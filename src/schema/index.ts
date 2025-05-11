@@ -27,3 +27,6 @@ export * from './validator';
 
 // Export schema migration utilities
 export * from './migration';
+
+// Export schema migration executor
+export * from './migration-executor';

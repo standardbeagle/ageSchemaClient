@@ -22,5 +22,8 @@ export * from './vertex';
 // Export edge operations
 export * from './edge';
 
+// Export batch operations
+export * from './batch';
+
 // Version information
 export const dbVersion = '0.1.0';

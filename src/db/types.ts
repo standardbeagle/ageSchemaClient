@@ -14,17 +14,17 @@ export enum ConnectionState {
    * Connection is idle
    */
   IDLE = 'idle',
-  
+
   /**
    * Connection is active
    */
   ACTIVE = 'active',
-  
+
   /**
    * Connection is closed
    */
   CLOSED = 'closed',
-  
+
   /**
    * Connection is in error state
    */
@@ -40,19 +40,19 @@ export interface PoolConfig {
    * @default 10
    */
   max?: number;
-  
+
   /**
    * Idle timeout in milliseconds
    * @default 30000
    */
   idleTimeoutMillis?: number;
-  
+
   /**
    * Connection timeout in milliseconds
    * @default 0 (no timeout)
    */
   connectionTimeoutMillis?: number;
-  
+
   /**
    * Allow exit on idle
    * @default false
@@ -69,25 +69,25 @@ export interface RetryConfig {
    * @default 3
    */
   maxAttempts?: number;
-  
+
   /**
    * Delay between retries in milliseconds
    * @default 1000
    */
   delay?: number;
-  
+
   /**
    * Maximum delay between retries in milliseconds
    * @default 5000
    */
   maxDelay?: number;
-  
+
   /**
    * Factor to increase delay between retries
    * @default 2
    */
   factor?: number;
-  
+
   /**
    * Jitter to add to delay between retries
    * @default 0.1
@@ -103,7 +103,7 @@ export enum DriverType {
    * Node-postgres driver
    */
   PG = 'pg',
-  
+
   /**
    * Other drivers can be added in the future
    */
@@ -118,7 +118,7 @@ export interface DriverOptions {
    * @default DriverType.PG
    */
   type?: DriverType;
-  
+
   /**
    * Driver-specific options
    */
@@ -133,12 +133,12 @@ export interface ConnectionConfig extends PgConnectionConfig {
    * Connection pool configuration
    */
   pool?: PoolConfig;
-  
+
   /**
    * Retry configuration
    */
   retry?: RetryConfig;
-  
+
   /**
    * Driver-specific options
    */
@@ -151,17 +151,24 @@ export interface ConnectionConfig extends PgConnectionConfig {
 export interface Connection {
   /**
    * Execute a query
-   * 
-   * @param text - Query text
+   *
+   * @param text - Query text or query config
    * @param params - Query parameters
    * @returns Query result
    */
-  query(text: string, params?: any[]): Promise<any>;
-  
+  query(text: string | any, params?: any[]): Promise<any>;
+
   /**
    * Release the connection back to the pool
    */
   release(): void;
+
+  /**
+   * Get the underlying client
+   *
+   * @returns Underlying client
+   */
+  getClient?(): any;
 }
 
 /**
@@ -172,22 +179,22 @@ export interface ConnectionEvent {
    * Event type
    */
   type: 'connect' | 'disconnect' | 'error' | 'status';
-  
+
   /**
    * Connection state
    */
   state: ConnectionState;
-  
+
   /**
    * Timestamp
    */
   timestamp: number;
-  
+
   /**
    * Error (if any)
    */
   error?: Error;
-  
+
   /**
    * Additional data
    */
@@ -207,22 +214,22 @@ export interface ConnectionHooks {
    * Before connect hook
    */
   beforeConnect?: ConnectionHook;
-  
+
   /**
    * After connect hook
    */
   afterConnect?: ConnectionHook;
-  
+
   /**
    * Before disconnect hook
    */
   beforeDisconnect?: ConnectionHook;
-  
+
   /**
    * After disconnect hook
    */
   afterDisconnect?: ConnectionHook;
-  
+
   /**
    * On error hook
    */
@@ -235,33 +242,33 @@ export interface ConnectionHooks {
 export interface ConnectionManager {
   /**
    * Get a connection from the pool
-   * 
+   *
    * @returns A connection
    */
   getConnection(): Promise<Connection>;
-  
+
   /**
    * Release a connection back to the pool
-   * 
+   *
    * @param connection - Connection to release
    */
   releaseConnection(connection: Connection): Promise<void>;
-  
+
   /**
    * Close all connections
    */
   closeAll(): Promise<void>;
-  
+
   /**
    * Get connection pool statistics
-   * 
+   *
    * @returns Pool statistics
    */
   getPoolStats(): PoolStats;
-  
+
   /**
    * Register connection lifecycle hooks
-   * 
+   *
    * @param hooks - Connection lifecycle hooks
    */
   registerHooks(hooks: ConnectionHooks): void;
@@ -275,22 +282,22 @@ export interface PoolStats {
    * Total number of connections
    */
   total: number;
-  
+
   /**
    * Number of idle connections
    */
   idle: number;
-  
+
   /**
    * Number of active connections
    */
   active: number;
-  
+
   /**
    * Number of waiting clients
    */
   waiting: number;
-  
+
   /**
    * Maximum number of connections
    */
@@ -305,27 +312,27 @@ export enum DatabaseErrorType {
    * Connection error
    */
   CONNECTION = 'connection',
-  
+
   /**
    * Query error
    */
   QUERY = 'query',
-  
+
   /**
    * Transaction error
    */
   TRANSACTION = 'transaction',
-  
+
   /**
    * Pool error
    */
   POOL = 'pool',
-  
+
   /**
    * Timeout error
    */
   TIMEOUT = 'timeout',
-  
+
   /**
    * Unknown error
    */
@@ -340,20 +347,20 @@ export class DatabaseError extends Error {
    * Error type
    */
   public readonly type: DatabaseErrorType;
-  
+
   /**
    * Original error
    */
   public readonly originalError?: Error;
-  
+
   /**
    * Additional data
    */
   public readonly data?: any;
-  
+
   /**
    * Create a new database error
-   * 
+   *
    * @param message - Error message
    * @param type - Error type
    * @param originalError - Original error
@@ -379,7 +386,7 @@ export class DatabaseError extends Error {
 export class ConnectionError extends DatabaseError {
   /**
    * Create a new connection error
-   * 
+   *
    * @param message - Error message
    * @param originalError - Original error
    * @param data - Additional data
@@ -396,7 +403,7 @@ export class ConnectionError extends DatabaseError {
 export class QueryError extends DatabaseError {
   /**
    * Create a new query error
-   * 
+   *
    * @param message - Error message
    * @param originalError - Original error
    * @param data - Additional data
@@ -413,7 +420,7 @@ export class QueryError extends DatabaseError {
 export class TransactionError extends DatabaseError {
   /**
    * Create a new transaction error
-   * 
+   *
    * @param message - Error message
    * @param originalError - Original error
    * @param data - Additional data
@@ -430,7 +437,7 @@ export class TransactionError extends DatabaseError {
 export class PoolError extends DatabaseError {
   /**
    * Create a new pool error
-   * 
+   *
    * @param message - Error message
    * @param originalError - Original error
    * @param data - Additional data
@@ -447,7 +454,7 @@ export class PoolError extends DatabaseError {
 export class TimeoutError extends DatabaseError {
   /**
    * Create a new timeout error
-   * 
+   *
    * @param message - Error message
    * @param originalError - Original error
    * @param data - Additional data

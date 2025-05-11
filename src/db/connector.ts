@@ -44,7 +44,7 @@ class PgConnection implements Connection {
 
   /**
    * Create a new PgConnection
-   * 
+   *
    * @param client - Pool client
    * @param manager - Connection manager
    */
@@ -56,7 +56,7 @@ class PgConnection implements Connection {
 
   /**
    * Execute a query
-   * 
+   *
    * @param text - Query text
    * @param params - Query parameters
    * @returns Query result
@@ -66,14 +66,14 @@ class PgConnection implements Connection {
       this.state = ConnectionState.ACTIVE;
       this.lastQuery = text;
       this.lastQueryTime = Date.now();
-      
+
       const result = await this.client.query(text, params);
-      
+
       this.state = ConnectionState.IDLE;
       return result;
     } catch (error) {
       this.state = ConnectionState.ERROR;
-      
+
       // Trigger error hook if registered
       const event: ConnectionEvent = {
         type: 'error',
@@ -82,9 +82,9 @@ class PgConnection implements Connection {
         error: error as Error,
         data: { query: text, params },
       };
-      
+
       await this.manager.triggerHook('onError', this, event);
-      
+
       throw new ConnectionError(
         `Query execution failed: ${(error as Error).message}`,
         error as Error,
@@ -103,7 +103,7 @@ class PgConnection implements Connection {
 
   /**
    * Get the connection state
-   * 
+   *
    * @returns Connection state
    */
   getState(): ConnectionState {
@@ -112,7 +112,7 @@ class PgConnection implements Connection {
 
   /**
    * Get the last query
-   * 
+   *
    * @returns Last query
    */
   getLastQuery(): string | null {
@@ -121,11 +121,20 @@ class PgConnection implements Connection {
 
   /**
    * Get the last query time
-   * 
+   *
    * @returns Last query time
    */
   getLastQueryTime(): number | null {
     return this.lastQueryTime;
+  }
+
+  /**
+   * Get the underlying client
+   *
+   * @returns Underlying client
+   */
+  getClient(): any {
+    return this.client;
   }
 }
 
@@ -140,13 +149,13 @@ export class PgConnectionManager implements ConnectionManager {
 
   /**
    * Create a new PgConnectionManager
-   * 
+   *
    * @param config - Connection configuration
    */
   constructor(config: ConnectionConfig) {
     this.config = this.validateConfig(config);
     this.pool = this.createPool(this.config);
-    
+
     // Set up pool error handler
     this.pool.on('error', (err: Error) => {
       console.error('Unexpected error on idle client', err);
@@ -156,7 +165,7 @@ export class PgConnectionManager implements ConnectionManager {
 
   /**
    * Validate connection configuration
-   * 
+   *
    * @param config - Connection configuration
    * @returns Validated connection configuration
    */
@@ -192,7 +201,7 @@ export class PgConnectionManager implements ConnectionManager {
 
   /**
    * Create a connection pool
-   * 
+   *
    * @param config - Connection configuration
    * @returns Connection pool
    */
@@ -215,7 +224,7 @@ export class PgConnectionManager implements ConnectionManager {
 
   /**
    * Handle pool error
-   * 
+   *
    * @param error - Error
    */
   private handlePoolError(error: Error): void {
@@ -230,7 +239,7 @@ export class PgConnectionManager implements ConnectionManager {
 
   /**
    * Get a connection from the pool with retry logic
-   * 
+   *
    * @returns A connection
    */
   async getConnection(): Promise<Connection> {
@@ -246,42 +255,42 @@ export class PgConnectionManager implements ConnectionManager {
           state: ConnectionState.IDLE,
           timestamp: Date.now(),
         };
-        
+
         await this.triggerHook('beforeConnect', null as any, beforeConnectEvent);
-        
+
         // Get client from pool
         const client = await this.pool.connect();
-        
+
         // Create connection wrapper
         const connection = new PgConnection(client, this);
-        
+
         // Add to active connections
         this.activeConnections.add(connection);
-        
+
         // Trigger afterConnect hook if registered
         const afterConnectEvent: ConnectionEvent = {
           type: 'connect',
           state: ConnectionState.IDLE,
           timestamp: Date.now(),
         };
-        
+
         await this.triggerHook('afterConnect', connection, afterConnectEvent);
-        
+
         return connection;
       } catch (error) {
         lastError = error as Error;
         attempts++;
-        
+
         if (attempts < retryConfig.maxAttempts!) {
           // Calculate delay with exponential backoff and jitter
           const delay = Math.min(
             retryConfig.delay! * Math.pow(retryConfig.factor!, attempts - 1),
             retryConfig.maxDelay!
           );
-          
+
           const jitter = delay * retryConfig.jitter! * (Math.random() * 2 - 1);
           const finalDelay = Math.max(0, delay + jitter);
-          
+
           // Wait before retrying
           await new Promise(resolve => setTimeout(resolve, finalDelay));
         }
@@ -297,7 +306,7 @@ export class PgConnectionManager implements ConnectionManager {
 
   /**
    * Release a connection back to the pool
-   * 
+   *
    * @param connection - Connection to release
    */
   async releaseConnection(connection: Connection): Promise<void> {
@@ -308,22 +317,22 @@ export class PgConnectionManager implements ConnectionManager {
         state: connection.getState(),
         timestamp: Date.now(),
       };
-      
+
       await this.triggerHook('beforeDisconnect', connection, beforeDisconnectEvent);
-      
+
       // Release the connection
       connection.release();
-      
+
       // Remove from active connections
       this.activeConnections.delete(connection);
-      
+
       // Trigger afterDisconnect hook if registered
       const afterDisconnectEvent: ConnectionEvent = {
         type: 'disconnect',
         state: ConnectionState.IDLE,
         timestamp: Date.now(),
       };
-      
+
       await this.triggerHook('afterDisconnect', connection, afterDisconnectEvent);
     } else {
       throw new ConnectionError('Invalid connection object');
@@ -337,7 +346,7 @@ export class PgConnectionManager implements ConnectionManager {
     try {
       // End the pool
       await this.pool.end();
-      
+
       // Clear active connections
       this.activeConnections.clear();
     } catch (error) {
@@ -350,7 +359,7 @@ export class PgConnectionManager implements ConnectionManager {
 
   /**
    * Get connection pool statistics
-   * 
+   *
    * @returns Pool statistics
    */
   getPoolStats(): PoolStats {
@@ -365,7 +374,7 @@ export class PgConnectionManager implements ConnectionManager {
 
   /**
    * Register connection lifecycle hooks
-   * 
+   *
    * @param hooks - Connection lifecycle hooks
    */
   registerHooks(hooks: ConnectionHooks): void {
@@ -374,7 +383,7 @@ export class PgConnectionManager implements ConnectionManager {
 
   /**
    * Trigger a hook
-   * 
+   *
    * @param hookName - Hook name
    * @param connection - Connection
    * @param event - Connection event
@@ -385,7 +394,7 @@ export class PgConnectionManager implements ConnectionManager {
     event: ConnectionEvent
   ): Promise<void> {
     const hook = this.hooks[hookName];
-    
+
     if (hook) {
       try {
         await hook(connection, event);

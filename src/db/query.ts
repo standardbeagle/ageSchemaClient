@@ -14,22 +14,22 @@ export interface QueryResult<T = any> {
    * Result rows
    */
   rows: T[];
-  
+
   /**
    * Row count
    */
   rowCount: number;
-  
+
   /**
    * Field information
    */
   fields: QueryResultField[];
-  
+
   /**
    * Command
    */
   command: string;
-  
+
   /**
    * OID
    */
@@ -44,32 +44,32 @@ export interface QueryResultField {
    * Field name
    */
   name: string;
-  
+
   /**
    * Table OID
    */
   tableID: number;
-  
+
   /**
    * Column index
    */
   columnID: number;
-  
+
   /**
    * Data type OID
    */
   dataTypeID: number;
-  
+
   /**
    * Data type size
    */
   dataTypeSize: number;
-  
+
   /**
    * Data type modifier
    */
   dataTypeModifier: number;
-  
+
   /**
    * Format
    */
@@ -85,25 +85,25 @@ export interface QueryOptions {
    * @default 0 (no timeout)
    */
   timeout?: number;
-  
+
   /**
    * Maximum number of retry attempts
    * @default 0 (no retries)
    */
   maxRetries?: number;
-  
+
   /**
    * Delay between retries in milliseconds
    * @default 1000
    */
   retryDelay?: number;
-  
+
   /**
    * Row mode
    * @default 'array'
    */
   rowMode?: 'array' | 'object';
-  
+
   /**
    * Query name (for prepared statements)
    */
@@ -126,7 +126,7 @@ const DEFAULT_QUERY_OPTIONS: QueryOptions = {
 export interface QueryLogger {
   /**
    * Log a query
-   * 
+   *
    * @param query - Query text
    * @param params - Query parameters
    * @param duration - Query duration in milliseconds
@@ -138,10 +138,10 @@ export interface QueryLogger {
     duration: number,
     result?: QueryResult
   ): void;
-  
+
   /**
    * Log a query error
-   * 
+   *
    * @param query - Query text
    * @param params - Query parameters
    * @param duration - Query duration in milliseconds
@@ -161,7 +161,7 @@ export interface QueryLogger {
 export class DefaultQueryLogger implements QueryLogger {
   /**
    * Log a query
-   * 
+   *
    * @param query - Query text
    * @param params - Query parameters
    * @param duration - Query duration in milliseconds
@@ -180,10 +180,10 @@ export class DefaultQueryLogger implements QueryLogger {
       } | Rows: ${rowCount}`
     );
   }
-  
+
   /**
    * Log a query error
-   * 
+   *
    * @param query - Query text
    * @param params - Query parameters
    * @param duration - Query duration in milliseconds
@@ -201,10 +201,10 @@ export class DefaultQueryLogger implements QueryLogger {
       } | Error: ${error.message}`
     );
   }
-  
+
   /**
    * Truncate a query for logging
-   * 
+   *
    * @param query - Query text
    * @returns Truncated query
    */
@@ -223,10 +223,10 @@ export class DefaultQueryLogger implements QueryLogger {
 export class QueryExecutor {
   private connection: Connection;
   private logger: QueryLogger;
-  
+
   /**
    * Create a new query executor
-   * 
+   *
    * @param connection - Database connection
    * @param logger - Query logger
    */
@@ -237,10 +237,10 @@ export class QueryExecutor {
     this.connection = connection;
     this.logger = logger;
   }
-  
+
   /**
    * Execute a SQL query
-   * 
+   *
    * @param sql - SQL query
    * @param params - Query parameters
    * @param options - Query options
@@ -254,13 +254,13 @@ export class QueryExecutor {
     const mergedOptions = { ...DEFAULT_QUERY_OPTIONS, ...options };
     let attempts = 0;
     let lastError: Error | null = null;
-    
+
     while (attempts <= mergedOptions.maxRetries!) {
       try {
         const startTime = Date.now();
         let timeoutId: NodeJS.Timeout | undefined;
         let timeoutPromise: Promise<never> | undefined;
-        
+
         // Set up timeout if specified
         if (mergedOptions.timeout && mergedOptions.timeout > 0) {
           timeoutPromise = new Promise<never>((_, reject) => {
@@ -273,19 +273,19 @@ export class QueryExecutor {
             }, mergedOptions.timeout);
           });
         }
-        
+
         // Prepare query config
         const queryConfig: any = {
           text: sql,
           values: params,
           rowMode: mergedOptions.rowMode,
         };
-        
+
         // Add name if specified (for prepared statements)
         if (mergedOptions.name) {
           queryConfig.name = mergedOptions.name;
         }
-        
+
         // Execute query with timeout if specified
         const result = await (timeoutPromise
           ? Promise.race([
@@ -293,32 +293,32 @@ export class QueryExecutor {
               timeoutPromise,
             ])
           : this.connection.query(queryConfig));
-        
+
         // Clear timeout if set
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
-        
+
         const duration = Date.now() - startTime;
-        
+
         // Log query
         this.logger.logQuery(sql, params, duration, result);
-        
+
         return result;
       } catch (error) {
         const duration = Date.now() - (lastError ? 0 : Date.now());
         lastError = error as Error;
-        
+
         // Log error
         this.logger.logError(sql, params, duration, lastError);
-        
+
         // Check if we should retry
         if (
           attempts < mergedOptions.maxRetries! &&
           this.isRetryableError(lastError)
         ) {
           attempts++;
-          
+
           // Wait before retrying
           await new Promise(resolve =>
             setTimeout(resolve, mergedOptions.retryDelay)
@@ -329,7 +329,7 @@ export class QueryExecutor {
         }
       }
     }
-    
+
     // All retry attempts failed or non-retryable error
     throw new QueryError(
       `Query execution failed: ${lastError?.message}`,
@@ -337,10 +337,10 @@ export class QueryExecutor {
       { query: sql, params }
     );
   }
-  
+
   /**
    * Execute a Cypher query
-   * 
+   *
    * @param cypher - Cypher query
    * @param params - Query parameters
    * @param graphName - Graph name
@@ -355,16 +355,166 @@ export class QueryExecutor {
   ): Promise<QueryResult<T>> {
     // Convert Cypher parameters to array format for PostgreSQL
     const sqlParams: any[] = params ? [params] : [];
-    
+
     // Construct the SQL query to execute Cypher via AGE extension
     const sql = `SELECT * FROM cypher('${graphName}', $1, $2) AS (result agtype)`;
-    
+
     return this.executeSQL<T>(sql, [cypher, sqlParams], options);
   }
-  
+
+  /**
+   * Execute a COPY FROM operation to load data from a string
+   *
+   * @param sql - COPY SQL statement
+   * @param data - Data to load
+   * @param options - Query options
+   * @returns Query result
+   */
+  async executeCopyFrom(
+    sql: string,
+    data: string,
+    options: QueryOptions & { transaction?: any } = {}
+  ): Promise<QueryResult> {
+    const mergedOptions = { ...DEFAULT_QUERY_OPTIONS, ...options };
+    let attempts = 0;
+    let lastError: Error | null = null;
+
+    while (attempts <= mergedOptions.maxRetries!) {
+      try {
+        const startTime = Date.now();
+        let timeoutId: NodeJS.Timeout | undefined;
+        let timeoutPromise: Promise<never> | undefined;
+
+        // Set up timeout if specified
+        if (mergedOptions.timeout && mergedOptions.timeout > 0) {
+          timeoutPromise = new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(() => {
+              reject(
+                new TimeoutError(
+                  `COPY operation timed out after ${mergedOptions.timeout}ms`
+                )
+              );
+            }, mergedOptions.timeout);
+          });
+        }
+
+        // Get the client from the connection
+        const client = this.connection.getClient ? this.connection.getClient() : this.connection;
+
+        // Execute the COPY statement
+        const result = await (timeoutPromise
+          ? Promise.race([
+              this.executeCopyOperation(client, sql, data, options.transaction),
+              timeoutPromise,
+            ])
+          : this.executeCopyOperation(client, sql, data, options.transaction));
+
+        // Clear timeout if set
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+
+        const duration = Date.now() - startTime;
+
+        // Log query
+        this.logger.logQuery(sql, [], duration, result);
+
+        return result;
+      } catch (error) {
+        const duration = Date.now() - (lastError ? 0 : Date.now());
+        lastError = error as Error;
+
+        // Log error
+        this.logger.logError(sql, [], duration, lastError);
+
+        // Check if we should retry
+        if (
+          attempts < mergedOptions.maxRetries! &&
+          this.isRetryableError(lastError)
+        ) {
+          attempts++;
+
+          // Wait before retrying
+          await new Promise(resolve =>
+            setTimeout(resolve, mergedOptions.retryDelay)
+          );
+        } else {
+          // No more retries or non-retryable error
+          break;
+        }
+      }
+    }
+
+    // All retry attempts failed or non-retryable error
+    throw new QueryError(
+      `COPY operation failed: ${lastError?.message}`,
+      lastError || undefined,
+      { query: sql }
+    );
+  }
+
+  /**
+   * Execute a COPY operation
+   *
+   * @param client - Database client
+   * @param sql - COPY SQL statement
+   * @param data - Data to load
+   * @param transaction - Transaction object
+   * @returns Query result
+   * @private
+   */
+  private async executeCopyOperation(
+    client: any,
+    sql: string,
+    data: string,
+    transaction?: any
+  ): Promise<QueryResult> {
+    return new Promise((resolve, reject) => {
+      // Execute the COPY statement
+      const stream = client.query(sql);
+
+      // Handle errors
+      stream.on('error', (err: Error) => {
+        reject(err);
+      });
+
+      // Write data to the stream
+      stream.write(data);
+      stream.end();
+
+      // Handle completion
+      stream.on('end', () => {
+        resolve({
+          rows: [],
+          rowCount: 0,
+          fields: [],
+          command: 'COPY',
+          oid: 0,
+        });
+      });
+    });
+  }
+
+  /**
+   * Begin a transaction
+   *
+   * @returns Transaction object
+   */
+  async beginTransaction(): Promise<any> {
+    const result = await this.executeSQL('BEGIN');
+    return {
+      commit: async () => {
+        return this.executeSQL('COMMIT');
+      },
+      rollback: async () => {
+        return this.executeSQL('ROLLBACK');
+      },
+    };
+  }
+
   /**
    * Transform query result
-   * 
+   *
    * @param result - Raw query result
    * @param transformer - Transformer function
    * @returns Transformed result
@@ -375,10 +525,10 @@ export class QueryExecutor {
   ): R[] {
     return result.rows.map(transformer);
   }
-  
+
   /**
    * Check if an error is retryable
-   * 
+   *
    * @param error - Error
    * @returns True if the error is retryable
    */
@@ -393,7 +543,7 @@ export class QueryExecutor {
       'connect ETIMEDOUT',
       'connect ECONNREFUSED',
     ];
-    
+
     return retryableErrorMessages.some(msg =>
       error.message.toLowerCase().includes(msg)
     );
