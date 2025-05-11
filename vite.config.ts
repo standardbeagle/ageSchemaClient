@@ -27,15 +27,19 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
     },
-    include: [
-      '**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      '**/*.integration.test.?(c|m)[jt]s?(x)'
-    ],
+    // Include patterns are set dynamically below based on TEST_TYPE
     setupFiles: [
-      // Add setup files for specific test types
-      // The integration setup file will only be loaded for integration tests
+      // Global setup file for all tests
+      './tests/setup/global.ts',
+      // Integration setup file only loaded for integration tests
+      ...(process.env.TEST_TYPE === 'integration' ? ['./tests/setup/integration.ts'] : []),
     ],
-    testNamePattern: process.env.TEST_TYPE === 'integration' ? /\.integration\.test\.[jt]s$/ : /(?<!\.integration)\.test\.[jt]s$/,
+    // Filter tests based on TEST_TYPE environment variable
+    include: process.env.TEST_TYPE === 'integration'
+      ? ['**/*.integration.test.{js,ts}'] // Only run integration tests
+      : process.env.TEST_TYPE === 'unit'
+        ? ['**/*.test.{js,ts}', '!**/*.integration.test.{js,ts}'] // Run all tests except integration tests
+        : ['**/*.test.{js,ts}'], // Run all tests
     environmentMatchGlobs: [
       // Match integration test files to use the integration setup
       ['**/integration/**/*.test.{js,ts}', 'node']

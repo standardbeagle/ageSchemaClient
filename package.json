@@ -21,10 +21,12 @@
     "build": "tsc && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:unit": "cross-env TEST_TYPE=unit vitest run",
+    "test:unit:watch": "cross-env TEST_TYPE=unit vitest",
     "test:coverage": "vitest run --coverage",
     "test:integration": "cross-env TEST_TYPE=integration vitest run",
     "test:integration:watch": "cross-env TEST_TYPE=integration vitest",
-    "test:all": "pnpm test && pnpm test:integration",
+    "test:all": "pnpm test:unit && pnpm test:integration",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "prepublishOnly": "pnpm run build"
