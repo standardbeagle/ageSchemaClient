@@ -27,5 +27,18 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
     },
+    include: [
+      '**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      '**/*.integration.test.?(c|m)[jt]s?(x)'
+    ],
+    setupFiles: [
+      // Add setup files for specific test types
+      // The integration setup file will only be loaded for integration tests
+    ],
+    testNamePattern: process.env.TEST_TYPE === 'integration' ? /\.integration\.test\.[jt]s$/ : /(?<!\.integration)\.test\.[jt]s$/,
+    environmentMatchGlobs: [
+      // Match integration test files to use the integration setup
+      ['**/integration/**/*.test.{js,ts}', 'node']
+    ],
   },
 });
