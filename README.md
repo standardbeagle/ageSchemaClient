@@ -42,14 +42,75 @@ const client = new AgeSchemaClient({
   },
 });
 
-// Use the client to query the database
-const queryBuilder = client.createQueryBuilder('my_graph');
-// ... more to come
+// Define a schema
+const schema = {
+  version: '1.0.0',
+  vertices: {
+    Person: {
+      properties: {
+        name: { type: 'string', required: true },
+        age: { type: 'number' }
+      }
+    },
+    Movie: {
+      properties: {
+        title: { type: 'string', required: true },
+        year: { type: 'number' }
+      }
+    }
+  },
+  edges: {
+    ACTED_IN: {
+      properties: {
+        role: { type: 'string' }
+      },
+      from: ['Person'],
+      to: ['Movie']
+    }
+  }
+};
+
+// Create vertices
+const tom = await client.vertices.createVertex('Person', {
+  name: 'Tom Hanks',
+  age: 66
+});
+
+const forrestGump = await client.vertices.createVertex('Movie', {
+  title: 'Forrest Gump',
+  year: 1994
+});
+
+// Create an edge
+const actedIn = await client.edges.createEdge('ACTED_IN', tom, forrestGump, {
+  role: 'Forrest Gump'
+});
+
+// Query the database
+const result = await client.query
+  .match('p', 'Person')
+  .where('p.name', '=', 'Tom Hanks')
+  .match('p', '-[a:ACTED_IN]->', 'm:Movie')
+  .return('p', 'm', 'a.role')
+  .execute();
 ```
 
 ## Documentation
 
 For more detailed documentation, see the [docs](./docs) directory.
+
+### API Reference
+
+A comprehensive API reference is available in the [API Reference](./docs/api-reference.md) document. This includes detailed information about:
+
+- Connection Management
+- Query Execution
+- SQL Generation
+- Vertex Operations
+- Edge Operations
+- Batch Operations
+- Schema Migration
+- Error Handling
 
 ## Development
 
