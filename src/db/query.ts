@@ -353,13 +353,15 @@ export class QueryExecutor {
     graphName: string = 'default',
     options: QueryOptions = {}
   ): Promise<QueryResult<T>> {
-    // Convert Cypher parameters to array format for PostgreSQL
-    const sqlParams: any[] = params ? [params] : [];
+    // Convert parameters to JSON string
+    const paramsJson = params ? JSON.stringify(params) : '{}';
 
-    // Construct the SQL query to execute Cypher via AGE extension
-    const sql = `SELECT * FROM cypher('${graphName}', $1, $2) AS (result agtype)`;
+    // Use dollar-quoted strings to avoid escaping issues
+    // Apache AGE requires dollar-quoted strings for Cypher queries and parameters
+    // The third parameter must be a SQL parameter ($1) not a dollar-quoted string
+    const sql = `SELECT * FROM ag_catalog.cypher('${graphName}', $q$${cypher}$q$, $1) AS (result agtype)`;
 
-    return this.executeSQL<T>(sql, [cypher, sqlParams], options);
+    return this.executeSQL<T>(sql, [paramsJson], options);
   }
 
   /**

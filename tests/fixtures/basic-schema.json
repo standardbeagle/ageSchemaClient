@@ -1,0 +1,73 @@
+{
+  "name": "basic-schema",
+  "version": "1.0.0",
+  "description": "Basic schema for testing",
+  "vertices": [
+    {
+      "label": "Person",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "age": {
+          "type": "number",
+          "required": false
+        },
+        "email": {
+          "type": "string",
+          "required": false
+        }
+      }
+    },
+    {
+      "label": "Product",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "price": {
+          "type": "number",
+          "required": true
+        },
+        "description": {
+          "type": "string",
+          "required": false
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "label": "PURCHASED",
+      "from": "Person",
+      "to": "Product",
+      "properties": {
+        "date": {
+          "type": "string",
+          "required": true
+        },
+        "quantity": {
+          "type": "number",
+          "required": true
+        }
+      }
+    },
+    {
+      "label": "REVIEWED",
+      "from": "Person",
+      "to": "Product",
+      "properties": {
+        "rating": {
+          "type": "number",
+          "required": true
+        },
+        "comment": {
+          "type": "string",
+          "required": false
+        }
+      }
+    }
+  ]
+}
