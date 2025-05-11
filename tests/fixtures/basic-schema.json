@@ -1,0 +1,98 @@
+{
+  "version": "1.0.0",
+  "vertices": {
+    "Person": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Person's name"
+        },
+        "age": {
+          "type": "integer",
+          "description": "Person's age"
+        },
+        "email": {
+          "type": "string",
+          "description": "Person's email address"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the person is active",
+          "default": true
+        }
+      },
+      "required": ["name", "email"],
+      "description": "A person vertex"
+    },
+    "Product": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Product name"
+        },
+        "price": {
+          "type": "number",
+          "description": "Product price"
+        },
+        "sku": {
+          "type": "string",
+          "description": "Product SKU"
+        },
+        "inStock": {
+          "type": "boolean",
+          "description": "Whether the product is in stock",
+          "default": true
+        }
+      },
+      "required": ["name", "price", "sku"],
+      "description": "A product vertex"
+    }
+  },
+  "edges": {
+    "PURCHASED": {
+      "properties": {
+        "date": {
+          "type": "date",
+          "description": "Purchase date"
+        },
+        "quantity": {
+          "type": "integer",
+          "description": "Purchase quantity"
+        },
+        "total": {
+          "type": "number",
+          "description": "Purchase total"
+        }
+      },
+      "required": ["date", "quantity"],
+      "fromVertex": "Person",
+      "toVertex": "Product",
+      "description": "A purchase edge"
+    },
+    "REVIEWED": {
+      "properties": {
+        "date": {
+          "type": "date",
+          "description": "Review date"
+        },
+        "rating": {
+          "type": "integer",
+          "description": "Review rating (1-5)"
+        },
+        "comment": {
+          "type": "string",
+          "description": "Review comment"
+        }
+      },
+      "required": ["date", "rating"],
+      "fromVertex": "Person",
+      "toVertex": "Product",
+      "description": "A review edge"
+    }
+  },
+  "metadata": {
+    "author": "Test Author",
+    "description": "Basic schema for integration tests",
+    "created": "2023-01-01T00:00:00Z"
+  }
+}

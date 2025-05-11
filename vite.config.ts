@@ -34,7 +34,8 @@ export default defineConfig({
     setupFiles: [
       // Add setup files for specific test types
       // The integration setup file will only be loaded for integration tests
-    ],
+      process.env.TEST_TYPE === 'integration' ? './tests/setup/integration.ts' : undefined
+    ].filter(Boolean),
     testNamePattern: process.env.TEST_TYPE === 'integration' ? /\.integration\.test\.[jt]s$/ : /(?<!\.integration)\.test\.[jt]s$/,
     environmentMatchGlobs: [
       // Match integration test files to use the integration setup

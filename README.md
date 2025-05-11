@@ -132,8 +132,39 @@ pnpm install
 # Build the library
 pnpm build
 
-# Run tests
+# Run unit tests
 pnpm test
+
+# Run integration tests
+pnpm test:integration
+
+# Run all tests
+pnpm test:all
+```
+
+### Testing
+
+#### Unit Tests
+
+Unit tests are located in the `tests` directory and can be run with:
+
+```bash
+pnpm test
+```
+
+#### Integration Tests
+
+Integration tests require a PostgreSQL database with the Apache AGE extension. See [Integration Testing](./docs/integration-testing.md) for more details.
+
+```bash
+# Start the test database (requires Docker)
+docker-compose -f docker-compose.test.yml up -d
+
+# Run integration tests
+pnpm test:integration
+
+# Stop the test database
+docker-compose -f docker-compose.test.yml down
 ```
 
 ## License

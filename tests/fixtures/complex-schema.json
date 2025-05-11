@@ -1,0 +1,196 @@
+{
+  "version": "1.0.0",
+  "vertices": {
+    "User": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User ID"
+        },
+        "username": {
+          "type": "string",
+          "description": "Username"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name"
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name"
+        },
+        "birthDate": {
+          "type": "date",
+          "description": "Birth date"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the user is active",
+          "default": true
+        },
+        "lastLogin": {
+          "type": "datetime",
+          "description": "Last login timestamp",
+          "nullable": true
+        },
+        "preferences": {
+          "type": "object",
+          "description": "User preferences",
+          "objectConstraints": {
+            "properties": {
+              "theme": {
+                "type": "string",
+                "description": "UI theme"
+              },
+              "notifications": {
+                "type": "boolean",
+                "description": "Notification preferences"
+              }
+            }
+          },
+          "nullable": true
+        }
+      },
+      "required": ["id", "username", "email"],
+      "description": "A user vertex"
+    },
+    "Post": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Post ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Post title"
+        },
+        "content": {
+          "type": "string",
+          "description": "Post content"
+        },
+        "createdAt": {
+          "type": "datetime",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "datetime",
+          "description": "Last update timestamp",
+          "nullable": true
+        },
+        "tags": {
+          "type": "array",
+          "description": "Post tags",
+          "arrayConstraints": {
+            "items": {
+              "type": "string"
+            }
+          },
+          "nullable": true
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Whether the post is published",
+          "default": false
+        }
+      },
+      "required": ["id", "title", "content", "createdAt"],
+      "description": "A post vertex"
+    },
+    "Comment": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Comment ID"
+        },
+        "content": {
+          "type": "string",
+          "description": "Comment content"
+        },
+        "createdAt": {
+          "type": "datetime",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "datetime",
+          "description": "Last update timestamp",
+          "nullable": true
+        }
+      },
+      "required": ["id", "content", "createdAt"],
+      "description": "A comment vertex"
+    }
+  },
+  "edges": {
+    "AUTHORED": {
+      "properties": {
+        "createdAt": {
+          "type": "datetime",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["createdAt"],
+      "fromVertex": "User",
+      "toVertex": "Post",
+      "description": "User authored a post"
+    },
+    "COMMENTED": {
+      "properties": {
+        "createdAt": {
+          "type": "datetime",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["createdAt"],
+      "fromVertex": "User",
+      "toVertex": "Comment",
+      "description": "User wrote a comment"
+    },
+    "COMMENT_ON": {
+      "properties": {
+        "createdAt": {
+          "type": "datetime",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["createdAt"],
+      "fromVertex": "Comment",
+      "toVertex": "Post",
+      "description": "Comment on a post"
+    },
+    "FOLLOWS": {
+      "properties": {
+        "since": {
+          "type": "datetime",
+          "description": "Follow timestamp"
+        }
+      },
+      "required": ["since"],
+      "fromVertex": "User",
+      "toVertex": "User",
+      "description": "User follows another user"
+    },
+    "LIKED": {
+      "properties": {
+        "timestamp": {
+          "type": "datetime",
+          "description": "Like timestamp"
+        }
+      },
+      "required": ["timestamp"],
+      "fromVertex": "User",
+      "toVertex": {
+        "oneOf": ["Post", "Comment"]
+      },
+      "description": "User liked a post or comment"
+    }
+  },
+  "metadata": {
+    "author": "Test Author",
+    "description": "Complex schema for integration tests",
+    "created": "2023-01-01T00:00:00Z"
+  }
+}
