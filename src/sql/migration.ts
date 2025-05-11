@@ -23,9 +23,9 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
     label: string
   ): SQLResult {
     const tableName = getVertexTableName(label, this.options.tablePrefix);
-    
+
     const sql = `DROP TABLE IF EXISTS ${tableName} CASCADE`;
-    
+
     return { sql, params: [] };
   };
 
@@ -39,9 +39,9 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
     label: string
   ): SQLResult {
     const tableName = getEdgeTableName(label, this.options.tablePrefix);
-    
+
     const sql = `DROP TABLE IF EXISTS ${tableName} CASCADE`;
-    
+
     return { sql, params: [] };
   };
 
@@ -52,23 +52,29 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
    * @param propertyName - Property name
    * @param propertyDef - Property definition
    * @param isEdge - Whether this is an edge table
+   * @param options - Table options
    * @returns SQL result
    */
   SQLGenerator.prototype.generateAddColumnSQL = function(
     label: string,
     propertyName: string,
     propertyDef: PropertyDefinition,
-    isEdge: boolean = false
+    isEdge: boolean = false,
+    options: any = {}
   ): SQLResult {
+    const tablePrefix = isEdge
+      ? (options.tablePrefix || this.options?.tablePrefix || 'e_')
+      : (options.tablePrefix || this.options?.tablePrefix || 'v_');
+
     const tableName = isEdge
-      ? getEdgeTableName(label, this.options.tablePrefix)
-      : getVertexTableName(label, this.options.tablePrefix);
-    
+      ? getEdgeTableName(label, tablePrefix)
+      : getVertexTableName(label, tablePrefix);
+
     const dataType = getPostgresDataType(propertyDef.type as PropertyType);
     const nullability = propertyDef.nullable === false ? 'NOT NULL' : 'NULL';
-    
+
     const sql = `ALTER TABLE ${tableName} ADD COLUMN ${quoteIdentifier(propertyName)} ${dataType} ${nullability}`;
-    
+
     return { sql, params: [] };
   };
 
@@ -78,19 +84,25 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
    * @param label - Vertex or edge label
    * @param propertyName - Property name
    * @param isEdge - Whether this is an edge table
+   * @param options - Table options
    * @returns SQL result
    */
   SQLGenerator.prototype.generateDropColumnSQL = function(
     label: string,
     propertyName: string,
-    isEdge: boolean = false
+    isEdge: boolean = false,
+    options: any = {}
   ): SQLResult {
+    const tablePrefix = isEdge
+      ? (options.tablePrefix || this.options?.tablePrefix || 'e_')
+      : (options.tablePrefix || this.options?.tablePrefix || 'v_');
+
     const tableName = isEdge
-      ? getEdgeTableName(label, this.options.tablePrefix)
-      : getVertexTableName(label, this.options.tablePrefix);
-    
+      ? getEdgeTableName(label, tablePrefix)
+      : getVertexTableName(label, tablePrefix);
+
     const sql = `ALTER TABLE ${tableName} DROP COLUMN IF EXISTS ${quoteIdentifier(propertyName)}`;
-    
+
     return { sql, params: [] };
   };
 
@@ -101,22 +113,28 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
    * @param propertyName - Property name
    * @param propertyDef - Property definition
    * @param isEdge - Whether this is an edge table
+   * @param options - Table options
    * @returns SQL result
    */
   SQLGenerator.prototype.generateAlterColumnTypeSQL = function(
     label: string,
     propertyName: string,
     propertyDef: PropertyDefinition,
-    isEdge: boolean = false
+    isEdge: boolean = false,
+    options: any = {}
   ): SQLResult {
+    const tablePrefix = isEdge
+      ? (options.tablePrefix || this.options?.tablePrefix || 'e_')
+      : (options.tablePrefix || this.options?.tablePrefix || 'v_');
+
     const tableName = isEdge
-      ? getEdgeTableName(label, this.options.tablePrefix)
-      : getVertexTableName(label, this.options.tablePrefix);
-    
+      ? getEdgeTableName(label, tablePrefix)
+      : getVertexTableName(label, tablePrefix);
+
     const dataType = getPostgresDataType(propertyDef.type as PropertyType);
-    
+
     const sql = `ALTER TABLE ${tableName} ALTER COLUMN ${quoteIdentifier(propertyName)} TYPE ${dataType} USING ${quoteIdentifier(propertyName)}::${dataType}`;
-    
+
     return { sql, params: [] };
   };
 
@@ -126,19 +144,25 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
    * @param label - Vertex or edge label
    * @param propertyName - Property name
    * @param isEdge - Whether this is an edge table
+   * @param options - Table options
    * @returns SQL result
    */
   SQLGenerator.prototype.generateSetNotNullSQL = function(
     label: string,
     propertyName: string,
-    isEdge: boolean = false
+    isEdge: boolean = false,
+    options: any = {}
   ): SQLResult {
+    const tablePrefix = isEdge
+      ? (options.tablePrefix || this.options?.tablePrefix || 'e_')
+      : (options.tablePrefix || this.options?.tablePrefix || 'v_');
+
     const tableName = isEdge
-      ? getEdgeTableName(label, this.options.tablePrefix)
-      : getVertexTableName(label, this.options.tablePrefix);
-    
+      ? getEdgeTableName(label, tablePrefix)
+      : getVertexTableName(label, tablePrefix);
+
     const sql = `ALTER TABLE ${tableName} ALTER COLUMN ${quoteIdentifier(propertyName)} SET NOT NULL`;
-    
+
     return { sql, params: [] };
   };
 
@@ -148,19 +172,25 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
    * @param label - Vertex or edge label
    * @param propertyName - Property name
    * @param isEdge - Whether this is an edge table
+   * @param options - Table options
    * @returns SQL result
    */
   SQLGenerator.prototype.generateDropNotNullSQL = function(
     label: string,
     propertyName: string,
-    isEdge: boolean = false
+    isEdge: boolean = false,
+    options: any = {}
   ): SQLResult {
+    const tablePrefix = isEdge
+      ? (options.tablePrefix || this.options?.tablePrefix || 'e_')
+      : (options.tablePrefix || this.options?.tablePrefix || 'v_');
+
     const tableName = isEdge
-      ? getEdgeTableName(label, this.options.tablePrefix)
-      : getVertexTableName(label, this.options.tablePrefix);
-    
+      ? getEdgeTableName(label, tablePrefix)
+      : getVertexTableName(label, tablePrefix);
+
     const sql = `ALTER TABLE ${tableName} ALTER COLUMN ${quoteIdentifier(propertyName)} DROP NOT NULL`;
-    
+
     return { sql, params: [] };
   };
 
@@ -182,9 +212,9 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
     const tableName = isEdge
       ? getEdgeTableName(label, this.options.tablePrefix)
       : getVertexTableName(label, this.options.tablePrefix);
-    
+
     const sql = `ALTER TABLE ${tableName} RENAME COLUMN ${quoteIdentifier(oldName)} TO ${quoteIdentifier(newName)}`;
-    
+
     return { sql, params: [] };
   };
 
@@ -206,9 +236,9 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
     const tableName = isEdge
       ? getEdgeTableName(label, this.options.tablePrefix)
       : getVertexTableName(label, this.options.tablePrefix);
-    
+
     let defaultValueStr: string;
-    
+
     if (defaultValue === null) {
       defaultValueStr = 'NULL';
     } else if (typeof defaultValue === 'string') {
@@ -218,9 +248,9 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
     } else {
       defaultValueStr = String(defaultValue);
     }
-    
+
     const sql = `ALTER TABLE ${tableName} ALTER COLUMN ${quoteIdentifier(propertyName)} SET DEFAULT ${defaultValueStr}`;
-    
+
     return { sql, params: [] };
   };
 
@@ -240,9 +270,9 @@ export function extendSQLGeneratorWithMigrationMethods(SQLGenerator: any): void 
     const tableName = isEdge
       ? getEdgeTableName(label, this.options.tablePrefix)
       : getVertexTableName(label, this.options.tablePrefix);
-    
+
     const sql = `ALTER TABLE ${tableName} ALTER COLUMN ${quoteIdentifier(propertyName)} DROP DEFAULT`;
-    
+
     return { sql, params: [] };
   };
 }

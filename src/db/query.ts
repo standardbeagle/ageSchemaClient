@@ -357,7 +357,7 @@ export class QueryExecutor {
     const paramsJson = params ? JSON.stringify(params) : '{}';
 
     // Use dollar-quoted strings to avoid escaping issues
-    // Apache AGE requires dollar-quoted strings for Cypher queries and parameters
+    // Apache AGE requires dollar-quoted strings for Cypher queries
     // The third parameter must be a SQL parameter ($1) not a dollar-quoted string
     const sql = `SELECT * FROM ag_catalog.cypher('${graphName}', $q$${cypher}$q$, $1) AS (result agtype)`;
 

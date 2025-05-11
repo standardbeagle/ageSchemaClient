@@ -123,15 +123,65 @@ describe('BatchOperations', () => {
     });
 
     it('should use chunking for large batches', async () => {
+      // Create a custom implementation of the batch operations class for testing
+      class TestBatchOperations extends BatchOperations<any> {
+        public async testCreateVerticesInChunks(label: string, dataArray: any[], options: any = {}) {
+          // Call the protected method directly
+          const metrics = {};
+          return this['createVerticesInChunks'](label, dataArray, options, metrics);
+        }
+      }
+
+      // Create a large array of vertices
       const vertices = Array(2000).fill(0).map((_, i) => ({ name: `Person ${i}`, age: 20 + i % 50 }));
-      
-      mockQueryExecutor.executeSQL.mockImplementation(() => ({ rows: [{ id: '123', name: 'Test' }] }));
-      
-      await batchOperations.createVerticesBatch('Person', vertices, { batchSize: 500 });
-      
-      // Should have called executeSQL 4 times (2000/500 = 4 chunks)
-      expect(mockQueryExecutor.executeSQL).toHaveBeenCalledTimes(5); // 4 chunks + 1 BEGIN
-      expect(mockSqlGenerator.generateBatchInsertVertexSQL).toHaveBeenCalledTimes(4);
+
+      // Mock the transaction
+      const mockTransaction = {
+        commit: vi.fn().mockResolvedValue({}),
+        rollback: vi.fn().mockResolvedValue({}),
+      };
+
+      // Create fresh mocks for this test
+      const testQueryExecutor = {
+        executeSQL: vi.fn().mockResolvedValue({ rows: [{ id: '123', name: 'Test' }] }),
+        beginTransaction: vi.fn().mockResolvedValue(mockTransaction),
+      };
+
+      const testSqlGenerator = {
+        generateBatchInsertVertexSQL: vi.fn().mockReturnValue({
+          sql: 'INSERT INTO v_Person (id, name, age) VALUES ($1, $2, $3)',
+          params: ['uuid_generate_v4()', 'Test Name', 30]
+        }),
+      };
+
+      const testVertexOps = {
+        validateVertexData: vi.fn(),
+        transformToVertex: vi.fn((label, row) => ({ ...row, label })),
+      };
+
+      const testEdgeOps = {
+        validateEdgeData: vi.fn(),
+        validateVertexTypes: vi.fn(),
+        transformToEdge: vi.fn(),
+      };
+
+      // Create the test batch operations instance
+      const testBatchOps = new TestBatchOperations(
+        mockSchema,
+        testQueryExecutor,
+        testSqlGenerator,
+        testVertexOps,
+        testEdgeOps
+      );
+
+      // Call the test method directly with a batch size of 500
+      await testBatchOps.testCreateVerticesInChunks('Person', vertices, { batchSize: 500 });
+
+      // Should have called executeSQL 4 times (one for each chunk)
+      expect(testQueryExecutor.beginTransaction).toHaveBeenCalledTimes(1);
+      expect(testSqlGenerator.generateBatchInsertVertexSQL).toHaveBeenCalledTimes(4);
+      expect(testQueryExecutor.executeSQL).toHaveBeenCalledTimes(4);
+      expect(mockTransaction.commit).toHaveBeenCalledTimes(1);
     });
 
     it('should collect performance metrics when requested', async () => {

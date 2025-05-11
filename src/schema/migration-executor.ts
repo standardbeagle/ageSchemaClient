@@ -131,19 +131,53 @@ const DEFAULT_MIGRATION_OPTIONS: MigrationOptions = {
 };
 
 /**
+ * Schema migration executor options
+ */
+export interface SchemaMigrationExecutorOptions {
+  /**
+   * Table prefix for vertex tables
+   * @default 'v_'
+   */
+  vertexTablePrefix?: string;
+
+  /**
+   * Table prefix for edge tables
+   * @default 'e_'
+   */
+  edgeTablePrefix?: string;
+}
+
+/**
+ * Default schema migration executor options
+ */
+const DEFAULT_EXECUTOR_OPTIONS: SchemaMigrationExecutorOptions = {
+  vertexTablePrefix: 'v_',
+  edgeTablePrefix: 'e_',
+};
+
+/**
  * Schema migration executor
  */
 export class SchemaMigrationExecutor {
+  /**
+   * Options for the migration executor
+   */
+  private options: SchemaMigrationExecutorOptions;
+
   /**
    * Create a new schema migration executor
    *
    * @param queryExecutor - Query executor
    * @param sqlGenerator - SQL generator
+   * @param options - Migration executor options
    */
   constructor(
     private queryExecutor: QueryExecutor,
-    private sqlGenerator: SQLGenerator
-  ) {}
+    private sqlGenerator: SQLGenerator,
+    options: SchemaMigrationExecutorOptions = {}
+  ) {
+    this.options = { ...DEFAULT_EXECUTOR_OPTIONS, ...options };
+  }
 
   /**
    * Create a migration plan
@@ -364,7 +398,9 @@ export class SchemaMigrationExecutor {
       // Vertex label added or removed
       if (change.type === SchemaChangeType.ADDED) {
         // Create vertex table
-        const createTableSQL = this.sqlGenerator.generateCreateVertexTableSQL(vertexLabel);
+        const createTableSQL = this.sqlGenerator.generateCreateVertexTableSQL(vertexLabel, {
+          tablePrefix: this.options.vertexTablePrefix
+        });
 
         steps.push({
           description: `Create vertex table for label '${vertexLabel}'`,
@@ -374,7 +410,9 @@ export class SchemaMigrationExecutor {
         });
       } else if (change.type === SchemaChangeType.REMOVED) {
         // Drop vertex table
-        const dropTableSQL = this.sqlGenerator.generateDropVertexTableSQL(vertexLabel);
+        const dropTableSQL = this.sqlGenerator.generateDropVertexTableSQL(vertexLabel, {
+          tablePrefix: this.options.vertexTablePrefix
+        });
 
         steps.push({
           description: `Drop vertex table for label '${vertexLabel}'`,
@@ -393,7 +431,8 @@ export class SchemaMigrationExecutor {
           vertexLabel,
           propertyName,
           targetSchema.vertices[vertexLabel].properties[propertyName],
-          false // isEdge
+          false, // isEdge
+          { tablePrefix: this.options.vertexTablePrefix }
         );
 
         steps.push({
@@ -407,7 +446,8 @@ export class SchemaMigrationExecutor {
         const dropColumnSQL = this.sqlGenerator.generateDropColumnSQL(
           vertexLabel,
           propertyName,
-          false // isEdge
+          false, // isEdge
+          { tablePrefix: this.options.vertexTablePrefix }
         );
 
         steps.push({
@@ -424,7 +464,8 @@ export class SchemaMigrationExecutor {
             vertexLabel,
             propertyName,
             targetSchema.vertices[vertexLabel].properties[propertyName],
-            false // isEdge
+            false, // isEdge
+            { tablePrefix: this.options.vertexTablePrefix }
           );
 
           steps.push({
@@ -447,7 +488,8 @@ export class SchemaMigrationExecutor {
           const setNotNullSQL = this.sqlGenerator.generateSetNotNullSQL(
             vertexLabel,
             prop,
-            false // isEdge
+            false, // isEdge
+            { tablePrefix: this.options.vertexTablePrefix }
           );
 
           steps.push({
@@ -466,7 +508,8 @@ export class SchemaMigrationExecutor {
           const dropNotNullSQL = this.sqlGenerator.generateDropNotNullSQL(
             vertexLabel,
             prop,
-            false // isEdge
+            false, // isEdge
+            { tablePrefix: this.options.vertexTablePrefix }
           );
 
           steps.push({
@@ -589,7 +632,8 @@ export class SchemaMigrationExecutor {
           const setNotNullSQL = this.sqlGenerator.generateSetNotNullSQL(
             edgeLabel,
             prop,
-            true // isEdge
+            true, // isEdge
+            { tablePrefix: this.options.edgeTablePrefix }
           );
 
           steps.push({
@@ -608,7 +652,8 @@ export class SchemaMigrationExecutor {
           const dropNotNullSQL = this.sqlGenerator.generateDropNotNullSQL(
             edgeLabel,
             prop,
-            true // isEdge
+            true, // isEdge
+            { tablePrefix: this.options.edgeTablePrefix }
           );
 
           steps.push({

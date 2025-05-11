@@ -108,8 +108,8 @@ describe('QueryExecutor', () => {
 
     expect(result).toBeDefined();
     expect(mockConnection.query).toHaveBeenCalledWith({
-      text: "SELECT * FROM ag_catalog.cypher('test-graph', $q$MATCH (n) RETURN n$q$, $p${\"param\":\"value\"}$p$) AS (result agtype)",
-      values: [],
+      text: "SELECT * FROM ag_catalog.cypher('test-graph', $q$MATCH (n) RETURN n$q$, $1) AS (result agtype)",
+      values: ["{\"param\":\"value\"}"],
       rowMode: 'object',
     });
   });

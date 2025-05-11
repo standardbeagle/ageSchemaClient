@@ -82,19 +82,24 @@ describe('SchemaMigrationExecutor', () => {
 
   beforeEach(() => {
     // Create mocks
-    mockQueryExecutor = {
-      executeSQL: vi.fn().mockResolvedValue({ rows: [] }),
-      beginTransaction: vi.fn().mockResolvedValue({
-        commit: vi.fn().mockResolvedValue({}),
-        rollback: vi.fn().mockResolvedValue({}),
-      }),
+    const mockTransaction = {
+      commit: vi.fn().mockResolvedValue({}),
+      rollback: vi.fn().mockResolvedValue({}),
     };
 
-    // Create SQL generator
-    sqlGenerator = new SQLGenerator(sourceSchema);
+    mockQueryExecutor = {
+      executeSQL: vi.fn().mockResolvedValue({ rows: [] }),
+      beginTransaction: vi.fn().mockResolvedValue(mockTransaction),
+    };
 
-    // Create migration executor
-    migrationExecutor = new SchemaMigrationExecutor(mockQueryExecutor, sqlGenerator);
+    // Create SQL generator with the target schema to handle new entities
+    sqlGenerator = new SQLGenerator(targetSchema);
+
+    // Create migration executor with default options
+    migrationExecutor = new SchemaMigrationExecutor(mockQueryExecutor, sqlGenerator, {
+      vertexTablePrefix: 'v_',
+      edgeTablePrefix: 'e_'
+    });
   });
 
   afterEach(() => {
@@ -201,7 +206,7 @@ describe('SchemaMigrationExecutor', () => {
         canCauseDataLoss: true,
       };
 
-      const result = await migrationExecutor.executeMigrationPlan(plan, { 
+      const result = await migrationExecutor.executeMigrationPlan(plan, {
         execute: true,
         allowDataLoss: false,
       });
@@ -230,7 +235,7 @@ describe('SchemaMigrationExecutor', () => {
       // Mock executeSQL to throw an error
       mockQueryExecutor.executeSQL.mockRejectedValueOnce(new Error('SQL syntax error'));
 
-      const result = await migrationExecutor.executeMigrationPlan(plan, { 
+      const result = await migrationExecutor.executeMigrationPlan(plan, {
         execute: true,
         createBackup: false, // Skip backup for this test
       });
@@ -239,7 +244,10 @@ describe('SchemaMigrationExecutor', () => {
       expect(result.error).toContain('SQL syntax error');
       expect(result.executedSteps).toBe(0);
       expect(mockQueryExecutor.beginTransaction).toHaveBeenCalledTimes(1);
-      expect(mockQueryExecutor.beginTransaction().rollback).toHaveBeenCalledTimes(1);
+
+      // Get the mock transaction that was returned by beginTransaction
+      const mockTransaction = await mockQueryExecutor.beginTransaction();
+      expect(mockTransaction.rollback).toHaveBeenCalledTimes(1);
     });
   });
 });
