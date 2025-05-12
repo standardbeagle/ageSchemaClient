@@ -10,7 +10,22 @@ export default defineConfig({
       formats: ['es', 'cjs'],
     },
     rollupOptions: {
-      external: [],
+      external: [
+        'pg',
+        'pg-pool',
+        'perf_hooks',
+        'events',
+        'net',
+        'dns',
+        'tls',
+        'path',
+        'fs',
+        'util',
+        'crypto',
+        'stream',
+        'string_decoder',
+        /^cloudflare:.*/
+      ],
       output: {
         exports: 'named',
         globals: {},

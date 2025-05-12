@@ -123,7 +123,7 @@ A comprehensive API reference is available in the [API Reference](./docs/api-ref
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/age-schema-client.git
+git clone https://github.com/beagle/age-schema-client.git
 cd age-schema-client
 
 # Install dependencies

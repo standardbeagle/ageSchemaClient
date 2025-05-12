@@ -14,12 +14,13 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "dist/**/*.d.ts"
   ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:publish": "tsc --noEmit false --emitDeclarationOnly && vite build",
+    "build:publish": "rm -rf dist && vite build && tsc --declaration --emitDeclarationOnly --outDir dist",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "cross-env TEST_TYPE=unit vitest run",
@@ -28,7 +29,7 @@
     "test:integration": "cross-env TEST_TYPE=integration vitest run",
     "test:integration:watch": "cross-env TEST_TYPE=integration vitest",
     "test:all": "pnpm test:unit && pnpm test:integration",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src",
     "format": "prettier --write \"src/**/*.ts\"",
     "prepublishOnly": "pnpm run build:publish"
   },
@@ -40,15 +41,15 @@
     "schema",
     "typescript"
   ],
-  "author": "Your Name <your.email@example.com>",
+  "author": "Beagle <beagle@example.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/age-schema-client.git"
+    "url": "https://github.com/beagle/age-schema-client.git"
   },
-  "homepage": "https://github.com/yourusername/age-schema-client#readme",
+  "homepage": "https://github.com/beagle/age-schema-client#readme",
   "bugs": {
-    "url": "https://github.com/yourusername/age-schema-client/issues"
+    "url": "https://github.com/beagle/age-schema-client/issues"
   },
   "packageManager": "pnpm@10.10.0",
   "engines": {
@@ -67,6 +68,7 @@
     "prettier": "^3.5.3",
     "terser": "^5.39.0",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.32.0",
     "vite": "^6.3.5",
     "vitest": "^3.1.3"
   },
