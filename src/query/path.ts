@@ -27,20 +27,20 @@ export class PathPart implements QueryPart {
    * Query part type
    */
   type = QueryPartType.MATCH;
-  
+
   /**
    * Path pattern
    */
   private pattern: string;
-  
+
   /**
    * Path alias
    */
   private alias: string;
-  
+
   /**
    * Create a new path part
-   * 
+   *
    * @param pattern - Path pattern
    * @param alias - Path alias
    */
@@ -48,14 +48,14 @@ export class PathPart implements QueryPart {
     this.pattern = pattern;
     this.alias = alias;
   }
-  
+
   /**
    * Convert to Cypher string
    */
   toCypher(): string {
     return `MATCH ${this.alias} = ${this.pattern}`;
   }
-  
+
   /**
    * Get parameters used in this query part
    */
@@ -66,13 +66,13 @@ export class PathPart implements QueryPart {
 
 /**
  * Path query builder class
- * 
+ *
  * Specialized query builder for path finding and traversal operations
  */
 export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T> {
   /**
    * Create a new path query builder
-   * 
+   *
    * @param schema - Schema definition
    * @param queryExecutor - Query executor
    * @param graphName - Graph name
@@ -84,10 +84,10 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
   ) {
     super(schema, queryExecutor, graphName);
   }
-  
+
   /**
    * Find the shortest path between two vertices
-   * 
+   *
    * @param startAlias - Start vertex alias
    * @param endAlias - End vertex alias
    * @param relationshipTypes - Relationship types to traverse
@@ -103,14 +103,14 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
     const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
     const depthConstraint = maxDepth !== undefined ? `*1..${maxDepth}` : '*';
     const pathPattern = `shortestPath((${startAlias})-[${relTypes}]${depthConstraint}->(${endAlias}))`;
-    
-    this.queryParts.push(new PathPart(pathPattern, 'p'));
+
+    (this as any).queryParts.push(new PathPart(pathPattern, 'p'));
     return this;
   }
-  
+
   /**
    * Find all paths between two vertices
-   * 
+   *
    * @param startAlias - Start vertex alias
    * @param endAlias - End vertex alias
    * @param relationshipTypes - Relationship types to traverse
@@ -126,14 +126,14 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
     const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
     const depthConstraint = maxDepth !== undefined ? `*1..${maxDepth}` : '*';
     const pathPattern = `allShortestPaths((${startAlias})-[${relTypes}]${depthConstraint}->(${endAlias}))`;
-    
-    this.queryParts.push(new PathPart(pathPattern, 'p'));
+
+    (this as any).queryParts.push(new PathPart(pathPattern, 'p'));
     return this;
   }
-  
+
   /**
    * Create a variable-length path query
-   * 
+   *
    * @param startAlias - Start vertex alias
    * @param relationshipAlias - Relationship alias
    * @param endAlias - End vertex alias
@@ -152,19 +152,19 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
   ): this {
     const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
     const depthConstraint = maxDepth !== undefined ? `*${minDepth}..${maxDepth}` : `*${minDepth}..`;
-    
+
     const pattern = `(${startAlias})-[${relationshipAlias}${relTypes}]${depthConstraint}->(${endAlias})`;
-    this.queryParts.push(new MatchPart([{
+    (this as any).queryParts.push(new MatchPart([{
       type: MatchPatternType.PATH,
       toCypher: () => pattern,
     }]));
-    
+
     return this;
   }
-  
+
   /**
    * Perform a breadth-first search
-   * 
+   *
    * @param startAlias - Start vertex alias
    * @param relationshipAlias - Relationship alias
    * @param endAlias - End vertex alias
@@ -180,27 +180,27 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
     maxDepth: number = 5
   ): this {
     // First match the start and end vertices
-    this.queryParts.push(new MatchPart([{
+    (this as any).queryParts.push(new MatchPart([{
       type: MatchPatternType.VERTEX,
-      alias: startAlias,
       label: '',
+      alias: startAlias,
       properties: {},
       toCypher: () => `(${startAlias})`
-    }]));
-    
+    } as VertexPattern]));
+
     // Then use APOC to perform BFS (this is a placeholder, actual implementation depends on available procedures)
     const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
     const cypher = `CALL apoc.path.expandBFS(${startAlias}, "${relTypes}", null, 1, ${maxDepth}) YIELD path`;
-    
+
     // Add WITH clause to pass the path to the next part of the query
     this.with('path');
-    
+
     return this;
   }
-  
+
   /**
    * Extract nodes from a path
-   * 
+   *
    * @param pathAlias - Path alias
    * @returns This path query builder
    */
@@ -208,10 +208,10 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
     this.return(`nodes(${pathAlias}) AS nodes`);
     return this;
   }
-  
+
   /**
    * Extract relationships from a path
-   * 
+   *
    * @param pathAlias - Path alias
    * @returns This path query builder
    */
@@ -219,10 +219,10 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
     this.return(`relationships(${pathAlias}) AS relationships`);
     return this;
   }
-  
+
   /**
    * Extract both nodes and relationships from a path
-   * 
+   *
    * @param pathAlias - Path alias
    * @returns This path query builder
    */

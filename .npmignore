@@ -1,0 +1,29 @@
+# Source files
+src/
+tests/
+examples/
+
+# Configuration files
+.github/
+.cursor/
+.roo/
+.eslintrc.cjs
+.prettierrc
+.gitignore
+.taskmasterconfig
+.windsurfrules
+.roomodes
+.env*
+tsconfig.json
+vite.config.ts
+
+# Development files
+*.test.ts
+*.integration.test.ts
+setup_*.sql
+test_*.sql
+tasks/
+
+# Build artifacts
+coverage/
+node_modules/

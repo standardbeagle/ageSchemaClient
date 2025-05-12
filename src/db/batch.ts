@@ -14,6 +14,9 @@ import { ValidationError } from '../core/errors';
 import { getTempTableName } from '../sql/utils';
 import { performance } from 'perf_hooks';
 
+// Import SQL extensions
+import '../sql/extensions';
+
 /**
  * Batch operation options
  */
@@ -293,20 +296,20 @@ export class BatchOperations<T extends SchemaDefinition> {
 
     try {
       // Create temporary table
-      const createTempTableSQL = this.sqlGenerator.generateCreateTempVertexTableSQL(
+      const createTempTableSQL = (this.sqlGenerator as any).generateCreateTempVertexTableSQL(
         label as string,
         tempTableName
       );
 
       // Generate COPY statement for bulk loading
-      const copySQL = this.sqlGenerator.generateCopyVertexSQL(
+      const copySQL = (this.sqlGenerator as any).generateCopyVertexSQL(
         label as string,
         tempTableName,
         Object.keys(this.schema.vertices[label as string].properties)
       );
 
       // Generate INSERT statement to move data from temp table to actual table
-      const insertFromTempSQL = this.sqlGenerator.generateInsertFromTempTableSQL(
+      const insertFromTempSQL = (this.sqlGenerator as any).generateInsertFromTempTableSQL(
         label as string,
         tempTableName
       );
@@ -444,20 +447,20 @@ export class BatchOperations<T extends SchemaDefinition> {
 
     try {
       // Create temporary table
-      const createTempTableSQL = this.sqlGenerator.generateCreateTempEdgeTableSQL(
+      const createTempTableSQL = (this.sqlGenerator as any).generateCreateTempEdgeTableSQL(
         label as string,
         tempTableName
       );
 
       // Generate COPY statement for bulk loading
-      const copySQL = this.sqlGenerator.generateCopyEdgeSQL(
+      const copySQL = (this.sqlGenerator as any).generateCopyEdgeSQL(
         label as string,
         tempTableName,
         Object.keys(this.schema.edges[label as string].properties)
       );
 
       // Generate INSERT statement to move data from temp table to actual table
-      const insertFromTempSQL = this.sqlGenerator.generateInsertFromTempTableSQL(
+      const insertFromTempSQL = (this.sqlGenerator as any).generateInsertFromTempTableSQL(
         label as string,
         tempTableName,
         true // isEdge

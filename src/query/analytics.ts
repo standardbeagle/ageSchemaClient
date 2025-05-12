@@ -12,7 +12,8 @@ import {
   QueryPart,
   IQueryBuilder,
   IMatchClause,
-  VertexPattern
+  VertexPattern,
+  MatchPatternType
 } from './types';
 import { ReturnPart, MatchPart } from './parts';
 import { MatchClause } from './clauses';
@@ -38,7 +39,8 @@ export class AnalyticsMatchClause<
     matchPart: MatchPart,
     vertexPattern: VertexPattern
   ) {
-    super(queryBuilder, matchPart, vertexPattern);
+    // Cast to IQueryBuilder to satisfy the type constraint
+    super(queryBuilder as unknown as IQueryBuilder<T>, matchPart, vertexPattern);
   }
 
   /**
@@ -51,7 +53,7 @@ export class AnalyticsMatchClause<
    */
   count(alias: string, resultAlias: string = 'count', distinct: boolean = false): AnalyticsQueryBuilder<T> {
     const distinctClause = distinct ? 'DISTINCT ' : '';
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.return(`count(${distinctClause}${alias}) AS ${resultAlias}`);
     return queryBuilder;
   }
@@ -64,7 +66,7 @@ export class AnalyticsMatchClause<
    * @returns The analytics query builder
    */
   sum(expression: string, resultAlias: string = 'sum'): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.return(`sum(${expression}) AS ${resultAlias}`);
     return queryBuilder;
   }
@@ -77,7 +79,7 @@ export class AnalyticsMatchClause<
    * @returns The analytics query builder
    */
   avg(expression: string, resultAlias: string = 'avg'): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.return(`avg(${expression}) AS ${resultAlias}`);
     return queryBuilder;
   }
@@ -90,7 +92,7 @@ export class AnalyticsMatchClause<
    * @returns The analytics query builder
    */
   min(expression: string, resultAlias: string = 'min'): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.return(`min(${expression}) AS ${resultAlias}`);
     return queryBuilder;
   }
@@ -103,7 +105,7 @@ export class AnalyticsMatchClause<
    * @returns The analytics query builder
    */
   max(expression: string, resultAlias: string = 'max'): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.return(`max(${expression}) AS ${resultAlias}`);
     return queryBuilder;
   }
@@ -117,7 +119,7 @@ export class AnalyticsMatchClause<
    * @returns The analytics query builder
    */
   aggregate(functionName: string, expression: string, resultAlias: string): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.return(`${functionName}(${expression}) AS ${resultAlias}`);
     return queryBuilder;
   }
@@ -130,8 +132,8 @@ export class AnalyticsMatchClause<
    * @returns A new analytics match clause
    */
   match<K extends keyof T['vertices']>(label: K, alias: string): AnalyticsMatchClause<T, K> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
-    return queryBuilder.match(label, alias);
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
+    return queryBuilder.match(label, alias) as unknown as AnalyticsMatchClause<T, K>;
   }
 
   /**
@@ -141,10 +143,16 @@ export class AnalyticsMatchClause<
    * @param params - Parameters
    * @returns This analytics match clause
    */
-  where(condition: string, params: Record<string, any> = {}): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
-    queryBuilder.where(condition, params);
-    return queryBuilder;
+  where(
+    property: keyof T['vertices'][L]['properties'],
+    operator: string,
+    value: any
+  ): this {
+    // Call the parent method to add the WHERE clause
+    super.where(property, operator, value);
+
+    // Return this for method chaining
+    return this;
   }
 
   /**
@@ -154,7 +162,7 @@ export class AnalyticsMatchClause<
    * @returns This analytics query builder
    */
   return(...expressions: string[]): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.return(...expressions);
     return queryBuilder;
   }
@@ -166,7 +174,7 @@ export class AnalyticsMatchClause<
    * @returns This analytics query builder
    */
   groupBy(...fields: string[]): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.groupBy(...fields);
     return queryBuilder;
   }
@@ -184,7 +192,7 @@ export class AnalyticsMatchClause<
     resultAlias: string,
     options: WindowFunctionOptions = {}
   ): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.windowFunction(functionType, resultAlias, options);
     return queryBuilder;
   }
@@ -197,7 +205,7 @@ export class AnalyticsMatchClause<
    * @returns This analytics query builder
    */
   rowNumber(resultAlias: string, options: WindowFunctionOptions = {}): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.rowNumber(resultAlias, options);
     return queryBuilder;
   }
@@ -210,7 +218,7 @@ export class AnalyticsMatchClause<
    * @returns This analytics query builder
    */
   rank(resultAlias: string, options: WindowFunctionOptions = {}): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.rank(resultAlias, options);
     return queryBuilder;
   }
@@ -223,7 +231,7 @@ export class AnalyticsMatchClause<
    * @returns This analytics query builder
    */
   denseRank(resultAlias: string, options: WindowFunctionOptions = {}): AnalyticsQueryBuilder<T> {
-    const queryBuilder = this.done() as AnalyticsQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
     queryBuilder.denseRank(resultAlias, options);
     return queryBuilder;
   }
@@ -306,13 +314,20 @@ export class AnalyticsQueryBuilder<T extends SchemaDefinition> extends QueryBuil
    * @param alias - Vertex alias
    * @returns Analytics match clause
    */
-  match<L extends keyof T['vertices']>(label: L, alias: string): AnalyticsMatchClause<T, L> {
-    // Call the parent match method to create the match part and add it to query parts
-    const matchClause = super.match(label, alias);
+  match<L extends keyof T['vertices']>(label: L, alias: string): IMatchClause<T, L> {
+    // Create a new match part and vertex pattern directly
+    const vertexPattern: VertexPattern = {
+      type: MatchPatternType.VERTEX,
+      label: label as string,
+      alias,
+      properties: {},
+      toCypher: () => `(${alias}:${String(label)})`
+    };
 
-    // Get the match part and vertex pattern from the match clause
-    const matchPart = (matchClause as any).matchPart as MatchPart;
-    const vertexPattern = (matchClause as any).vertexPattern as VertexPattern;
+    const matchPart = new MatchPart([vertexPattern]);
+
+    // Add the match part to query parts (accessing protected property)
+    (this as any).queryParts.push(matchPart);
 
     // Create and return a new analytics match clause
     return new AnalyticsMatchClause<T, L>(this, matchPart, vertexPattern);

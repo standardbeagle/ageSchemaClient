@@ -4,6 +4,9 @@
  * @packageDocumentation
  */
 
+// Initialize database module
+import './init';
+
 // Export database types
 export * from './types';
 

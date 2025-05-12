@@ -11,6 +11,9 @@ import { Transaction } from '../db/transaction';
 import { compareSchemas, SchemaChange, SchemaChangeType } from './migration';
 import { ValidationError } from '../core/errors';
 
+// Import SQL extensions
+import '../sql/extensions';
+
 /**
  * Migration step
  */
@@ -215,8 +218,8 @@ export class SchemaMigrationExecutor {
     }
 
     return {
-      sourceVersion: sourceSchema.version || 'unknown',
-      targetVersion: targetSchema.version || 'unknown',
+      sourceVersion: String(sourceSchema.version || 'unknown'),
+      targetVersion: String(targetSchema.version || 'unknown'),
       steps,
       canCauseDataLoss: dataLossChanges.length > 0,
     };
@@ -385,7 +388,7 @@ export class SchemaMigrationExecutor {
    */
   private createVertexMigrationSteps(
     change: SchemaChange,
-    sourceSchema: SchemaDefinition,
+    _sourceSchema: SchemaDefinition,
     targetSchema: SchemaDefinition
   ): MigrationStep[] {
     const steps: MigrationStep[] = [];
@@ -410,7 +413,7 @@ export class SchemaMigrationExecutor {
         });
       } else if (change.type === SchemaChangeType.REMOVED) {
         // Drop vertex table
-        const dropTableSQL = this.sqlGenerator.generateDropVertexTableSQL(vertexLabel, {
+        const dropTableSQL = (this.sqlGenerator as any).generateDropVertexTableSQL(vertexLabel, {
           tablePrefix: this.options.vertexTablePrefix
         });
 
@@ -427,7 +430,7 @@ export class SchemaMigrationExecutor {
 
       if (change.type === SchemaChangeType.ADDED) {
         // Add column
-        const addColumnSQL = this.sqlGenerator.generateAddColumnSQL(
+        const addColumnSQL = (this.sqlGenerator as any).generateAddColumnSQL(
           vertexLabel,
           propertyName,
           targetSchema.vertices[vertexLabel].properties[propertyName],
@@ -443,7 +446,7 @@ export class SchemaMigrationExecutor {
         });
       } else if (change.type === SchemaChangeType.REMOVED) {
         // Drop column
-        const dropColumnSQL = this.sqlGenerator.generateDropColumnSQL(
+        const dropColumnSQL = (this.sqlGenerator as any).generateDropColumnSQL(
           vertexLabel,
           propertyName,
           false, // isEdge
@@ -460,7 +463,7 @@ export class SchemaMigrationExecutor {
         // Modify column
         if (pathParts.length === 5 && pathParts[4] === 'type') {
           // Type change
-          const alterColumnTypeSQL = this.sqlGenerator.generateAlterColumnTypeSQL(
+          const alterColumnTypeSQL = (this.sqlGenerator as any).generateAlterColumnTypeSQL(
             vertexLabel,
             propertyName,
             targetSchema.vertices[vertexLabel].properties[propertyName],
@@ -485,7 +488,7 @@ export class SchemaMigrationExecutor {
       for (const prop of newRequired) {
         if (!oldRequired.includes(prop)) {
           // Add NOT NULL constraint
-          const setNotNullSQL = this.sqlGenerator.generateSetNotNullSQL(
+          const setNotNullSQL = (this.sqlGenerator as any).generateSetNotNullSQL(
             vertexLabel,
             prop,
             false, // isEdge
@@ -505,7 +508,7 @@ export class SchemaMigrationExecutor {
       for (const prop of oldRequired) {
         if (!newRequired.includes(prop)) {
           // Drop NOT NULL constraint
-          const dropNotNullSQL = this.sqlGenerator.generateDropNotNullSQL(
+          const dropNotNullSQL = (this.sqlGenerator as any).generateDropNotNullSQL(
             vertexLabel,
             prop,
             false, // isEdge
@@ -536,7 +539,7 @@ export class SchemaMigrationExecutor {
    */
   private createEdgeMigrationSteps(
     change: SchemaChange,
-    sourceSchema: SchemaDefinition,
+    _sourceSchema: SchemaDefinition,
     targetSchema: SchemaDefinition
   ): MigrationStep[] {
     const steps: MigrationStep[] = [];
@@ -559,7 +562,7 @@ export class SchemaMigrationExecutor {
         });
       } else if (change.type === SchemaChangeType.REMOVED) {
         // Drop edge table
-        const dropTableSQL = this.sqlGenerator.generateDropEdgeTableSQL(edgeLabel);
+        const dropTableSQL = (this.sqlGenerator as any).generateDropEdgeTableSQL(edgeLabel);
 
         steps.push({
           description: `Drop edge table for label '${edgeLabel}'`,
@@ -574,7 +577,7 @@ export class SchemaMigrationExecutor {
 
       if (change.type === SchemaChangeType.ADDED) {
         // Add column
-        const addColumnSQL = this.sqlGenerator.generateAddColumnSQL(
+        const addColumnSQL = (this.sqlGenerator as any).generateAddColumnSQL(
           edgeLabel,
           propertyName,
           targetSchema.edges[edgeLabel].properties[propertyName],
@@ -589,7 +592,7 @@ export class SchemaMigrationExecutor {
         });
       } else if (change.type === SchemaChangeType.REMOVED) {
         // Drop column
-        const dropColumnSQL = this.sqlGenerator.generateDropColumnSQL(
+        const dropColumnSQL = (this.sqlGenerator as any).generateDropColumnSQL(
           edgeLabel,
           propertyName,
           true // isEdge
@@ -605,7 +608,7 @@ export class SchemaMigrationExecutor {
         // Modify column
         if (pathParts.length === 5 && pathParts[4] === 'type') {
           // Type change
-          const alterColumnTypeSQL = this.sqlGenerator.generateAlterColumnTypeSQL(
+          const alterColumnTypeSQL = (this.sqlGenerator as any).generateAlterColumnTypeSQL(
             edgeLabel,
             propertyName,
             targetSchema.edges[edgeLabel].properties[propertyName],
@@ -629,7 +632,7 @@ export class SchemaMigrationExecutor {
       for (const prop of newRequired) {
         if (!oldRequired.includes(prop)) {
           // Add NOT NULL constraint
-          const setNotNullSQL = this.sqlGenerator.generateSetNotNullSQL(
+          const setNotNullSQL = (this.sqlGenerator as any).generateSetNotNullSQL(
             edgeLabel,
             prop,
             true, // isEdge
@@ -649,7 +652,7 @@ export class SchemaMigrationExecutor {
       for (const prop of oldRequired) {
         if (!newRequired.includes(prop)) {
           // Drop NOT NULL constraint
-          const dropNotNullSQL = this.sqlGenerator.generateDropNotNullSQL(
+          const dropNotNullSQL = (this.sqlGenerator as any).generateDropNotNullSQL(
             edgeLabel,
             prop,
             true, // isEdge

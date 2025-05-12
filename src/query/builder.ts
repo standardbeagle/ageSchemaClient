@@ -16,6 +16,7 @@ import {
   QueryBuilderResult,
   MatchPatternType,
   VertexPattern,
+  EdgePattern,
 } from './types';
 import {
   MatchPart,
@@ -77,7 +78,7 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
       alias,
       properties: {},
       toCypher: () => {
-        const labelStr = label ? `:${label}` : '';
+        const labelStr = label ? `:${String(label)}` : '';
         return `(${alias}${labelStr})`;
       }
     };

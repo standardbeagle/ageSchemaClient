@@ -1008,7 +1008,14 @@ RETURNING *`;
 
             default:
               conditions.push(`${columnName} ${operator} $${paramIndex}`);
-              params.push(value);
+              if (Array.isArray(value)) {
+                // Handle array parameters
+                for (const item of value) {
+                  params.push(item);
+                }
+              } else {
+                params.push(value);
+              }
               paramIndex++;
               break;
           }

@@ -4,6 +4,9 @@
  * @packageDocumentation
  */
 
+// Initialize SQL module
+import './init';
+
 // Export SQL types
 export * from './types';
 

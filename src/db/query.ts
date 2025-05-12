@@ -108,6 +108,11 @@ export interface QueryOptions {
    * Query name (for prepared statements)
    */
   name?: string;
+
+  /**
+   * Transaction object
+   */
+  transaction?: any;
 }
 
 /**

@@ -18,6 +18,7 @@ import {
   SchemaParseError,
   SchemaValidationError,
   SchemaVersionError,
+  ValidationErrorCollection,
 } from './errors';
 import { ErrorCollector } from './error-collector';
 import {

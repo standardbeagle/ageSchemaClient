@@ -32,11 +32,11 @@ export function extendSQLGeneratorWithBatchOperations(SQLGenerator: any): void {
     }
 
     const { primaryKeyColumn, includeMetadata } = {
-      ...{
+      ...(({
         tablePrefix: 'v_',
         includeMetadata: true,
         primaryKeyColumn: 'id',
-      },
+      } as SQLVertexTableOptions)),
       ...options,
     };
 
@@ -47,7 +47,8 @@ export function extendSQLGeneratorWithBatchOperations(SQLGenerator: any): void {
 
     // Add property columns
     for (const [propName, propDef] of Object.entries(vertexDef.properties)) {
-      const dataType = getPostgresDataType(propDef.type as PropertyType);
+      const propType = (propDef as any).type;
+      const dataType = getPostgresDataType(propType as PropertyType);
       const nullability = this.isPropertyRequired(vertexDef, propName) ? 'NOT NULL' : 'NULL';
       columnDefs.push(`${quoteIdentifier(propName)} ${dataType} ${nullability}`);
     }
@@ -84,13 +85,13 @@ export function extendSQLGeneratorWithBatchOperations(SQLGenerator: any): void {
     }
 
     const { primaryKeyColumn, sourceIdColumn, targetIdColumn, includeMetadata } = {
-      ...{
+      ...(({
         tablePrefix: 'e_',
         includeMetadata: true,
         primaryKeyColumn: 'id',
         sourceIdColumn: 'source_id',
         targetIdColumn: 'target_id',
-      },
+      } as SQLEdgeTableOptions)),
       ...options,
     };
 
@@ -103,7 +104,8 @@ export function extendSQLGeneratorWithBatchOperations(SQLGenerator: any): void {
 
     // Add property columns
     for (const [propName, propDef] of Object.entries(edgeDef.properties)) {
-      const dataType = getPostgresDataType(propDef.type as PropertyType);
+      const propType = (propDef as any).type;
+      const dataType = getPostgresDataType(propType as PropertyType);
       const nullability = this.isPropertyRequired(edgeDef, propName) ? 'NOT NULL' : 'NULL';
       columnDefs.push(`${quoteIdentifier(propName)} ${dataType} ${nullability}`);
     }
@@ -142,11 +144,11 @@ export function extendSQLGeneratorWithBatchOperations(SQLGenerator: any): void {
     }
 
     const { primaryKeyColumn } = {
-      ...{
+      ...(({
         tablePrefix: 'v_',
         includeMetadata: true,
         primaryKeyColumn: 'id',
-      },
+      } as SQLVertexTableOptions)),
       ...options,
     };
 
@@ -180,13 +182,13 @@ FROM STDIN WITH (FORMAT TEXT, DELIMITER E'\\t', NULL '\\N')`;
     }
 
     const { primaryKeyColumn, sourceIdColumn, targetIdColumn } = {
-      ...{
+      ...(({
         tablePrefix: 'e_',
         includeMetadata: true,
         primaryKeyColumn: 'id',
         sourceIdColumn: 'source_id',
         targetIdColumn: 'target_id',
-      },
+      } as SQLEdgeTableOptions)),
       ...options,
     };
 
@@ -233,7 +235,7 @@ FROM STDIN WITH (FORMAT TEXT, DELIMITER E'\\t', NULL '\\N')`;
       : getVertexTableName(label, mergedOptions.tablePrefix);
 
     // Get all columns from the temporary table
-    const columnsSQL = `SELECT column_name FROM information_schema.columns 
+    const columnsSQL = `SELECT column_name FROM information_schema.columns
 WHERE table_name = '${tempTableName.replace(/"/g, '')}'
 ORDER BY ordinal_position`;
 

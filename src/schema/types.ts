@@ -1,6 +1,6 @@
 /**
  * Type definitions for schema components
- * 
+ *
  * @packageDocumentation
  */
 
@@ -12,22 +12,22 @@ export interface SchemaVersion {
    * Major version number (incremented for breaking changes)
    */
   major: number;
-  
+
   /**
    * Minor version number (incremented for backwards-compatible feature additions)
    */
   minor: number;
-  
+
   /**
    * Patch version number (incremented for backwards-compatible bug fixes)
    */
   patch: number;
-  
+
   /**
    * Pre-release identifier (e.g., 'alpha', 'beta')
    */
   prerelease?: string;
-  
+
   /**
    * Build metadata
    */
@@ -42,22 +42,22 @@ export interface SchemaMetadata {
    * Schema author
    */
   author?: string;
-  
+
   /**
    * Schema description
    */
   description?: string;
-  
+
   /**
    * Creation timestamp
    */
   created?: string;
-  
+
   /**
    * Last updated timestamp
    */
   updated?: string;
-  
+
   /**
    * Additional custom metadata
    */
@@ -71,6 +71,7 @@ export enum PropertyType {
   STRING = 'string',
   NUMBER = 'number',
   INTEGER = 'integer',
+  FLOAT = 'float',
   BOOLEAN = 'boolean',
   DATE = 'date',
   DATETIME = 'datetime',
@@ -87,22 +88,22 @@ export interface StringConstraints {
    * Minimum string length
    */
   minLength?: number;
-  
+
   /**
    * Maximum string length
    */
   maxLength?: number;
-  
+
   /**
    * Regular expression pattern
    */
   pattern?: string;
-  
+
   /**
    * Enumerated allowed values
    */
   enum?: string[];
-  
+
   /**
    * Format validation (e.g., 'email', 'uri')
    */
@@ -117,27 +118,27 @@ export interface NumberConstraints {
    * Minimum value
    */
   minimum?: number;
-  
+
   /**
    * Maximum value
    */
   maximum?: number;
-  
+
   /**
    * Whether the minimum value is exclusive
    */
   exclusiveMinimum?: boolean;
-  
+
   /**
    * Whether the maximum value is exclusive
    */
   exclusiveMaximum?: boolean;
-  
+
   /**
    * Multiple of value
    */
   multipleOf?: number;
-  
+
   /**
    * Enumerated allowed values
    */
@@ -152,17 +153,17 @@ export interface ArrayConstraints {
    * Minimum array length
    */
   minItems?: number;
-  
+
   /**
    * Maximum array length
    */
   maxItems?: number;
-  
+
   /**
    * Whether array items must be unique
    */
   uniqueItems?: boolean;
-  
+
   /**
    * Item type definition
    */
@@ -177,12 +178,12 @@ export interface ObjectConstraints {
    * Required properties
    */
   required?: string[];
-  
+
   /**
    * Property definitions
    */
   properties?: Record<string, PropertyDefinition>;
-  
+
   /**
    * Additional properties schema
    */
@@ -197,47 +198,47 @@ export interface PropertyDefinition {
    * Property data type
    */
   type: PropertyType | PropertyType[];
-  
+
   /**
    * Property description
    */
   description?: string;
-  
+
   /**
    * Default value
    */
   default?: unknown;
-  
+
   /**
    * Whether the property can be null
    */
   nullable?: boolean;
-  
+
   /**
    * String constraints (for string properties)
    */
   stringConstraints?: StringConstraints;
-  
+
   /**
    * Number constraints (for number properties)
    */
   numberConstraints?: NumberConstraints;
-  
+
   /**
    * Array constraints (for array properties)
    */
   arrayConstraints?: ArrayConstraints;
-  
+
   /**
    * Object constraints (for object properties)
    */
   objectConstraints?: ObjectConstraints;
-  
+
   /**
    * Custom validation function name
    */
   customValidator?: string;
-  
+
   /**
    * Additional metadata
    */
@@ -271,7 +272,7 @@ export interface VertexConnectionConstraint {
    * Vertex label
    */
   label: string;
-  
+
   /**
    * Optional property constraints
    */
@@ -286,17 +287,17 @@ export interface VertexLabel {
    * Vertex properties
    */
   properties: Record<string, PropertyDefinition>;
-  
+
   /**
    * Required properties
    */
   required?: string[];
-  
+
   /**
    * Vertex description
    */
   description?: string;
-  
+
   /**
    * Additional metadata
    */
@@ -311,37 +312,37 @@ export interface EdgeLabel {
    * Edge properties
    */
   properties: Record<string, PropertyDefinition>;
-  
+
   /**
    * Required properties
    */
   required?: string[];
-  
+
   /**
    * Source vertex constraint
    */
   fromVertex: VertexConnectionConstraint | string;
-  
+
   /**
    * Target vertex constraint
    */
   toVertex: VertexConnectionConstraint | string;
-  
+
   /**
    * Edge multiplicity
    */
   multiplicity?: EdgeMultiplicity;
-  
+
   /**
    * Edge direction
    */
   direction?: EdgeDirection;
-  
+
   /**
    * Edge description
    */
   description?: string;
-  
+
   /**
    * Additional metadata
    */
@@ -356,17 +357,17 @@ export interface SchemaDefinition {
    * Schema version
    */
   version: string | SchemaVersion;
-  
+
   /**
    * Vertex label definitions
    */
   vertices: Record<string, VertexLabel>;
-  
+
   /**
    * Edge label definitions
    */
   edges: Record<string, EdgeLabel>;
-  
+
   /**
    * Schema metadata
    */

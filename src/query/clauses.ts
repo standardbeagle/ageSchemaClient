@@ -24,7 +24,7 @@ export class MatchClause<
 > implements IMatchClause<T, L> {
   /**
    * Create a new match clause
-   * 
+   *
    * @param queryBuilder - Query builder
    * @param matchPart - Match part
    * @param vertexPattern - Vertex pattern
@@ -34,10 +34,10 @@ export class MatchClause<
     private matchPart: MatchPart,
     private vertexPattern: VertexPattern
   ) {}
-  
+
   /**
    * Add property constraint
-   * 
+   *
    * @param property - Property name
    * @param operator - Operator
    * @param value - Value
@@ -48,15 +48,15 @@ export class MatchClause<
     if (!this.vertexPattern.properties) {
       this.vertexPattern.properties = {};
     }
-    
+
     this.vertexPattern.properties[property as string] = value;
-    
+
     return this;
   }
-  
+
   /**
    * Add outgoing edge
-   * 
+   *
    * @param label - Edge label
    * @param alias - Edge alias
    * @param targetLabel - Target vertex label
@@ -76,11 +76,11 @@ export class MatchClause<
       alias: targetAlias,
       properties: {},
       toCypher: () => {
-        const labelStr = targetLabel ? `:${targetLabel}` : '';
+        const labelStr = targetLabel ? `:${String(targetLabel)}` : '';
         return `(${targetAlias}${labelStr})`;
       }
     };
-    
+
     // Create edge pattern
     const edgePattern: EdgePattern = {
       type: MatchPatternType.EDGE,
@@ -93,20 +93,20 @@ export class MatchClause<
       toCypher: () => {
         const sourceStr = this.vertexPattern.toCypher();
         const targetStr = targetVertex.toCypher();
-        const labelStr = label ? `:${label}` : '';
+        const labelStr = label ? `:${String(label)}` : '';
         return `${sourceStr}-[${alias}${labelStr}]->${targetStr}`;
       }
     };
-    
+
     // Add pattern to match part
     this.matchPart.addPattern(edgePattern);
-    
+
     return this;
   }
-  
+
   /**
    * Add incoming edge
-   * 
+   *
    * @param label - Edge label
    * @param alias - Edge alias
    * @param sourceLabel - Source vertex label
@@ -126,11 +126,11 @@ export class MatchClause<
       alias: sourceAlias,
       properties: {},
       toCypher: () => {
-        const labelStr = sourceLabel ? `:${sourceLabel}` : '';
+        const labelStr = sourceLabel ? `:${String(sourceLabel)}` : '';
         return `(${sourceAlias}${labelStr})`;
       }
     };
-    
+
     // Create edge pattern
     const edgePattern: EdgePattern = {
       type: MatchPatternType.EDGE,
@@ -143,20 +143,20 @@ export class MatchClause<
       toCypher: () => {
         const sourceStr = sourceVertex.toCypher();
         const targetStr = this.vertexPattern.toCypher();
-        const labelStr = label ? `:${label}` : '';
+        const labelStr = label ? `:${String(label)}` : '';
         return `${sourceStr}-[${alias}${labelStr}]->${targetStr}`;
       }
     };
-    
+
     // Add pattern to match part
     this.matchPart.addPattern(edgePattern);
-    
+
     return this;
   }
-  
+
   /**
    * Add bidirectional edge
-   * 
+   *
    * @param label - Edge label
    * @param alias - Edge alias
    * @param otherLabel - Other vertex label
@@ -176,11 +176,11 @@ export class MatchClause<
       alias: otherAlias,
       properties: {},
       toCypher: () => {
-        const labelStr = otherLabel ? `:${otherLabel}` : '';
+        const labelStr = otherLabel ? `:${String(otherLabel)}` : '';
         return `(${otherAlias}${labelStr})`;
       }
     };
-    
+
     // Create edge pattern
     const edgePattern: EdgePattern = {
       type: MatchPatternType.EDGE,
@@ -193,20 +193,20 @@ export class MatchClause<
       toCypher: () => {
         const thisStr = this.vertexPattern.toCypher();
         const otherStr = otherVertex.toCypher();
-        const labelStr = label ? `:${label}` : '';
+        const labelStr = label ? `:${String(label)}` : '';
         return `${thisStr}-[${alias}${labelStr}]-${otherStr}`;
       }
     };
-    
+
     // Add pattern to match part
     this.matchPart.addPattern(edgePattern);
-    
+
     return this;
   }
-  
+
   /**
    * Return to the main query builder
-   * 
+   *
    * @returns Query builder
    */
   done(): IQueryBuilder<T> {
@@ -220,7 +220,7 @@ export class MatchClause<
 export class ReturnClause<T extends SchemaDefinition> implements IReturnClause<T> {
   /**
    * Create a new return clause
-   * 
+   *
    * @param queryBuilder - Query builder
    * @param returnPart - Return part
    */
@@ -228,10 +228,10 @@ export class ReturnClause<T extends SchemaDefinition> implements IReturnClause<T
     private queryBuilder: IQueryBuilder<T>,
     private returnPart: ReturnPart
   ) {}
-  
+
   /**
    * Add GROUP BY clause
-   * 
+   *
    * @param expressions - Group by expressions
    * @returns Query builder
    */
@@ -239,10 +239,10 @@ export class ReturnClause<T extends SchemaDefinition> implements IReturnClause<T
     this.returnPart.addGroupBy(expressions);
     return this.queryBuilder;
   }
-  
+
   /**
    * Return to the main query builder
-   * 
+   *
    * @returns Query builder
    */
   done(): IQueryBuilder<T> {

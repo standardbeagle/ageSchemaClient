@@ -7,7 +7,8 @@
 import { SchemaDefinition } from '../schema/types';
 import { QueryExecutor } from '../db/query';
 import { AnalyticsQueryBuilder, AnalyticsMatchClause } from './analytics';
-import { OrderDirection } from './types';
+import { OrderDirection, VertexPattern } from './types';
+import { MatchPart } from './parts';
 
 /**
  * Algorithm type
@@ -156,7 +157,7 @@ export class AlgorithmMatchClause<
     resultAlias: string = 'path',
     options: PathFindingOptions = {}
   ): AlgorithmQueryBuilder<T> {
-    const queryBuilder = this.done() as AlgorithmQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
     queryBuilder.shortestPath(startAlias, endAlias, resultAlias, options);
     return queryBuilder;
   }
@@ -176,7 +177,7 @@ export class AlgorithmMatchClause<
     resultAlias: string = 'paths',
     options: PathFindingOptions = {}
   ): AlgorithmQueryBuilder<T> {
-    const queryBuilder = this.done() as AlgorithmQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
     queryBuilder.allShortestPaths(startAlias, endAlias, resultAlias, options);
     return queryBuilder;
   }
@@ -198,7 +199,7 @@ export class AlgorithmMatchClause<
     resultAlias: string = 'path',
     options: PathFindingOptions = {}
   ): AlgorithmQueryBuilder<T> {
-    const queryBuilder = this.done() as AlgorithmQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
     queryBuilder.dijkstra(startAlias, endAlias, costProperty, resultAlias, options);
     return queryBuilder;
   }
@@ -216,7 +217,7 @@ export class AlgorithmMatchClause<
     resultAlias: string = 'centrality',
     options: CentralityOptions = {}
   ): AlgorithmQueryBuilder<T> {
-    const queryBuilder = this.done() as AlgorithmQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
     queryBuilder.betweennessCentrality(vertexAlias, resultAlias, options);
     return queryBuilder;
   }
@@ -236,7 +237,7 @@ export class AlgorithmMatchClause<
     dampingFactor: number = 0.85,
     iterations: number = 20
   ): AlgorithmQueryBuilder<T> {
-    const queryBuilder = this.done() as AlgorithmQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
     queryBuilder.pageRank(vertexAlias, resultAlias, dampingFactor, iterations);
     return queryBuilder;
   }
@@ -254,7 +255,7 @@ export class AlgorithmMatchClause<
     resultAlias: string = 'community',
     options: CommunityDetectionOptions = {}
   ): AlgorithmQueryBuilder<T> {
-    const queryBuilder = this.done() as AlgorithmQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
     queryBuilder.louvain(vertexAlias, resultAlias, options);
     return queryBuilder;
   }
@@ -270,7 +271,7 @@ export class AlgorithmMatchClause<
     pathAlias: string = 'path',
     resultAlias: string = 'nodes'
   ): AlgorithmQueryBuilder<T> {
-    const queryBuilder = this.done() as AlgorithmQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
     queryBuilder.extractNodes(pathAlias, resultAlias);
     return queryBuilder;
   }
@@ -286,7 +287,7 @@ export class AlgorithmMatchClause<
     pathAlias: string = 'path',
     resultAlias: string = 'relationships'
   ): AlgorithmQueryBuilder<T> {
-    const queryBuilder = this.done() as AlgorithmQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
     queryBuilder.extractRelationships(pathAlias, resultAlias);
     return queryBuilder;
   }
@@ -302,7 +303,7 @@ export class AlgorithmMatchClause<
     pathAlias: string = 'path',
     resultAlias: string = 'length'
   ): AlgorithmQueryBuilder<T> {
-    const queryBuilder = this.done() as AlgorithmQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
     queryBuilder.pathLength(pathAlias, resultAlias);
     return queryBuilder;
   }
@@ -315,7 +316,7 @@ export class AlgorithmMatchClause<
    * @returns A new algorithm match clause
    */
   match<K extends keyof T['vertices']>(label: K, alias: string): AlgorithmMatchClause<T, K> {
-    const queryBuilder = this.done() as AlgorithmQueryBuilder<T>;
+    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
     return queryBuilder.match(label, alias);
   }
 }

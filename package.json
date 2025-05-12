@@ -19,6 +19,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:publish": "tsc --noEmit false --emitDeclarationOnly && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "cross-env TEST_TYPE=unit vitest run",
@@ -29,7 +30,7 @@
     "test:all": "pnpm test:unit && pnpm test:integration",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run build:publish"
   },
   "keywords": [
     "apache",
@@ -39,8 +40,16 @@
     "schema",
     "typescript"
   ],
-  "author": "",
+  "author": "Your Name <your.email@example.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/age-schema-client.git"
+  },
+  "homepage": "https://github.com/yourusername/age-schema-client#readme",
+  "bugs": {
+    "url": "https://github.com/yourusername/age-schema-client/issues"
+  },
   "packageManager": "pnpm@10.10.0",
   "engines": {
     "node": ">=16.0.0"
