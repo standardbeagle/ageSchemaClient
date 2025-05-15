@@ -25,6 +25,13 @@ const connectionManager = new PgConnectionManager({
     maxAttempts: 3,
     delay: 1000,
   },
+  // PostgreSQL-specific options
+  pgOptions: {
+    // Ensure ag_catalog is in the search path for Apache AGE
+    searchPath: 'ag_catalog, "$user", public',
+    applicationName: 'ageSchemaClient-example',
+    statementTimeout: 30000, // 30 seconds
+  },
 });
 
 // Example usage

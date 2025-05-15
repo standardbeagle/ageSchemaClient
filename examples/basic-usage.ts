@@ -12,6 +12,12 @@ const client = new AgeSchemaClient({
     database: 'my_database',
     user: 'postgres',
     password: 'postgres',
+    // PostgreSQL-specific options
+    pgOptions: {
+      // Ensure ag_catalog is in the search path for Apache AGE
+      searchPath: 'ag_catalog, "$user", public',
+      applicationName: 'ageSchemaClient-basic',
+    },
   },
   schema: {
     // This will be a schema object or path in the future

@@ -5,4 +5,4 @@ SET search_path = ag_catalog, "$user", public;
 SELECT * FROM ag_catalog.cypher('test_graph', $$
   MATCH (n:Person)
   RETURN n
-$$) as (v agtype);
+$$) as (v  ag_catalog.agtype);

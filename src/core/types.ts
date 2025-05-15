@@ -1,6 +1,6 @@
 /**
  * Core type definitions for the ageSchemaClient library
- * 
+ *
  * @packageDocumentation
  */
 
@@ -12,12 +12,12 @@ export interface ClientConfig {
    * Database connection configuration
    */
   connection: ConnectionConfig;
-  
+
   /**
    * Schema configuration
    */
   schema?: SchemaConfig;
-  
+
   /**
    * Query configuration
    */
@@ -32,31 +32,62 @@ export interface ConnectionConfig {
    * Database host
    */
   host: string;
-  
+
   /**
    * Database port
    */
   port: number;
-  
+
   /**
    * Database name
    */
   database: string;
-  
+
   /**
    * Database user
    */
   user: string;
-  
+
   /**
    * Database password
    */
   password: string;
-  
+
   /**
    * SSL configuration
    */
   ssl?: boolean | SSLConfig;
+
+  /**
+   * PostgreSQL-specific connection options
+   */
+  pgOptions?: {
+    /**
+     * Search path for PostgreSQL schemas
+     * @default "ag_catalog, public"
+     */
+    searchPath?: string;
+
+    /**
+     * Application name
+     */
+    applicationName?: string;
+
+    /**
+     * Statement timeout in milliseconds
+     */
+    statementTimeout?: number;
+
+    /**
+     * Query timeout in milliseconds
+     */
+    queryTimeout?: number;
+
+    /**
+     * Idle in transaction session timeout in milliseconds
+     */
+    idleInTransactionSessionTimeout?: number;
+  };
 }
 
 /**
@@ -67,17 +98,17 @@ export interface SSLConfig {
    * Require SSL
    */
   rejectUnauthorized?: boolean;
-  
+
   /**
    * CA certificate
    */
   ca?: string;
-  
+
   /**
    * Client certificate
    */
   cert?: string;
-  
+
   /**
    * Client key
    */
@@ -92,12 +123,12 @@ export interface SchemaConfig {
    * Path to schema file
    */
   path?: string;
-  
+
   /**
    * Schema object
    */
   schema?: unknown;
-  
+
   /**
    * Validation options
    */
@@ -112,7 +143,7 @@ export interface ValidationOptions {
    * Strict mode
    */
   strict?: boolean;
-  
+
   /**
    * Ignore unknown properties
    */
@@ -127,12 +158,12 @@ export interface QueryConfig {
    * Query timeout in milliseconds
    */
   timeout?: number;
-  
+
   /**
    * Maximum number of retries
    */
   maxRetries?: number;
-  
+
   /**
    * Retry delay in milliseconds
    */

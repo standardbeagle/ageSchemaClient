@@ -126,6 +126,37 @@ export interface DriverOptions {
 }
 
 /**
+ * PostgreSQL connection options
+ */
+export interface PgConnectionOptions {
+  /**
+   * Search path for PostgreSQL schemas
+   * @default "ag_catalog, public"
+   */
+  searchPath?: string;
+
+  /**
+   * Application name
+   */
+  applicationName?: string;
+
+  /**
+   * Statement timeout in milliseconds
+   */
+  statementTimeout?: number;
+
+  /**
+   * Query timeout in milliseconds
+   */
+  queryTimeout?: number;
+
+  /**
+   * Idle in transaction session timeout in milliseconds
+   */
+  idleInTransactionSessionTimeout?: number;
+}
+
+/**
  * Extended connection configuration
  */
 export interface ConnectionConfig extends PgConnectionConfig {
@@ -143,6 +174,11 @@ export interface ConnectionConfig extends PgConnectionConfig {
    * Driver-specific options
    */
   driver?: DriverOptions;
+
+  /**
+   * PostgreSQL-specific connection options
+   */
+  pgOptions?: PgConnectionOptions;
 }
 
 /**

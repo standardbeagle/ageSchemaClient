@@ -1,0 +1,6 @@
+age_version is not an age functions and should not be used. If you need to check for age availability, use the following query instead:
+
+SELECT COUNT(*) > 0 as age_available
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'ag_catalog' AND p.proname = 'create_graph'

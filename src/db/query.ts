@@ -329,8 +329,7 @@ export class QueryExecutor {
             setTimeout(resolve, mergedOptions.retryDelay)
           );
         } else {
-          // No more retries or non-retryable error
-          break;
+          throw error;
         }
       }
     }
@@ -361,10 +360,19 @@ export class QueryExecutor {
     // Convert parameters to JSON string
     const paramsJson = params ? JSON.stringify(params) : '{}';
 
+    // Ensure search_path includes ag_catalog before executing Cypher query
+    try {
+      await this.executeSQL('SET search_path TO ag_catalog, "$user", public');
+    } catch (error) {
+      console.error('Failed to set search_path:', error);
+      // Continue execution even if setting search_path fails
+      // The connection string might already include the search_path
+    }
+
     // Use dollar-quoted strings to avoid escaping issues
     // Apache AGE requires dollar-quoted strings for Cypher queries
     // The third parameter must be a SQL parameter ($1) not a dollar-quoted string
-    const sql = `SELECT * FROM ag_catalog.cypher('${graphName}', $q$${cypher}$q$, $1) AS (result agtype)`;
+    const sql = `SELECT * FROM ag_catalog.cypher('${graphName}', $q$${cypher}$q$, $1) AS (result  ag_catalog.agtype)`;
 
     return this.executeSQL<T>(sql, [paramsJson], options);
   }
@@ -411,10 +419,10 @@ export class QueryExecutor {
         // Execute the COPY statement
         const result = await (timeoutPromise
           ? Promise.race([
-              this.executeCopyOperation(client, sql, data, options.transaction),
+              this.executeCopyOperation(client, sql, data),
               timeoutPromise,
             ])
-          : this.executeCopyOperation(client, sql, data, options.transaction));
+          : this.executeCopyOperation(client, sql, data));
 
         // Clear timeout if set
         if (timeoutId) {
@@ -466,15 +474,13 @@ export class QueryExecutor {
    * @param client - Database client
    * @param sql - COPY SQL statement
    * @param data - Data to load
-   * @param transaction - Transaction object
    * @returns Query result
    * @private
    */
   private async executeCopyOperation(
     client: any,
     sql: string,
-    data: string,
-    transaction?: any
+    data: string
   ): Promise<QueryResult> {
     return new Promise((resolve, reject) => {
       // Execute the COPY statement
@@ -508,7 +514,7 @@ export class QueryExecutor {
    * @returns Transaction object
    */
   async beginTransaction(): Promise<any> {
-    const result = await this.executeSQL('BEGIN');
+    await this.executeSQL('BEGIN');
     return {
       commit: async () => {
         return this.executeSQL('COMMIT');

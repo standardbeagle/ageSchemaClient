@@ -55,7 +55,12 @@ describe('QueryExecutor Integration', () => {
   it('should execute a Cypher query', async () => {
     try {
       // Check if AGE is available by running a simple Cypher query
-      await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.age_version()`);
+      await queryExecutor.executeSQL(`
+        SELECT COUNT(*) > 0 as age_available
+        FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        WHERE n.nspname = 'ag_catalog' AND p.proname = 'create_graph'
+      `);
 
       // Create a test vertex
       const createResult = await queryExecutor.executeCypher(

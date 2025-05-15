@@ -196,6 +196,19 @@ export class PgConnectionManager implements ConnectionManager {
       config.driver.type = DriverType.PG;
     }
 
+    // Initialize pgOptions if not provided
+    if (!config.pgOptions) {
+      config.pgOptions = {};
+    }
+
+    // Ensure ag_catalog is in the search_path
+    if (!config.pgOptions.searchPath) {
+      config.pgOptions.searchPath = 'ag_catalog, "$user", public';
+    } else if (!config.pgOptions.searchPath.includes('ag_catalog')) {
+      // Add ag_catalog to the beginning of the search path if it's not already there
+      config.pgOptions.searchPath = `ag_catalog, ${config.pgOptions.searchPath}`;
+    }
+
     return config;
   }
 
@@ -206,7 +219,8 @@ export class PgConnectionManager implements ConnectionManager {
    * @returns Connection pool
    */
   private createPool(config: ConnectionConfig): Pool {
-    const poolConfig = {
+    // Create connection parameters
+    const poolConfig: any = {
       host: config.host,
       port: config.port,
       database: config.database,
@@ -218,6 +232,21 @@ export class PgConnectionManager implements ConnectionManager {
       connectionTimeoutMillis: config.pool?.connectionTimeoutMillis,
       allowExitOnIdle: config.pool?.allowExitOnIdle,
     };
+
+    // Add search_path to connection parameters
+    if (config.pgOptions?.searchPath) {
+      // Add search_path directly to the connection string parameters
+      if (!poolConfig.connectionString) {
+        poolConfig.connectionString = '';
+      }
+
+      // Append search_path to the connection string
+      if (poolConfig.connectionString.length > 0) {
+        poolConfig.connectionString += ' ';
+      }
+
+      poolConfig.connectionString += `search_path=${config.pgOptions.searchPath}`;
+    }
 
     return new Pool(poolConfig);
   }
@@ -266,6 +295,15 @@ export class PgConnectionManager implements ConnectionManager {
 
         // Add to active connections
         this.activeConnections.add(connection);
+
+        // Set search_path for this connection if not already set in connection string
+        if (this.config.pgOptions?.searchPath && !this.pool.options.connectionString) {
+          try {
+            await connection.query(`SET search_path TO ${this.config.pgOptions.searchPath}`);
+          } catch (error) {
+            console.error('Failed to set search_path:', error);
+          }
+        }
 
         // Trigger afterConnect hook if registered
         const afterConnectEvent: ConnectionEvent = {

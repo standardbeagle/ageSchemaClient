@@ -94,7 +94,7 @@ describe('QueryExecutor', () => {
         maxRetries: 2,
         retryDelay: 10,
       })
-    ).rejects.toThrow('Query execution failed');
+    ).rejects.toThrow('connection error');
 
     expect(mockConnection.query).toHaveBeenCalledTimes(3);
   });
@@ -108,7 +108,7 @@ describe('QueryExecutor', () => {
 
     expect(result).toBeDefined();
     expect(mockConnection.query).toHaveBeenCalledWith({
-      text: "SELECT * FROM ag_catalog.cypher('test-graph', $q$MATCH (n) RETURN n$q$, $1) AS (result agtype)",
+      text: "SELECT * FROM ag_catalog.cypher('test-graph', $q$MATCH (n) RETURN n$q$, $1) AS (result  ag_catalog.agtype)",
       values: ["{\"param\":\"value\"}"],
       rowMode: 'object',
     });

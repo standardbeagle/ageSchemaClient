@@ -1,0 +1,24 @@
+
+# Apache AGE
+- The library is completely dependent on Apache AGE to function - 0% can function without it.
+- The function age_version() is not part of Apache AGE and should never be used to check if AGE is working.
+- In Apache AGE, dollar quoted strings are fine for Cypher queries, but the third parameter (for passing dynamic data) is problematic.
+- In Apache AGE, agtype only works with literal strings not dynamic strings, and the only reliable way to pass dynamic data to Cypher is with UNWIND or WITH to process a function return value.
+- For Apache AGE, use the approach of populating a temporary table with parameter values and then using a function call from Cypher to load the data from the temporary table.
+- User provided an organizational chart example using Apache AGE that should be used as a reference for writing integration tests.
+- Always fully qualify all Apache AGE entity references in the codebase.
+- When working with Apache AGE, always fully qualify the agtype data type as ag_catalog.agtype.
+- Prepared queries can only have one statement which may limit certain implementation approaches.
+- Cypher queries need to use fully qualified names for all entities.
+- Calling UNWIND within a cypher query with a function return value requires ag_catalog to be in the search path, set the search path in the connection string.
+- Postgres parameterized queries can only use one statement; multi-statement queries cannot be parameterized.
+- When using Apache AGE Cypher queries in bash scripts, nested quotes need proper escaping and dollar-quoted strings need special handling to avoid syntax errors.
+- The run-cypher.sh script in the ageSchemaClient project has issues executing Cypher queries, showing an 'unhandled cypher(cstring) function call' error when trying to access test_graph.
+- If you get the error unhandled cypher(cstring) function call, then age needs to be loaded with LOAD 'age';
+- If you get the error that agtype cannot be found, make sure you fully qualify it as ag_catalog.agtype.
+
+# Testing
+- Test databases should always be available and include clear instructions indicating they are test databases.
+- The age-integration database should be created with the test user for running integration tests.
+- The .env.test file contains credentials to an AGE-enabled database that should be used for integration tests.
+- Integration tests are configured and passing, and should be run during development.

@@ -35,4 +35,4 @@ GRANT ALL PRIVILEGES ON ALL PROCEDURES IN SCHEMA ag_catalog TO age;
 SELECT * FROM ag_catalog.cypher('test_graph', $$
   CREATE (n:Person {name: 'Test Person', age: 30})
   RETURN n
-$$) as (v agtype);
+$$) as (v  ag_catalog.agtype);

@@ -36,6 +36,11 @@ const client = new AgeSchemaClient({
     database: 'my_database',
     user: 'postgres',
     password: 'postgres',
+    // PostgreSQL-specific options
+    pgOptions: {
+      // Ensure ag_catalog is in the search path for Apache AGE
+      searchPath: 'ag_catalog, "$user", public',
+    },
   },
   schema: {
     path: './schema.json',
@@ -111,6 +116,10 @@ A comprehensive API reference is available in the [API Reference](./docs/api-ref
 - Batch Operations
 - Schema Migration
 - Error Handling
+
+### Connection Options
+
+For detailed information about connection options, including PostgreSQL-specific options like search_path, see the [Connection Options](./docs/connection-options.md) document.
 
 ## Development
 
