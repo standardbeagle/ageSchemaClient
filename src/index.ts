@@ -38,3 +38,6 @@ export type {
 
 // Query exports
 export * from './query';
+
+// Loader exports
+export * from './loader';
