@@ -305,6 +305,14 @@ export class PgConnectionManager implements ConnectionManager {
           }
         }
 
+        // Load Apache AGE extension for this connection
+        try {
+          await connection.query('LOAD \'age\';');
+        } catch (error) {
+          console.error('Failed to load Apache AGE extension:', error);
+          // Don't throw here to maintain backward compatibility, but log the error
+        }
+
         // Trigger afterConnect hook if registered
         const afterConnectEvent: ConnectionEvent = {
           type: 'connect',
