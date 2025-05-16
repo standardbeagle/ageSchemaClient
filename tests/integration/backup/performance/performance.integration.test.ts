@@ -89,6 +89,49 @@ describe('Performance Integration', () => {
 
     const startTime = Date.now();
 
+    // First, ensure AGE is loaded
+    await queryExecutor.executeSQL(`LOAD 'age';`);
+
+    // Set search path to include ag_catalog
+    await queryExecutor.executeSQL(`SET search_path TO ag_catalog, "$user", public;`);
+
+    // Create vertex and edge labels if they don't exist
+    try {
+      await queryExecutor.executeSQL(`
+        SELECT * FROM ag_catalog.create_vlabel('${AGE_GRAPH_NAME}', 'Person');
+      `);
+      console.log('Created Person vertex label');
+    } catch (error) {
+      console.warn(`Warning: Could not create Person vertex label: ${(error as Error).message}`);
+    }
+
+    try {
+      await queryExecutor.executeSQL(`
+        SELECT * FROM ag_catalog.create_vlabel('${AGE_GRAPH_NAME}', 'Product');
+      `);
+      console.log('Created Product vertex label');
+    } catch (error) {
+      console.warn(`Warning: Could not create Product vertex label: ${(error as Error).message}`);
+    }
+
+    try {
+      await queryExecutor.executeSQL(`
+        SELECT * FROM ag_catalog.create_elabel('${AGE_GRAPH_NAME}', 'PURCHASED');
+      `);
+      console.log('Created PURCHASED edge label');
+    } catch (error) {
+      console.warn(`Warning: Could not create PURCHASED edge label: ${(error as Error).message}`);
+    }
+
+    try {
+      await queryExecutor.executeSQL(`
+        SELECT * FROM ag_catalog.create_elabel('${AGE_GRAPH_NAME}', 'REVIEWED');
+      `);
+      console.log('Created REVIEWED edge label');
+    } catch (error) {
+      console.warn(`Warning: Could not create REVIEWED edge label: ${(error as Error).message}`);
+    }
+
     // Create persons
     const personData = Array(personCount).fill(0).map((_, i) => ({
       name: `Person ${i}`,

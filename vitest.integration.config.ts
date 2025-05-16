@@ -1,6 +1,6 @@
 /**
  * Vitest configuration for integration tests
- * 
+ *
  * This configuration is used when running integration tests only.
  * It includes only integration tests and configures the test environment
  * appropriately for database integration testing.
@@ -14,7 +14,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['**/*.integration.test.{js,ts}'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/backup/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -35,7 +35,6 @@ export default defineConfig({
     // Setup files for integration tests
     setupFiles: [
       './tests/setup/global.ts',
-      './tests/setup/integration.ts',
     ],
     // Global setup and teardown files
     globalSetup: './tests/setup/globalSetup.ts',

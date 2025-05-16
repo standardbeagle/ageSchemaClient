@@ -1,12 +1,15 @@
 # ageSchemaClient
 
-A TypeScript library for Apache AGE graph databases with schema validation.
+A TypeScript library for Apache AGE graph databases with schema validation and efficient data loading.
 
 ## Features
 
 - Schema-aware graph database operations
 - Type-safe query building
 - SQL generation for batch operations
+- Efficient data loading with single-function approach
+- Transaction management
+- Progress tracking for large operations
 - Comprehensive error handling
 - Support for both Node.js and browser environments
 
@@ -102,7 +105,11 @@ const result = await client.query
 
 ## Documentation
 
-For more detailed documentation, see the [docs](./docs) directory.
+For detailed documentation, see the following resources:
+
+- [Schema Loader](./docs/schema-loader.md) - Documentation for the SchemaLoader class
+- [Examples](./examples/) - Example code for common use cases
+- [API Reference](./docs/api-reference.md) - Detailed API documentation
 
 ### API Reference
 
@@ -116,10 +123,54 @@ A comprehensive API reference is available in the [API Reference](./docs/api-ref
 - Batch Operations
 - Schema Migration
 - Error Handling
+- SchemaLoader Operations
+
+### Examples
+
+#### Basic Usage
+
+See [basic-usage.ts](./examples/basic-usage.ts) for a simple example of using the client.
+
+#### Transactions
+
+See [schema-loader-transaction.ts](./examples/schema-loader-transaction.ts) for an example of using transactions.
+
+#### Progress Tracking
+
+See [schema-loader-progress.ts](./examples/schema-loader-progress.ts) for an example of tracking progress during data loading.
+
+#### Error Handling
+
+See [schema-loader-error-handling.ts](./examples/schema-loader-error-handling.ts) for examples of handling various error scenarios.
 
 ### Connection Options
 
 For detailed information about connection options, including PostgreSQL-specific options like search_path, see the [Connection Options](./docs/connection-options.md) document.
+
+## Apache AGE Integration
+
+This library is designed to work with Apache AGE, a PostgreSQL extension for graph database functionality. It handles the complexities of working with AGE, including:
+
+- Proper parameter passing using temporary tables
+- Handling AGE-specific data types (agtype)
+- Optimizing queries for performance
+- Managing graph data loading efficiently
+- Ensuring ag_catalog is in the search path
+
+### Important AGE-Specific Considerations
+
+1. **Search Path**: Always include `ag_catalog` in the search path:
+   ```typescript
+   searchPath: 'ag_catalog, "$user", public'
+   ```
+
+2. **Loading AGE Extension**: The library automatically loads the AGE extension with `LOAD 'age';` for each new connection.
+
+3. **Parameter Passing**: Due to AGE limitations with dynamic parameters, the library uses temporary tables for parameter passing.
+
+4. **AGE Data Types**: The library properly handles the `ag_catalog.agtype` data type, including proper string formatting.
+
+5. **Query Structure**: For optimal performance with AGE, the library structures queries to minimize the number of database roundtrips.
 
 ## Development
 

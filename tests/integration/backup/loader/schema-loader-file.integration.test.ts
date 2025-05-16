@@ -117,7 +117,7 @@ describe('SchemaLoader.loadFromFile Integration', () => {
     // Verify the result
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
-    expect(result.errors![0].message).toContain('ENOENT');
+    expect(result.errors![0].message).toContain('File not found');
   });
 
   // Test: Handle invalid JSON file

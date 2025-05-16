@@ -11,6 +11,7 @@ This document provides a comprehensive reference for the Apache AGE Schema Clien
 - [Edge Operations](#edge-operations)
 - [Batch Operations](#batch-operations)
 - [Schema Migration](#schema-migration)
+- [SchemaLoader](#schemaloader)
 - [Error Handling](#error-handling)
 
 ## Connection Management
@@ -20,7 +21,7 @@ This document provides a comprehensive reference for the Apache AGE Schema Clien
 ```typescript
 class PgConnectionManager {
   constructor(config: PgConnectionConfig);
-  
+
   async getConnection(): Promise<Connection>;
   async closeAll(): Promise<void>;
   getPoolStatus(): PoolStatus;
@@ -75,7 +76,7 @@ interface PoolStatus {
 ```typescript
 class QueryExecutor {
   constructor(connection: Connection, options?: QueryExecutorOptions);
-  
+
   async executeSQL(sql: string, params?: any[], options?: QueryOptions): Promise<QueryResult>;
   async executeCypher(query: string, params?: any, options?: QueryOptions): Promise<QueryResult>;
   async executeCopyFrom(sql: string, data: string, options?: QueryOptions): Promise<QueryResult>;
@@ -134,7 +135,7 @@ interface Transaction {
 ```typescript
 class SQLGenerator<T extends SchemaDefinition> {
   constructor(schema: T, options?: SQLGeneratorOptions);
-  
+
   generateCreateVertexTableSQL(label: string): SQLResult;
   generateCreateEdgeTableSQL(label: string): SQLResult;
   generateInsertVertexSQL(label: string, data: any): SQLResult;
@@ -149,7 +150,7 @@ class SQLGenerator<T extends SchemaDefinition> {
   generateFindEdgesSQL(label: string, filter?: any, options?: FindOptions): SQLResult;
   generateBatchInsertVertexSQL(label: string, dataArray: any[]): SQLResult;
   generateBatchInsertEdgeSQL(label: string, edgeData: any[]): SQLResult;
-  
+
   // Migration methods
   generateDropVertexTableSQL(label: string): SQLResult;
   generateDropEdgeTableSQL(label: string): SQLResult;
@@ -203,39 +204,39 @@ interface FindOptions {
 ```typescript
 class VertexOperations<T extends SchemaDefinition> {
   constructor(schema: T, queryExecutor: QueryExecutor, sqlGenerator: SQLGenerator<T>);
-  
+
   async createVertex<L extends keyof T['vertices']>(
     label: L,
     data: VertexData<T, L>
   ): Promise<Vertex<T, L>>;
-  
+
   async getVertex<L extends keyof T['vertices']>(
     label: L,
     id: string
   ): Promise<Vertex<T, L> | null>;
-  
+
   async updateVertex<L extends keyof T['vertices']>(
     label: L,
     id: string,
     data: Partial<VertexData<T, L>>
   ): Promise<Vertex<T, L>>;
-  
+
   async deleteVertex<L extends keyof T['vertices']>(
     label: L,
     id: string
   ): Promise<boolean>;
-  
+
   async findVertices<L extends keyof T['vertices']>(
     label: L,
     filter?: VertexFilter<T, L>,
     options?: FindOptions
   ): Promise<Vertex<T, L>[]>;
-  
+
   validateVertexData<L extends keyof T['vertices']>(
     label: L,
     data: VertexData<T, L>
   ): void;
-  
+
   transformToVertex<L extends keyof T['vertices']>(
     label: L,
     row: any
@@ -287,47 +288,47 @@ class EdgeOperations<T extends SchemaDefinition> {
     sqlGenerator: SQLGenerator<T>,
     vertexOperations: VertexOperations<T>
   );
-  
+
   async createEdge<L extends keyof T['edges']>(
     label: L,
     fromVertex: Vertex<T, any>,
     toVertex: Vertex<T, any>,
     data?: EdgeData<T, L>
   ): Promise<Edge<T, L>>;
-  
+
   async getEdge<L extends keyof T['edges']>(
     label: L,
     id: string
   ): Promise<Edge<T, L> | null>;
-  
+
   async updateEdge<L extends keyof T['edges']>(
     label: L,
     id: string,
     data: Partial<EdgeData<T, L>>
   ): Promise<Edge<T, L>>;
-  
+
   async deleteEdge<L extends keyof T['edges']>(
     label: L,
     id: string
   ): Promise<boolean>;
-  
+
   async findEdges<L extends keyof T['edges']>(
     label: L,
     filter?: EdgeFilter<T, L>,
     options?: FindOptions
   ): Promise<Edge<T, L>[]>;
-  
+
   validateEdgeData<L extends keyof T['edges']>(
     label: L,
     data: EdgeData<T, L>
   ): void;
-  
+
   validateVertexTypes<L extends keyof T['edges']>(
     label: L,
     fromVertex: Vertex<T, any>,
     toVertex: Vertex<T, any>
   ): void;
-  
+
   transformToEdge<L extends keyof T['edges']>(
     label: L,
     row: any
@@ -384,13 +385,13 @@ class BatchOperations<T extends SchemaDefinition> {
     vertexOperations: VertexOperations<T>,
     edgeOperations: EdgeOperations<T>
   );
-  
+
   async createVerticesBatch<L extends keyof T['vertices']>(
     label: L,
     dataArray: VertexData<T, L>[],
     options?: BatchOperationOptions
   ): Promise<Vertex<T, L>[]>;
-  
+
   async createEdgesBatch<L extends keyof T['edges']>(
     label: L,
     edges: Array<{
@@ -435,13 +436,13 @@ interface BatchPerformanceMetrics {
 ```typescript
 class SchemaMigrationExecutor {
   constructor(queryExecutor: QueryExecutor, sqlGenerator: SQLGenerator);
-  
+
   createMigrationPlan(
     sourceSchema: SchemaDefinition,
     targetSchema: SchemaDefinition,
     options?: MigrationOptions
   ): MigrationPlan;
-  
+
   async executeMigrationPlan(
     plan: MigrationPlan,
     options?: MigrationOptions
@@ -541,6 +542,119 @@ interface SchemaMigrationOptions {
 }
 ```
 
+## SchemaLoader
+
+The SchemaLoader class provides functionality for loading graph data into Apache AGE using the single-function approach.
+
+### SchemaLoader
+
+```typescript
+class SchemaLoader<T extends SchemaDefinition> {
+  constructor(
+    schema: T,
+    queryExecutor: QueryExecutor,
+    options?: SchemaLoaderOptions
+  );
+
+  // Load both vertices and edges
+  async loadGraphData(
+    data: GraphData,
+    options?: LoadOptions
+  ): Promise<LoadResult>;
+
+  // Load only vertices
+  async loadVertices(
+    vertices: Record<string, any[]>,
+    options?: LoadOptions
+  ): Promise<LoadResult>;
+
+  // Load only edges
+  async loadEdges(
+    edges: Record<string, any[]>,
+    options?: LoadOptions
+  ): Promise<LoadResult>;
+
+  // Load from a JSON file
+  async loadFromFile(
+    filePath: string,
+    options?: LoadOptions
+  ): Promise<LoadResult>;
+
+  // Execute a callback within a transaction
+  async withTransaction<R>(
+    callback: (transaction: Transaction) => Promise<R>
+  ): Promise<R>;
+}
+```
+
+### SchemaLoaderOptions
+
+```typescript
+interface SchemaLoaderOptions {
+  validateBeforeLoad?: boolean; // Default: true
+  batchSize?: number; // Default: 1000
+  logger?: Logger;
+  parallelInserts?: boolean; // Default: false
+  maxParallelBatches?: number; // Default: 4
+  useStreamingForLargeDatasets?: boolean; // Default: false
+  largeDatasetThreshold?: number; // Default: 10000
+}
+```
+
+### LoadOptions
+
+```typescript
+interface LoadOptions {
+  transaction?: Transaction;
+  graphName?: string; // Default: 'default'
+  batchSize?: number;
+  onProgress?: (progress: ProgressInfo) => void;
+  validateData?: boolean;
+}
+```
+
+### ProgressInfo
+
+```typescript
+interface ProgressInfo {
+  phase: 'validation' | 'storing' | 'creating';
+  current: number;
+  total: number;
+  percentage: number;
+  vertexCount?: number;
+  edgeCount?: number;
+  currentType?: string;
+  currentBatch?: number;
+  totalBatches?: number;
+  elapsedTime?: number;
+  estimatedTimeRemaining?: number;
+}
+```
+
+### LoadResult
+
+```typescript
+interface LoadResult {
+  success: boolean;
+  vertexCount: number;
+  edgeCount: number;
+  vertexTypes: string[];
+  edgeTypes: string[];
+  errors?: Error[];
+  warnings?: string[];
+  duration: number;
+}
+```
+
+### GraphData
+
+```typescript
+interface GraphData {
+  vertex: Record<string, any[]>;
+  edge: Record<string, any[]>;
+}
+```
+
 ## Error Handling
 
 ### Error Classes
@@ -549,12 +663,25 @@ interface SchemaMigrationOptions {
 class ValidationError extends Error {
   constructor(message: string, details?: any);
   details?: any;
+  validationErrors: ValidationErrorDetail[];
+}
+
+class ValidationErrorDetail {
+  path: string;
+  message: string;
+  value?: any;
+  constraint?: any;
 }
 
 class QueryError extends Error {
   constructor(message: string, cause?: Error, details?: any);
   cause?: Error;
   details?: any;
+}
+
+class DatabaseError extends Error {
+  constructor(message: string, originalError?: any);
+  originalError: any;
 }
 
 class TimeoutError extends Error {
@@ -565,5 +692,11 @@ class SchemaVersionError extends Error {
   constructor(message: string, sourceVersion: string, targetVersion: string);
   sourceVersion: string;
   targetVersion: string;
+}
+
+class LoadError extends Error {
+  constructor(message: string, phase: string, data?: any);
+  phase: 'validation' | 'storing' | 'creating';
+  data: any;
 }
 ```

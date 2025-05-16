@@ -209,6 +209,22 @@ export class PgConnectionManager implements ConnectionManager {
       config.pgOptions.searchPath = `ag_catalog, ${config.pgOptions.searchPath}`;
     }
 
+    // If connectionString is provided, ensure it includes search_path
+    if (config.connectionString) {
+      const searchPathParam = 'search_path=ag_catalog,public';
+      if (!config.connectionString.includes('search_path=')) {
+        config.connectionString += config.connectionString.includes('?')
+          ? `&${searchPathParam}`
+          : `?${searchPathParam}`;
+      } else if (!config.connectionString.includes('ag_catalog')) {
+        // Replace existing search_path to include ag_catalog
+        config.connectionString = config.connectionString.replace(
+          /search_path=[^&]*/,
+          searchPathParam
+        );
+      }
+    }
+
     return config;
   }
 
@@ -219,7 +235,12 @@ export class PgConnectionManager implements ConnectionManager {
    * @returns Connection pool
    */
   private createPool(config: ConnectionConfig): Pool {
-    // Create connection parameters without connection string manipulation
+    // If connectionString is provided, use it directly
+    if (config.connectionString) {
+      return new Pool({ connectionString: config.connectionString });
+    }
+
+    // Otherwise, create connection parameters
     const poolConfig: any = {
       host: config.host,
       port: config.port,
@@ -289,6 +310,16 @@ export class PgConnectionManager implements ConnectionManager {
           // Use the configured search_path or default to include ag_catalog
           const searchPath = this.config.pgOptions?.searchPath || 'ag_catalog, "$user", public';
           await connection.query(`SET search_path TO ${searchPath}`);
+
+          // Verify search_path was set correctly
+          const result = await connection.query('SELECT current_setting(\'search_path\') AS search_path');
+          const currentSearchPath = result.rows[0].search_path;
+
+          if (!currentSearchPath.includes('ag_catalog')) {
+            console.warn(`Warning: search_path does not include ag_catalog: ${currentSearchPath}`);
+            // Try again with explicit ag_catalog
+            await connection.query('SET search_path TO ag_catalog, "$user", public');
+          }
         } catch (error) {
           console.error('Failed to set search_path:', error);
         }
@@ -296,6 +327,18 @@ export class PgConnectionManager implements ConnectionManager {
         // Load Apache AGE extension for this connection
         try {
           await connection.query('LOAD \'age\';');
+
+          // Verify AGE is loaded by checking for the cypher function
+          const result = await connection.query(`
+            SELECT COUNT(*) > 0 as age_loaded
+            FROM pg_proc p
+            JOIN pg_namespace n ON p.pronamespace = n.oid
+            WHERE n.nspname = 'ag_catalog' AND p.proname = 'cypher'
+          `);
+
+          if (!result.rows[0].age_loaded) {
+            console.warn('Warning: Apache AGE extension not properly loaded');
+          }
         } catch (error) {
           console.error('Failed to load Apache AGE extension:', error);
           // Don't throw here to maintain backward compatibility, but log the error
