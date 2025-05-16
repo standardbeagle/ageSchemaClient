@@ -5,12 +5,11 @@
  * that connect to a real PostgreSQL database with the AGE extension.
  */
 
-import { PgConnectionManager, QueryExecutor, TransactionManager } from '../../src/db';
+import { QueryExecutor, TransactionManager } from '../../src/db';
+import { PgConnectionManager } from '../../src/db/connector';
 import { afterAll, beforeAll } from 'vitest';
 import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
-import { Schema } from '../../src/schema/types';
+import { getTestConnectionManager, releaseAllTestConnections } from './test-connection-manager';
 
 // Load environment variables from .env.test
 dotenv.config({ path: '.env.test' });
@@ -23,34 +22,11 @@ const testSchema = `test_${Date.now().toString(36).substring(2, 8)}`;
 // Export the test schema name so it can be used in tests
 export const TEST_SCHEMA = testSchema;
 
-// Connection configuration for test database
-const connectionConfig = {
-  host: process.env.PGHOST || 'localhost',
-  port: parseInt(process.env.PGPORT || '5432', 10),
-  database: process.env.PGDATABASE || 'age-integration',
-  user: process.env.PGUSER || 'age',
-  password: process.env.PGPASSWORD || 'agepassword',
-  pool: {
-    max: 5,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-  },
-  retry: {
-    maxAttempts: 3,
-    delay: 1000,
-  },
-  // PostgreSQL-specific options
-  pgOptions: {
-    // Ensure ag_catalog is in the search path for Apache AGE
-    searchPath: 'ag_catalog, "$user", public',
-    applicationName: 'ageSchemaClient-tests',
-  },
-};
-
 // Graph name for AGE tests
 export const AGE_GRAPH_NAME = process.env.AGE_GRAPH_NAME || 'test_graph';
 
 // Shared connection manager and query executor for tests
+// Each test file gets its own connection manager
 export let connectionManager: PgConnectionManager;
 export let queryExecutor: QueryExecutor;
 export let transactionManager: TransactionManager;
@@ -61,10 +37,20 @@ beforeAll(async () => {
     console.log(`Using test schema: ${testSchema}`);
 
     // Connect to the test database
-    connectionManager = new PgConnectionManager(connectionConfig);
-    const connection = await connectionManager.getConnection();
-    queryExecutor = new QueryExecutor(connection);
-    transactionManager = new TransactionManager(connectionManager);
+    try {
+      // Use the singleton test connection manager
+      connectionManager = getTestConnectionManager();
+
+      const connection = await connectionManager.getConnection();
+      queryExecutor = new QueryExecutor(connection);
+      transactionManager = new TransactionManager(connection);
+    } catch (connectionError) {
+      // Clearly identify this as a connection error, not an AGE configuration issue
+      console.error(`DATABASE CONNECTION ERROR: ${connectionError.message}`);
+      console.error('Failed to connect to the database. Check your database connection settings in .env.test');
+      console.error('All integration tests will be skipped due to database connection failure.');
+      throw new Error('DATABASE_CONNECTION_ERROR');
+    }
 
     // Create a test schema for isolation
     try {
@@ -90,42 +76,52 @@ beforeAll(async () => {
         WHERE n.nspname = 'ag_catalog' AND p.proname = 'create_graph'
       `);
       ageAvailable = result.rows[0].age_available;
-      if (ageAvailable) {
-        console.log('Apache AGE extension is available');
-      } else {
-        console.warn('Apache AGE extension is not available or not properly installed');
-        console.warn('Integration tests requiring AGE will be skipped');
+      if (!ageAvailable) {
+        console.error('AGE CONFIGURATION ERROR: Apache AGE extension is not available or not properly installed');
+        console.error('All integration tests will be skipped due to missing AGE extension.');
+        throw new Error('AGE_NOT_AVAILABLE');
       }
+      console.log('Apache AGE extension is available');
     } catch (error) {
-      console.warn('Apache AGE extension is not available or not properly installed');
-      console.warn(`Error: ${error.message}`);
-      console.warn('Integration tests requiring AGE will be skipped');
+      if (error.message === 'AGE_NOT_AVAILABLE') {
+        throw error; // Re-throw our custom error
+      }
+      console.error('AGE CONFIGURATION ERROR: Failed to check AGE availability');
+      console.error(`Error: ${error.message}`);
+      console.error('All integration tests will be skipped due to AGE configuration issues.');
+      throw new Error('AGE_CONFIGURATION_ERROR');
     }
 
-    // Only try to initialize AGE graph if the extension is available
-    if (ageAvailable) {
+    // Only try to initialize AGE graph if we've reached this point (AGE is available)
+    try {
+      // Drop the graph if it exists
       try {
-        // Drop the graph if it exists
-        try {
-          await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${AGE_GRAPH_NAME}', true)`);
-        } catch (error) {
-          // Ignore error if graph doesn't exist
-          console.warn(`Warning: Could not drop graph ${AGE_GRAPH_NAME}: ${error.message}`);
-        }
-
-        // Create a new graph
-        await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.create_graph('${AGE_GRAPH_NAME}')`);
-        console.log(`Integration test setup complete. Connected to ${connectionConfig.database} and created graph ${AGE_GRAPH_NAME}`);
+        await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${AGE_GRAPH_NAME}', true)`);
       } catch (error) {
-        console.warn(`Warning: Could not create graph ${AGE_GRAPH_NAME}: ${error.message}`);
-        console.warn('Integration tests requiring graph operations will be skipped.');
+        // Ignore error if graph doesn't exist
+        console.warn(`Warning: Could not drop graph ${AGE_GRAPH_NAME}: ${error.message}`);
       }
+
+      // Create a new graph
+      await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.create_graph('${AGE_GRAPH_NAME}')`);
+      console.log(`Integration test setup complete. Created graph ${AGE_GRAPH_NAME}`);
+    } catch (error) {
+      console.error(`AGE GRAPH ERROR: Could not create graph ${AGE_GRAPH_NAME}: ${error.message}`);
+      console.error('All integration tests will be skipped due to graph creation failure.');
+      throw new Error('AGE_GRAPH_CREATION_ERROR');
     }
   } catch (error) {
-    console.error(`Error setting up integration tests: ${error.message}`);
-    console.warn('All integration tests will be skipped.');
-    // Skip all tests in this file
-    // This is handled by the testNamePattern in vite.config.ts
+    // This will catch any errors thrown above
+    if (error.message === 'DATABASE_CONNECTION_ERROR' ||
+        error.message === 'AGE_NOT_AVAILABLE' ||
+        error.message === 'AGE_CONFIGURATION_ERROR' ||
+        error.message === 'AGE_GRAPH_CREATION_ERROR') {
+      // Error has already been logged with appropriate context
+    } else {
+      console.error(`UNKNOWN ERROR setting up integration tests: ${error.message}`);
+      console.error('All integration tests will be skipped.');
+    }
+    throw error; // Re-throw to skip tests
   }
 }, 30000); // Increase timeout to 30 seconds
 
@@ -170,15 +166,15 @@ afterAll(async () => {
         }
       }
 
-      // Close all connections with a timeout to prevent hanging
-      const closePromise = connectionManager.closeAll();
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Connection close timed out')), 5000);
-      });
-
-      await Promise.race([closePromise, timeoutPromise])
-        .then(() => console.log('Test database connections closed.'))
-        .catch(error => console.error(`Error during connection close: ${error.message}`));
+      // Release connections but don't close the pool
+      // The pool will be closed when the process exits
+      try {
+        // Release active connections but don't close the pool
+        await releaseAllTestConnections();
+        console.log('Test database connections released (pool will be closed when process exits).');
+      } catch (error) {
+        console.error(`Error releasing connections: ${error.message}`);
+      }
 
       console.log('Integration test teardown complete.');
     } catch (error) {
@@ -271,23 +267,13 @@ export async function isAgeAvailable(): Promise<boolean> {
       SELECT current_setting('search_path') AS search_path
     `);
 
+    // Search path and AGE extension loading are now handled automatically by the connection pool
+    // No need to set search_path or load AGE extension explicitly here
     const searchPath = searchPathResult.rows[0].search_path;
     if (!searchPath.includes('ag_catalog')) {
       console.warn('Warning: search_path does not include ag_catalog');
-      console.warn('Setting search_path to include ag_catalog...');
-
-      // Ensure search_path includes ag_catalog
-      await queryExecutor.executeSQL('SET search_path TO ag_catalog, "$user", public');
-    }
-
-    // Step 7: Try to load the AGE extension explicitly
-    try {
-      await queryExecutor.executeSQL("LOAD 'age'");
-      console.log('Successfully loaded AGE extension');
-    } catch (loadError) {
-      console.warn(`Warning: Failed to load AGE extension: ${loadError.message}`);
-      console.warn('This may indicate the extension is not properly installed or the shared library is not in the PostgreSQL library path');
-      return false;
+      console.warn('This should have been set automatically by the connection pool');
+      console.warn('Check the connection pool configuration if this warning persists');
     }
 
     // Step 8: Verify AGE functionality by checking for the existence of the create_graph function
@@ -325,14 +311,27 @@ export async function isAgeAvailable(): Promise<boolean> {
     console.log('Apache AGE is properly installed, configured, and functional');
     return true;
   } catch (error) {
-    console.warn(`Warning: AGE extension check failed: ${error.message}`);
-    console.warn('The test is using the database specified in .env.test file.');
-    console.warn('The database should be available, but the AGE extension is not installed or not properly configured.');
-    console.warn('Please make sure the AGE extension is installed on your PostgreSQL server.');
-    console.warn('Installation instructions: https://github.com/apache/age');
-    console.warn('After installing AGE, you need to create the extension in your database:');
-    console.warn('  CREATE EXTENSION age;');
-    return false;
+    // Check if this is a connection error
+    if (error.message && (
+        error.message.includes('connection') ||
+        error.message.includes('timeout') ||
+        error.message.includes('ECONNREFUSED') ||
+        error.message.includes('terminated')
+    )) {
+      console.error(`DATABASE CONNECTION ERROR: ${error.message}`);
+      console.error('Failed to connect to the database during AGE availability check.');
+      console.error('Check your database connection settings in .env.test');
+      throw new Error('DATABASE_CONNECTION_ERROR');
+    } else {
+      // This is likely an AGE configuration issue
+      console.error(`AGE CONFIGURATION ERROR: ${error.message}`);
+      console.error('The database is available, but the AGE extension is not installed or not properly configured.');
+      console.error('Please make sure the AGE extension is installed on your PostgreSQL server.');
+      console.error('Installation instructions: https://github.com/apache/age');
+      console.error('After installing AGE, you need to create the extension in your database:');
+      console.error('  CREATE EXTENSION age;');
+      return false;
+    }
   }
 }
 
@@ -344,9 +343,7 @@ export async function createTestVertex(label: string, properties: Record<string,
   }
 
   try {
-    // Ensure search_path includes ag_catalog
-    await queryExecutor.executeSQL('SET search_path TO ag_catalog, "$user", public');
-
+    // Search path is automatically set by the connection pool
     const result = await queryExecutor.executeCypher(
       `CREATE (n:${label} $props) RETURN n`,
       { props: properties },
@@ -373,9 +370,7 @@ export async function createTestEdge(
   }
 
   try {
-    // Ensure search_path includes ag_catalog
-    await queryExecutor.executeSQL('SET search_path TO ag_catalog, "$user", public');
-
+    // Search path is automatically set by the connection pool
     const result = await queryExecutor.executeCypher(
       `
       MATCH (a:${fromLabel}), (b:${toLabel})
@@ -395,9 +390,6 @@ export async function createTestEdge(
     throw new Error(`Failed to create test edge: ${error.message}`);
   }
 }
-
-// Export connection configuration for tests
-export { connectionConfig };
 
 // Import and re-export the loadSchemaFixture function from fixtures
 import { loadSchemaFixture as loadFixture } from '../fixtures';

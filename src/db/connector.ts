@@ -219,7 +219,7 @@ export class PgConnectionManager implements ConnectionManager {
    * @returns Connection pool
    */
   private createPool(config: ConnectionConfig): Pool {
-    // Create connection parameters
+    // Create connection parameters without connection string manipulation
     const poolConfig: any = {
       host: config.host,
       port: config.port,
@@ -231,23 +231,11 @@ export class PgConnectionManager implements ConnectionManager {
       idleTimeoutMillis: config.pool?.idleTimeoutMillis,
       connectionTimeoutMillis: config.pool?.connectionTimeoutMillis,
       allowExitOnIdle: config.pool?.allowExitOnIdle,
+      // Add any other pg-specific options except search_path
+      application_name: config.pgOptions?.applicationName,
     };
 
-    // Add search_path to connection parameters
-    if (config.pgOptions?.searchPath) {
-      // Add search_path directly to the connection string parameters
-      if (!poolConfig.connectionString) {
-        poolConfig.connectionString = '';
-      }
-
-      // Append search_path to the connection string
-      if (poolConfig.connectionString.length > 0) {
-        poolConfig.connectionString += ' ';
-      }
-
-      poolConfig.connectionString += `search_path=${config.pgOptions.searchPath}`;
-    }
-
+    // We'll set search_path with a SQL query after connecting
     return new Pool(poolConfig);
   }
 
@@ -296,13 +284,13 @@ export class PgConnectionManager implements ConnectionManager {
         // Add to active connections
         this.activeConnections.add(connection);
 
-        // Set search_path for this connection if not already set in connection string
-        if (this.config.pgOptions?.searchPath && !this.pool.options.connectionString) {
-          try {
-            await connection.query(`SET search_path TO ${this.config.pgOptions.searchPath}`);
-          } catch (error) {
-            console.error('Failed to set search_path:', error);
-          }
+        // Always set search_path for this connection
+        try {
+          // Use the configured search_path or default to include ag_catalog
+          const searchPath = this.config.pgOptions?.searchPath || 'ag_catalog, "$user", public';
+          await connection.query(`SET search_path TO ${searchPath}`);
+        } catch (error) {
+          console.error('Failed to set search_path:', error);
         }
 
         // Load Apache AGE extension for this connection
@@ -382,6 +370,73 @@ export class PgConnectionManager implements ConnectionManager {
       await this.triggerHook('afterDisconnect', connection, afterDisconnectEvent);
     } else {
       throw new ConnectionError('Invalid connection object');
+    }
+  }
+
+  /**
+   * Release all active connections without closing the pool
+   * This is useful for test cleanup between test files
+   */
+  async releaseAllConnections(): Promise<void> {
+    try {
+      // Create a copy of the active connections to avoid modification during iteration
+      const connections = [...this.activeConnections];
+
+      // Release each connection
+      for (const connection of connections) {
+        try {
+          await this.releaseConnection(connection);
+        } catch (error) {
+          console.error(`Failed to release connection: ${(error as Error).message}`);
+        }
+      }
+
+      // Verify all connections were released
+      if (this.activeConnections.size > 0) {
+        console.warn(`Warning: ${this.activeConnections.size} connections still active after releaseAllConnections`);
+      }
+    } catch (error) {
+      throw new PoolError(
+        `Failed to release all connections: ${(error as Error).message}`,
+        error as Error
+      );
+    }
+  }
+
+  /**
+   * Static registry of all connection managers
+   * Used for testing to ensure all pools are properly closed
+   */
+  private static connectionManagers: Set<PgConnectionManager> = new Set();
+
+  /**
+   * Register this connection manager in the static registry
+   * Used for testing to ensure all pools are properly closed
+   */
+  registerForCleanup(): void {
+    PgConnectionManager.connectionManagers.add(this);
+    console.log(`Registered connection manager (total: ${PgConnectionManager.connectionManagers.size})`);
+  }
+
+  /**
+   * Close all connection pools in the registry
+   * Used for testing to ensure all pools are properly closed
+   */
+  static async closeAllPools(): Promise<void> {
+    if (PgConnectionManager.connectionManagers.size > 0) {
+      console.log(`Closing ${PgConnectionManager.connectionManagers.size} connection pools...`);
+
+      for (const manager of PgConnectionManager.connectionManagers) {
+        try {
+          await manager.closeAll();
+        } catch (error) {
+          console.error(`Error closing connection pool: ${(error as Error).message}`);
+        }
+      }
+
+      // Clear the registry
+      PgConnectionManager.connectionManagers.clear();
+      console.log('All connection pools closed.');
     }
   }
 

@@ -42,6 +42,19 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
     },
+    // Run tests sequentially to avoid connection pool issues
+    pool: 'forks', // Using forks for better isolation in database tests
+    poolOptions: {
+      forks: {
+        // Use a single fork to avoid connection issues
+        singleFork: true
+      }
+    },
+    // Run tests sequentially (one at a time)
+    sequence: {
+      concurrent: false,
+      shuffle: false,
+    },
     // Include patterns are set dynamically below based on TEST_TYPE
     setupFiles: [
       // Global setup file for all tests
@@ -49,6 +62,8 @@ export default defineConfig({
       // Integration setup file only loaded for integration tests
       ...(process.env.TEST_TYPE === 'integration' ? ['./tests/setup/integration.ts'] : []),
     ],
+    // Global setup and teardown files
+    globalSetup: './tests/setup/globalSetup.ts',
     // Filter tests based on TEST_TYPE environment variable
     include: process.env.TEST_TYPE === 'integration'
       ? ['**/*.integration.test.{js,ts}'] // Only run integration tests

@@ -168,8 +168,9 @@ describe('Error Handling Integration', () => {
         console.error('Error in connection pool exhaustion test:', error.message);
         throw error;
       } finally {
-        // Clean up
-        await smallPoolManager.closeAll();
+        // Release connections back to the pool but don't close it
+        // The pool will be closed when the process exits
+        await smallPoolManager.releaseAllConnections();
       }
     }, 10000); // Set timeout to 10 seconds
 
@@ -204,8 +205,9 @@ describe('Error Handling Integration', () => {
         console.error('Error in connection recovery test:', error.message);
         throw error;
       } finally {
-        // Clean up
-        await recoveryManager.closeAll();
+        // Release connections back to the pool but don't close it
+        // The pool will be closed when the process exits
+        await recoveryManager.releaseAllConnections();
       }
     }, 10000); // Set timeout to 10 seconds
   });
