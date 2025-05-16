@@ -187,33 +187,143 @@ afterAll(async () => {
   }
 }, 30000); // Increase timeout to 30 seconds
 
-// Helper function to check if AGE is available
+// Helper function to check if AGE is available with comprehensive diagnostics
 export async function isAgeAvailable(): Promise<boolean> {
   try {
-    // Ensure search_path includes ag_catalog
-    await queryExecutor.executeSQL('SET search_path TO ag_catalog, "$user", public');
+    console.log('Performing comprehensive Apache AGE availability check...');
 
-    // Verify AGE is available by checking for the existence of the ag_catalog schema
-    // and a known AGE function (create_graph)
-    const result = await queryExecutor.executeSQL(`
-      SELECT COUNT(*) > 0 as age_available
+    // Step 1: Check if the AGE extension is installed in the database
+    const extensionResult = await queryExecutor.executeSQL(`
+      SELECT COUNT(*) > 0 as extension_installed
+      FROM pg_catalog.pg_extension
+      WHERE extname = 'age'
+    `);
+
+    const extensionInstalled = extensionResult.rows[0].extension_installed;
+    if (!extensionInstalled) {
+      console.warn('Warning: Apache AGE extension is not installed in the database');
+      console.warn('Run CREATE EXTENSION age; to install the extension');
+      return false;
+    }
+
+    // Step 2: Get AGE extension details
+    const extensionDetailsResult = await queryExecutor.executeSQL(`
+      SELECT e.extversion AS version, n.nspname AS schema
+      FROM pg_catalog.pg_extension e
+      LEFT JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
+      WHERE e.extname = 'age'
+    `);
+
+    if (extensionDetailsResult.rows.length > 0) {
+      console.log(`Apache AGE extension version ${extensionDetailsResult.rows[0].version} is installed in schema ${extensionDetailsResult.rows[0].schema}`);
+    }
+
+    // Step 3: Check if ag_catalog schema exists
+    const schemaResult = await queryExecutor.executeSQL(`
+      SELECT COUNT(*) > 0 as schema_exists
+      FROM pg_catalog.pg_namespace
+      WHERE nspname = 'ag_catalog'
+    `);
+
+    const schemaExists = schemaResult.rows[0].schema_exists;
+    if (!schemaExists) {
+      console.warn('Warning: ag_catalog schema does not exist');
+      console.warn('The AGE extension may not be properly installed');
+      return false;
+    }
+
+    // Step 4: Check if the current user has access to the ag_catalog schema
+    const schemaAccessResult = await queryExecutor.executeSQL(`
+      SELECT pg_catalog.has_schema_privilege(current_user, 'ag_catalog', 'USAGE') as has_usage_privilege
+    `);
+
+    const hasSchemaAccess = schemaAccessResult.rows[0].has_usage_privilege;
+    if (!hasSchemaAccess) {
+      console.warn('Warning: Current user does not have USAGE privilege on ag_catalog schema');
+      console.warn(`Run: GRANT USAGE ON SCHEMA ag_catalog TO ${process.env.PGUSER || 'current_user'};`);
+      return false;
+    }
+
+    // Step 5: Check if the current user has execute privileges on key AGE functions
+    const functionAccessResult = await queryExecutor.executeSQL(`
+      SELECT p.proname,
+             pg_catalog.has_function_privilege(current_user, p.oid, 'EXECUTE') as has_execute_privilege
+      FROM pg_catalog.pg_proc p
+      JOIN pg_catalog.pg_namespace n ON p.pronamespace = n.oid
+      WHERE n.nspname = 'ag_catalog' AND p.proname IN ('cypher', 'create_graph', 'drop_graph')
+    `);
+
+    let missingFunctionPrivileges = false;
+    for (const row of functionAccessResult.rows) {
+      if (!row.has_execute_privilege) {
+        console.warn(`Warning: Current user does not have EXECUTE privilege on ag_catalog.${row.proname}`);
+        console.warn(`Run: GRANT EXECUTE ON FUNCTION ag_catalog.${row.proname} TO ${process.env.PGUSER || 'current_user'};`);
+        missingFunctionPrivileges = true;
+      }
+    }
+
+    if (missingFunctionPrivileges) {
+      return false;
+    }
+
+    // Step 6: Check if search_path includes ag_catalog
+    const searchPathResult = await queryExecutor.executeSQL(`
+      SELECT current_setting('search_path') AS search_path
+    `);
+
+    const searchPath = searchPathResult.rows[0].search_path;
+    if (!searchPath.includes('ag_catalog')) {
+      console.warn('Warning: search_path does not include ag_catalog');
+      console.warn('Setting search_path to include ag_catalog...');
+
+      // Ensure search_path includes ag_catalog
+      await queryExecutor.executeSQL('SET search_path TO ag_catalog, "$user", public');
+    }
+
+    // Step 7: Try to load the AGE extension explicitly
+    try {
+      await queryExecutor.executeSQL("LOAD 'age'");
+      console.log('Successfully loaded AGE extension');
+    } catch (loadError) {
+      console.warn(`Warning: Failed to load AGE extension: ${loadError.message}`);
+      console.warn('This may indicate the extension is not properly installed or the shared library is not in the PostgreSQL library path');
+      return false;
+    }
+
+    // Step 8: Verify AGE functionality by checking for the existence of the create_graph function
+    const functionResult = await queryExecutor.executeSQL(`
+      SELECT COUNT(*) > 0 as function_exists
       FROM pg_proc p
       JOIN pg_namespace n ON p.pronamespace = n.oid
       WHERE n.nspname = 'ag_catalog' AND p.proname = 'create_graph'
     `);
-    const ageAvailable = result.rows[0].age_available;
 
-    if (!ageAvailable) {
+    const functionExists = functionResult.rows[0].function_exists;
+    if (!functionExists) {
       console.warn('Warning: AGE extension check failed: create_graph function not found in ag_catalog schema');
-      console.warn('The test is using the database specified in .env.test file.');
-      console.warn('The database should be available, but the AGE extension is not installed or not properly configured.');
-      console.warn('Please make sure the AGE extension is installed on your PostgreSQL server.');
-      console.warn('Installation instructions: https://github.com/apache/age');
-      console.warn('After installing AGE, you need to create the extension in your database:');
-      console.warn('  CREATE EXTENSION age;');
+      console.warn('The AGE extension may not be properly loaded');
+      return false;
     }
 
-    return ageAvailable;
+    // Step 9: Try to create and drop a test graph to verify full functionality
+    try {
+      const testGraphName = `test_graph_${Date.now().toString(36).substring(2, 8)}`;
+
+      // Create test graph
+      await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.create_graph('${testGraphName}')`);
+      console.log(`Successfully created test graph ${testGraphName}`);
+
+      // Drop test graph
+      await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${testGraphName}', true)`);
+      console.log(`Successfully dropped test graph ${testGraphName}`);
+    } catch (graphError) {
+      console.warn(`Warning: Failed to create/drop test graph: ${graphError.message}`);
+      console.warn('This indicates a problem with AGE functionality');
+      return false;
+    }
+
+    console.log('Apache AGE is properly installed, configured, and functional');
+    return true;
   } catch (error) {
     console.warn(`Warning: AGE extension check failed: ${error.message}`);
     console.warn('The test is using the database specified in .env.test file.');
