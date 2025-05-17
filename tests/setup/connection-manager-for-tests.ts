@@ -13,13 +13,14 @@
  * 8. Connection leaks are detected and reported
  */
 
-import { PgConnectionManager, ConnectionHooks, Connection, ConnectionEvent } from '../../src/db/connector';
+import { PgConnectionManager, Connection, ConnectionEvent } from '../../src/db/connector';
 
 /**
- * TestConnectionManager class that implements the singleton pattern
+ * Connection manager for tests that implements the singleton pattern.
+ * This class manages real database connections used during tests.
  */
-export class TestConnectionManager {
-  private static instance: TestConnectionManager | null = null;
+export class ConnectionManagerForTests {
+  private static instance: ConnectionManagerForTests | null = null;
   private connectionManager: PgConnectionManager;
   private activeConnections: Set<Connection> = new Set();
 
@@ -27,7 +28,6 @@ export class TestConnectionManager {
    * Private constructor to prevent direct instantiation
    */
   private constructor() {
-    console.log('Creating test connection manager...');
     this.connectionManager = new PgConnectionManager(connectionConfig);
 
     // Register hooks to track connections and ensure AGE is loaded
@@ -73,11 +73,11 @@ export class TestConnectionManager {
    *
    * @returns The singleton instance
    */
-  public static getInstance(): TestConnectionManager {
-    if (!TestConnectionManager.instance) {
-      TestConnectionManager.instance = new TestConnectionManager();
+  public static getInstance(): ConnectionManagerForTests {
+    if (!ConnectionManagerForTests.instance) {
+      ConnectionManagerForTests.instance = new ConnectionManagerForTests();
     }
-    return TestConnectionManager.instance;
+    return ConnectionManagerForTests.instance;
   }
 
   /**
@@ -138,16 +138,6 @@ export class TestConnectionManager {
     console.log('All connections released');
   }
 
-  /**
-   * Close the connection pool
-   * This should be called when all tests are complete
-   */
-  public async closePool(): Promise<void> {
-    await this.connectionManager.closeAll();
-
-    // Clear tracked connections
-    this.activeConnections.clear();
-  }
 
   /**
    * Get the number of active connections
@@ -173,9 +163,9 @@ export class TestConnectionManager {
    * It ensures that AGE is loaded and search_path is set
    *
    * @param connection - Connection
-   * @param event - Connection event
+   * @param _event - Connection event
    */
-  private async afterConnectHook(connection: Connection, event: ConnectionEvent): Promise<void> {
+  private async afterConnectHook(connection: Connection, _event: ConnectionEvent): Promise<void> {
     try {
       // Load AGE extension
       await connection.query('LOAD \'age\';');
@@ -199,11 +189,12 @@ export class TestConnectionManager {
    * This is called before a connection is released back to the pool
    *
    * @param connection - Connection
-   * @param event - Connection event
+   * @param _event - Connection event
    */
-  private async beforeDisconnectHook(connection: Connection, event: ConnectionEvent): Promise<void> {
+  private async beforeDisconnectHook(connection: Connection, _event: ConnectionEvent): Promise<void> {
     // Remove from tracked connections
     this.activeConnections.delete(connection);
+    // Note: The age_params table is truncated by the release event handler in the PgConnectionManager
   }
 }
 
@@ -211,9 +202,9 @@ export class TestConnectionManager {
 export const connectionConfig = {
   host: process.env.PGHOST || 'localhost',
   port: parseInt(process.env.PGPORT || '5432', 10),
-  database: process.env.PGDATABASE || 'age-integration',
-  user: process.env.PGUSER || 'age',
-  password: process.env.PGPASSWORD || 'agepassword',
+  database: process.env.PGDATABASE,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
   pool: {
     max: 10, // Increase the pool size to handle more concurrent connections
     idleTimeoutMillis: 60000, // How long a connection can be idle before being closed
@@ -237,24 +228,19 @@ export const connectionConfig = {
 };
 
 /**
- * Get the singleton connection manager instance
- * If it doesn't exist, it will be created
+ * Get the connection manager singleton for tests
+ * This is the function that should be used by tests to get a connection manager
  *
- * @returns The singleton connection manager instance
+ * @returns The connection manager singleton for tests
  */
-export function getTestConnectionManager(): PgConnectionManager {
-  const testConnectionManager = TestConnectionManager.getInstance();
-  return testConnectionManager.connectionManager;
+export function getConnectionManagerForTests(): ConnectionManagerForTests {
+  return ConnectionManagerForTests.getInstance();
 }
 
 /**
- * Release all connections in the singleton pool without closing it
- * This is useful for test cleanup between test files
+ * Release all connections used in tests
+ * This is the function that should be used by tests to release all connections
  */
-export async function releaseAllTestConnections(): Promise<void> {
-  const testConnectionManager = TestConnectionManager.getInstance();
-  await testConnectionManager.releaseAllConnections();
+export async function releaseAllConnections(): Promise<void> {
+  await ConnectionManagerForTests.getInstance().releaseAllConnections();
 }
-
-// Note: We don't register a global afterAll hook here to avoid Vitest import issues
-// The pool will be closed in the global teardown function

@@ -11,6 +11,7 @@ import {
   isAgeAvailable
 } from '../setup/integration';
 import { QueryBuilder } from '../../src/query/builder';
+import { OrderDirection } from '../../src/query/types';
 import { movieSchema } from '../fixtures/movie-schema';
 
 // Graph name for the query builder tests
@@ -115,20 +116,12 @@ describe('QueryBuilder Integration', () => {
     // Create a new query builder for this test
     const queryBuilder = new QueryBuilder(movieSchema, queryExecutor, QUERY_BUILDER_TEST_GRAPH);
 
-    // Build the query and log it for debugging
-    const cypherQuery = queryBuilder
+    // Build and execute the query using the query builder
+    const result = await queryBuilder
       .match('Movie', 'm')
       .done() // Return to the main query builder from the match clause
       .return('m.title AS title', 'm.year AS year')
-      .toCypher();
-
-    console.log('Generated Cypher query:', cypherQuery);
-
-    // Use raw Cypher query for the first test to verify the basic functionality
-    const result = await queryExecutor.executeCypher(`
-      MATCH (m:Movie)
-      RETURN m.title AS title, m.year AS year
-    `, {}, QUERY_BUILDER_TEST_GRAPH);
+      .execute();
 
     // Verify the result
     expect(result.rows).toHaveLength(5);
@@ -147,15 +140,18 @@ describe('QueryBuilder Integration', () => {
       return;
     }
 
-    // Skip using the query builder for this test
+    // Create a new query builder for this test
+    const queryBuilder = new QueryBuilder(movieSchema, queryExecutor, QUERY_BUILDER_TEST_GRAPH);
 
-    // Use raw Cypher query with a WHERE clause
+    // Build and execute the query using the query builder
     // Note: In Apache AGE, we need to be careful with string comparisons
     // For this test, we'll use a simpler approach without string comparison
-    const result = await queryExecutor.executeCypher(`
-      MATCH (m:Movie)
-      RETURN m.title AS title, m.genre AS genre
-    `, {}, QUERY_BUILDER_TEST_GRAPH);
+    const result = await queryBuilder
+      .match('Movie', 'm')
+      .done()
+      .where('m.genre IS NOT NULL') // Simple condition that will match all movies
+      .return('m.title AS title', 'm.genre AS genre')
+      .execute();
 
     // Verify the result
     expect(result.rows).toHaveLength(5);
@@ -169,14 +165,21 @@ describe('QueryBuilder Integration', () => {
 
   // Test: MATCH with ORDER BY clause
   it('should execute a MATCH query with ORDER BY clause', async () => {
+    if (!ageAvailable) {
+      console.warn('Skipping test: AGE not available');
+      return;
+    }
 
+    // Create a new query builder for this test
+    const queryBuilder = new QueryBuilder(movieSchema, queryExecutor, QUERY_BUILDER_TEST_GRAPH);
 
-    // Use raw Cypher query for now
-    const result = await queryExecutor.executeCypher(`
-      MATCH (m:Movie)
-      RETURN m.title AS title, m.rating AS rating
-      ORDER BY m.rating DESC
-    `, {}, QUERY_BUILDER_TEST_GRAPH);
+    // Build and execute the query using the query builder
+    const result = await queryBuilder
+      .match('Movie', 'm')
+      .done()
+      .return('m.title AS title', 'm.rating AS rating')
+      .orderBy('m.rating', OrderDirection.DESC)
+      .execute();
 
     // Verify the result
     expect(result.rows).toHaveLength(5);
@@ -189,14 +192,22 @@ describe('QueryBuilder Integration', () => {
 
   // Test: MATCH with LIMIT clause
   it('should execute a MATCH query with LIMIT clause', async () => {
+    if (!ageAvailable) {
+      console.warn('Skipping test: AGE not available');
+      return;
+    }
 
-    // Use raw Cypher query for now
-    const result = await queryExecutor.executeCypher(`
-      MATCH (m:Movie)
-      RETURN m.title AS title
-      ORDER BY m.title
-      LIMIT 3
-    `, {}, QUERY_BUILDER_TEST_GRAPH);
+    // Create a new query builder for this test
+    const queryBuilder = new QueryBuilder(movieSchema, queryExecutor, QUERY_BUILDER_TEST_GRAPH);
+
+    // Build and execute the query using the query builder
+    const result = await queryBuilder
+      .match('Movie', 'm')
+      .done()
+      .return('m.title AS title')
+      .orderBy('m.title')
+      .limit(3)
+      .execute();
 
     // Verify the result
     expect(result.rows).toHaveLength(3);
@@ -204,14 +215,22 @@ describe('QueryBuilder Integration', () => {
 
   // Test: MATCH with SKIP clause
   it('should execute a MATCH query with SKIP clause', async () => {
+    if (!ageAvailable) {
+      console.warn('Skipping test: AGE not available');
+      return;
+    }
 
-    // Use raw Cypher query for now
-    const result = await queryExecutor.executeCypher(`
-      MATCH (m:Movie)
-      RETURN m.title AS title
-      ORDER BY m.title
-      SKIP 2
-    `, {}, QUERY_BUILDER_TEST_GRAPH);
+    // Create a new query builder for this test
+    const queryBuilder = new QueryBuilder(movieSchema, queryExecutor, QUERY_BUILDER_TEST_GRAPH);
+
+    // Build and execute the query using the query builder
+    const result = await queryBuilder
+      .match('Movie', 'm')
+      .done()
+      .return('m.title AS title')
+      .orderBy('m.title')
+      .skip(2)
+      .execute();
 
     // Verify the result
     expect(result.rows).toHaveLength(3);
@@ -224,14 +243,18 @@ describe('QueryBuilder Integration', () => {
       return;
     }
 
-    // Use raw Cypher query for now
+    // Create a new query builder for this test
+    const queryBuilder = new QueryBuilder(movieSchema, queryExecutor, QUERY_BUILDER_TEST_GRAPH);
+
+    // Build and execute the query using the query builder
     // For this test, we'll use a simpler approach without complex WHERE conditions
-    // We'll just return all persons and movies
-    const result = await queryExecutor.executeCypher(`
-      MATCH (p:Person)
-      RETURN p.name AS director
-      ORDER BY p.name
-    `, {}, QUERY_BUILDER_TEST_GRAPH);
+    // We'll just return all persons
+    const result = await queryBuilder
+      .match('Person', 'p')
+      .done()
+      .return('p.name AS director')
+      .orderBy('p.name')
+      .execute();
 
     // Verify the result
     expect(result.rows).toHaveLength(5);
@@ -246,11 +269,15 @@ describe('QueryBuilder Integration', () => {
       return;
     }
 
-    // Use raw Cypher query for now
-    const result = await queryExecutor.executeCypher(`
-      MATCH (m:Movie)
-      RETURN m.genre AS genre, count(m) AS count
-    `, {}, QUERY_BUILDER_TEST_GRAPH);
+    // Create a new query builder for this test
+    const queryBuilder = new QueryBuilder(movieSchema, queryExecutor, QUERY_BUILDER_TEST_GRAPH);
+
+    // Build and execute the query using the query builder
+    const result = await queryBuilder
+      .match('Movie', 'm')
+      .done()
+      .return('m.genre AS genre', 'count(m) AS count')
+      .execute();
 
     // Verify the result
     expect(result.rows.length).toBeGreaterThan(0);
@@ -267,5 +294,42 @@ describe('QueryBuilder Integration', () => {
     expect(genreCounts['Drama']).toBe(2);
     expect(genreCounts['Crime']).toBe(2);
     expect(genreCounts['Action']).toBe(1);
+  });
+
+  // Test: MATCH with relationship using directorId
+  it('should execute a MATCH query with relationship using directorId', async () => {
+    if (!ageAvailable) {
+      console.warn('Skipping test: AGE not available');
+      return;
+    }
+
+    // Create a new query builder for this test
+    const queryBuilder = new QueryBuilder(movieSchema, queryExecutor, QUERY_BUILDER_TEST_GRAPH);
+
+    // Build and execute the query using the query builder
+    const result = await queryBuilder
+      .match('Movie', 'm')
+      .done()
+      .match('Person', 'p')
+      .done()
+      .where('m.directorId = p.id')
+      .return('m.title AS movie', 'p.name AS director')
+      .orderBy('m.title')
+      .execute();
+
+    // Verify the result
+    expect(result.rows).toHaveLength(5);
+
+    // Check a few specific director-movie pairs
+    const movieDirectors = result.rows.reduce((acc: Record<string, string>, row: any) => {
+      const movie = JSON.parse(row.movie);
+      const director = JSON.parse(row.director);
+      acc[movie] = director;
+      return acc;
+    }, {});
+
+    expect(movieDirectors['The Shawshank Redemption']).toBe('Frank Darabont');
+    expect(movieDirectors['The Godfather']).toBe('Francis Ford Coppola');
+    expect(movieDirectors['The Dark Knight']).toBe('Christopher Nolan');
   });
 });

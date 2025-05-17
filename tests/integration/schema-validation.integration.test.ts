@@ -15,11 +15,7 @@ import {
 import { SchemaValidator } from '../../src/schema/validator';
 import { VertexOperations, EdgeOperations } from '../../src/db';
 import { ValidationError } from '../../src/core/errors';
-
-// Mock SQLGenerator that doesn't validate the schema
-class MockSQLGenerator {
-  constructor(private schema: any) {}
-}
+import { SQLGenerator } from '../../src/sql/generator';
 
 // Graph name for the schema validation tests
 const SCHEMA_TEST_GRAPH = 'schema_test_graph';
@@ -102,11 +98,11 @@ describe('Schema Validation Integration', () => {
       return;
     }
 
-    // Create mock SQL generator, schema validator, and operations
-    sqlGenerator = new MockSQLGenerator(testSchema);
+    // Create SQL generator, schema validator, and operations
+    sqlGenerator = new SQLGenerator(testSchema);
     schemaValidator = new SchemaValidator(testSchema);
-    vertexOperations = new VertexOperations(testSchema, queryExecutor, sqlGenerator as any);
-    edgeOperations = new EdgeOperations(testSchema, queryExecutor, sqlGenerator as any);
+    vertexOperations = new VertexOperations(testSchema, queryExecutor, sqlGenerator, SCHEMA_TEST_GRAPH);
+    edgeOperations = new EdgeOperations(testSchema, queryExecutor, sqlGenerator, SCHEMA_TEST_GRAPH);
   });
 
   // Clean up after all tests

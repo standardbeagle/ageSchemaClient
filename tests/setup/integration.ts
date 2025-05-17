@@ -6,11 +6,10 @@
  */
 
 import { QueryExecutor, TransactionManager } from '../../src/db';
-import { PgConnectionManager } from '../../src/db/connector';
 import { afterAll, beforeAll } from 'vitest';
 import dotenv from 'dotenv';
-import { getTestConnectionManager, releaseAllTestConnections } from './test-connection-manager';
-import { ResourceRegistry, getResourceRegistry, ResourceType } from './resource-registry';
+import { getConnectionManagerForTests, releaseAllConnections, ConnectionManagerForTests } from './connection-manager-for-tests';
+import { getResourceRegistry } from './resource-registry';
 import { generateSchemaName, generateGraphName } from './name-generator';
 
 // Load environment variables from .env.test
@@ -30,7 +29,7 @@ export const AGE_GRAPH_NAME = process.env.AGE_GRAPH_NAME || generateGraphName();
 
 // Shared connection manager and query executor for tests
 // Each test file gets its own connection manager
-export let connectionManager: PgConnectionManager;
+export let connectionManager: ConnectionManagerForTests;
 export let queryExecutor: QueryExecutor;
 export let transactionManager: TransactionManager;
 
@@ -41,8 +40,8 @@ beforeAll(async () => {
 
     // Connect to the test database
     try {
-      // Use the singleton test connection manager
-      connectionManager = getTestConnectionManager();
+      // Use the singleton connection manager for tests
+      connectionManager = getConnectionManagerForTests();
 
       const connection = await connectionManager.getConnection();
       queryExecutor = new QueryExecutor(connection);
@@ -146,7 +145,7 @@ afterAll(async () => {
     // The pool will be closed when the process exits
     try {
       // Release active connections but don't close the pool
-      await releaseAllTestConnections();
+      await releaseAllConnections();
       console.log('Test database connections released (pool will be closed when process exits).');
     } catch (error) {
       console.error(`Error releasing connections: ${error.message}`);

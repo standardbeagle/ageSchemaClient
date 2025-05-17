@@ -6,7 +6,6 @@
  */
 
 import { getResourceRegistry } from './resource-registry';
-import { releaseAllTestConnections } from './test-connection-manager';
 
 // This function will be called once before all tests
 export default function() {
@@ -27,13 +26,6 @@ export default function() {
       await resourceRegistry.cleanupAll();
     } catch (error) {
       console.error(`Error cleaning up resources: ${(error as Error).message}`);
-    }
-
-    // Release all connections
-    try {
-      await releaseAllTestConnections();
-    } catch (error) {
-      console.error(`Error releasing connections: ${(error as Error).message}`);
     }
 
     // Clean up any global resources

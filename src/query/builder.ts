@@ -220,14 +220,6 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
    */
   async execute<R = any>(options: QueryExecutionOptions = {}): QueryBuilderResult<R> {
     try {
-      // Validate query against schema
-      if (options.validate !== false) {
-        const errors = this.validateQuery();
-
-        if (errors.length > 0) {
-          throw new Error(`Query validation failed: ${errors.join(', ')}`);
-        }
-      }
 
       const params = this.getParameters();
       const graphName = options.graphName || this.graphName;
@@ -251,6 +243,8 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
       // For queries with parameters, use the WITH clause approach
       // This is more compatible with Apache AGE
       console.log('Executing Cypher query with parameters using WITH clause');
+
+      this.queryExecutor.executeSQL("")
 
       // Add a WITH clause at the beginning of the query with all parameters
       const withClauseParams = Object.entries(params)

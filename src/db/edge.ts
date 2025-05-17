@@ -132,17 +132,20 @@ export class EdgeOperations<T extends SchemaDefinition> {
       throw new ValidationError('Graph name is required to create an edge');
     }
 
-    // Use Cypher query for edge creation
+    // Format properties for Cypher query
+    const propsString = this.formatPropertiesForCypher(data);
+
+    // Use Cypher query for edge creation with hardcoded properties
     const query = `
       MATCH (a), (b)
       WHERE id(a) = ${fromVertex.id} AND id(b) = ${toVertex.id}
-      CREATE (a)-[r:${String(label)} $props]->(b)
+      CREATE (a)-[r:${String(label)} ${propsString}]->(b)
       RETURN a, r, b
     `;
 
     const result = await this.queryExecutor.executeCypher(
       query,
-      { props: data },
+      {},
       targetGraph
     );
 
@@ -236,50 +239,29 @@ export class EdgeOperations<T extends SchemaDefinition> {
       throw new ValidationError('Graph name is required to get an edge');
     }
 
-    // Convert properties to Cypher query conditions
-    const fromConditions = Object.entries(fromProperties)
-      .map(([key, value]) => {
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof value === 'boolean') {
-          return `a.${key} = ${value}`;
-        }
-        return `toString(a.${key}) = '${String(value)}'`;
-      })
-      .join(' AND ');
-
-    const toConditions = Object.entries(toProperties)
-      .map(([key, value]) => {
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof value === 'boolean') {
-          return `b.${key} = ${value}`;
-        }
-        return `toString(b.${key}) = '${String(value)}'`;
-      })
-      .join(' AND ');
-
-    let edgeConditions = '';
-    if (edgeProperties && Object.keys(edgeProperties).length > 0) {
-      edgeConditions = ' AND ' + Object.entries(edgeProperties)
-        .map(([key, value]) => {
-          // Handle boolean values specially to avoid type casting issues
-          if (typeof value === 'boolean') {
-            return `r.${key} = ${value}`;
-          }
-          return `toString(r.${key}) = '${String(value)}'`;
-        })
-        .join(' AND ');
-    }
+    // Build WHERE conditions with hardcoded values
+    const fromConditions = this.buildPropertyConditions('a', fromProperties);
+    const toConditions = this.buildPropertyConditions('b', toProperties);
+    const edgeConditions = edgeProperties && Object.keys(edgeProperties).length > 0
+      ? `AND ${this.buildPropertyConditions('r', edgeProperties)}`
+      : '';
 
     // Build Cypher query
     const query = `
       MATCH (a)-[r:${String(label)}]->(b)
-      WHERE ${fromConditions} AND ${toConditions}${edgeConditions}
+      WHERE ${fromConditions}
+      AND ${toConditions}
+      ${edgeConditions}
       RETURN a, r, b
       LIMIT 1
     `;
 
     // Execute query
-    const result = await this.queryExecutor.executeCypher(query, {}, graphName || this.graphName);
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      targetGraph
+    );
 
     if (result.rows.length === 0) {
       return null;
@@ -294,18 +276,75 @@ export class EdgeOperations<T extends SchemaDefinition> {
     return {
       id: edgeData.id || edgeData.identity.toString(),
       label: label,
-      properties: edgeData.properties || {},
-      from: {
-        id: fromData.id || fromData.identity.toString(),
-        label: fromData.label,
-        properties: fromData.properties || {}
-      },
-      to: {
-        id: toData.id || toData.identity.toString(),
-        label: toData.label,
-        properties: toData.properties || {}
-      }
+      fromId: fromData.id || fromData.identity.toString(),
+      toId: toData.id || toData.identity.toString(),
+      properties: edgeData.properties || {}
     } as Edge<T, L>;
+  }
+
+  /**
+   * Build property conditions for Cypher queries with parameters
+   *
+   * @param variableName - Cypher variable name
+   * @param properties - Properties to match
+   * @returns Cypher WHERE conditions
+   */
+  private buildPropertyConditionsForParams(
+    variableName: string,
+    properties: Record<string, any>
+  ): string {
+    if (!properties || Object.keys(properties).length === 0) {
+      return 'true';
+    }
+
+    const propPrefix = variableName === 'a' ? 'fromProps' :
+                       variableName === 'b' ? 'toProps' : 'edgeProps';
+
+    return Object.entries(properties)
+      .map(([key, value]) => {
+        if (value === null) {
+          return `${variableName}.${key} IS NULL`;
+        } else if (typeof value === 'boolean') {
+          return `${variableName}.${key} = ${value}`;
+        } else if (typeof value === 'number') {
+          return `${variableName}.${key} = ${value}`;
+        } else {
+          return `${variableName}.${key} = $${propPrefix}.${key}`;
+        }
+      })
+      .join(' AND ');
+  }
+
+  /**
+   * Build property conditions for Cypher queries
+   *
+   * @param variableName - Cypher variable name
+   * @param properties - Properties to match
+   * @returns Cypher WHERE conditions
+   */
+  private buildPropertyConditions(
+    variableName: string,
+    properties: Record<string, any>
+  ): string {
+    if (!properties || Object.keys(properties).length === 0) {
+      return 'true';
+    }
+
+    return Object.entries(properties)
+      .map(([key, value]) => {
+        if (value === null) {
+          return `${variableName}.${key} IS NULL`;
+        } else if (typeof value === 'boolean') {
+          return `${variableName}.${key} = ${value}`;
+        } else if (typeof value === 'number') {
+          return `${variableName}.${key} = ${value}`;
+        } else if (typeof value === 'string') {
+          return `${variableName}.${key} = '${value}'`;
+        } else {
+          return `${variableName}.${key} = ${JSON.stringify(value)}`;
+        }
+      })
+      .join(' AND ');
   }
 
   /**
@@ -725,50 +764,29 @@ export class EdgeOperations<T extends SchemaDefinition> {
       throw new ValidationError('Graph name is required to delete an edge');
     }
 
-    // Convert properties to Cypher query conditions
-    const fromConditions = Object.entries(fromProperties)
-      .map(([key, value]) => {
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof value === 'boolean') {
-          return `a.${key} = ${value}`;
-        }
-        return `toString(a.${key}) = '${String(value)}'`;
-      })
-      .join(' AND ');
-
-    const toConditions = Object.entries(toProperties)
-      .map(([key, value]) => {
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof value === 'boolean') {
-          return `b.${key} = ${value}`;
-        }
-        return `toString(b.${key}) = '${String(value)}'`;
-      })
-      .join(' AND ');
-
-    let edgeConditions = '';
-    if (edgeProperties && Object.keys(edgeProperties).length > 0) {
-      edgeConditions = ' AND ' + Object.entries(edgeProperties)
-        .map(([key, value]) => {
-          // Handle boolean values specially to avoid type casting issues
-          if (typeof value === 'boolean') {
-            return `r.${key} = ${value}`;
-          }
-          return `toString(r.${key}) = '${String(value)}'`;
-        })
-        .join(' AND ');
-    }
+    // Build WHERE conditions with hardcoded values
+    const fromConditions = this.buildPropertyConditions('a', fromProperties);
+    const toConditions = this.buildPropertyConditions('b', toProperties);
+    const edgeConditions = edgeProperties && Object.keys(edgeProperties).length > 0
+      ? `AND ${this.buildPropertyConditions('r', edgeProperties)}`
+      : '';
 
     // Build Cypher query
     const query = `
       MATCH (a)-[r:${String(label)}]->(b)
-      WHERE ${fromConditions} AND ${toConditions}${edgeConditions}
+      WHERE ${fromConditions}
+      AND ${toConditions}
+      ${edgeConditions}
       DELETE r
       RETURN count(*) AS deleted
     `;
 
     // Execute query
-    const result = await this.queryExecutor.executeCypher(query, {}, graphName || this.graphName);
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      targetGraph
+    );
 
     // Check if any edges were deleted
     return parseInt(result.rows[0].deleted, 10) > 0;
@@ -788,6 +806,12 @@ export class EdgeOperations<T extends SchemaDefinition> {
     toVertex: Vertex<T, any>,
     graphName?: string
   ): Promise<Edge<T, L>[]> {
+    // Ensure we have a graph name
+    const targetGraph = graphName || this.graphName;
+    if (!targetGraph) {
+      throw new ValidationError('Graph name is required to delete edges between vertices');
+    }
+
     // Use Cypher query to delete edges between vertices
     const query = `
       MATCH (a)-[r:${String(label)}]->(b)
@@ -800,7 +824,7 @@ export class EdgeOperations<T extends SchemaDefinition> {
     const result = await this.queryExecutor.executeCypher(
       query,
       {},
-      graphName || this.graphName
+      targetGraph
     );
 
     if (result.rows.length === 0) {
@@ -853,16 +877,19 @@ export class EdgeOperations<T extends SchemaDefinition> {
     const results: Edge<T, L>[] = [];
 
     for (const edge of edges) {
+      // Format properties for Cypher query
+      const propsString = this.formatPropertiesForCypher(edge.data || {});
+
       const query = `
         MATCH (a), (b)
         WHERE id(a) = ${edge.fromVertex.id} AND id(b) = ${edge.toVertex.id}
-        CREATE (a)-[r:${String(label)} $props]->(b)
+        CREATE (a)-[r:${String(label)} ${propsString}]->(b)
         RETURN a, r, b
       `;
 
       const result = await this.queryExecutor.executeCypher(
         query,
-        { props: edge.data || {} },
+        {},
         graphName || this.graphName
       );
 
@@ -1008,6 +1035,34 @@ export class EdgeOperations<T extends SchemaDefinition> {
   }
 
   /**
+   * Format properties for Cypher query
+   *
+   * @param data - Properties to format
+   * @returns Formatted properties string for Cypher query
+   */
+  private formatPropertiesForCypher(data: Record<string, any>): string {
+    if (!data || Object.keys(data).length === 0) {
+      return '{}';
+    }
+
+    const props = Object.entries(data).map(([key, value]) => {
+      if (value === null) {
+        return `${key}: null`;
+      } else if (typeof value === 'boolean') {
+        return `${key}: ${value}`;
+      } else if (typeof value === 'number') {
+        return `${key}: ${value}`;
+      } else if (typeof value === 'string') {
+        return `${key}: '${value.replace(/'/g, "\\'")}'`;
+      } else {
+        return `${key}: ${JSON.stringify(value)}`;
+      }
+    });
+
+    return `{${props.join(', ')}}`;
+  }
+
+  /**
    * Validate vertex types against edge constraints
    *
    * @param label - Edge label
@@ -1020,6 +1075,8 @@ export class EdgeOperations<T extends SchemaDefinition> {
     toVertex: Vertex<T, any>
   ): void {
     const edgeDef = this.schema.edges[label as string] as EdgeLabel;
+
+
 
     if (!fromVertex || !fromVertex.label) {
       throw new ValidationError(`Source vertex is invalid or missing label`);

@@ -31,8 +31,7 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     ageAvailable = await isAgeAvailable();
 
     if (!ageAvailable) {
-      console.warn('Apache AGE extension is not available, tests will be skipped');
-      return;
+      throw new Error('Apache AGE extension is not available, tests will be skipped');
     }
 
     // Drop the test graph if it exists

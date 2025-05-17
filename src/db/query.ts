@@ -388,9 +388,6 @@ export class QueryExecutor {
       );
     }
 
-    // Convert parameters to JSON string
-    const paramsJson = params ? JSON.stringify(params) : '{}';
-
     try {
       // Extract return columns from the Cypher query to match the AS clause
       // This is a critical step for Apache AGE compatibility
@@ -457,8 +454,10 @@ export class QueryExecutor {
         }
       }
 
+      // Convert parameters to JSON string
+      const paramsJson = params ? JSON.stringify(params) : '{}';
+
       // Execute the Cypher query with proper return type
-      // Note: Connection pool already handles loading AGE and setting search_path
       const sql = `SELECT * FROM ag_catalog.cypher('${graphName}', $q$${cypher}$q$, $1) AS (${returnColumns})`;
 
       // Log the query and parameters for debugging if logger is available

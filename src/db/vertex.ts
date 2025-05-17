@@ -130,15 +130,18 @@ export class VertexOperations<T extends Schema> {
       throw new ValidationError('Graph name is required to create a vertex');
     }
 
-    // Generate and execute Cypher query
+    // Generate properties string for Cypher query
+    const propsString = this.formatPropertiesForCypher(data);
+
+    // Generate and execute Cypher query with hardcoded properties
     const query = `
-      CREATE (v:${String(label)} $props)
+      CREATE (v:${String(label)} ${propsString})
       RETURN v
     `;
 
     const result = await this.queryExecutor.executeCypher(
       query,
-      { props: data },
+      {},
       targetGraph
     );
 
@@ -204,16 +207,8 @@ export class VertexOperations<T extends Schema> {
       throw new ValidationError('Graph name is required to get a vertex');
     }
 
-    // Convert properties to Cypher query conditions
-    const conditions = Object.entries(properties)
-      .map(([key, value]) => {
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof value === 'boolean') {
-          return `v.${key} = ${value}`;
-        }
-        return `toString(v.${key}) = '${String(value)}'`;
-      })
-      .join(' AND ');
+    // Build WHERE conditions with hardcoded values
+    const conditions = this.buildPropertyConditions('v', properties);
 
     // Build Cypher query
     const query = `
@@ -224,21 +219,77 @@ export class VertexOperations<T extends Schema> {
     `;
 
     // Execute query
-    const result = await this.queryExecutor.executeCypher(query, {}, targetGraph);
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      targetGraph
+    );
 
     if (result.rows.length === 0) {
       return null;
     }
 
-    // Parse the vertex from the result
-    const vertexData = JSON.parse(result.rows[0].v);
+    return this.transformToVertex(label, result.rows[0]);
+  }
 
-    // Transform to Vertex object
-    return {
-      id: vertexData.id || vertexData.identity.toString(),
-      label: label,
-      properties: vertexData.properties || {}
-    } as Vertex<T, L>;
+  /**
+   * Build property conditions for Cypher queries using direct parameters
+   *
+   * @param variableName - Cypher variable name
+   * @param properties - Properties to match
+   * @returns Cypher WHERE conditions
+   */
+  private buildPropertyConditionsForParams(
+    variableName: string,
+    properties: Record<string, any>
+  ): string {
+    if (!properties || Object.keys(properties).length === 0) {
+      return 'true';
+    }
+
+    return Object.entries(properties)
+      .map(([key, value]) => {
+        if (value === null) {
+          return `${variableName}.${key} IS NULL`;
+        } else if (typeof value === 'boolean') {
+          return `${variableName}.${key} = ${value}`;
+        } else if (typeof value === 'number') {
+          return `${variableName}.${key} = ${value}`;
+        } else {
+          return `${variableName}.${key} = $props.${key}`;
+        }
+      })
+      .join(' AND ');
+  }
+
+  /**
+   * Build property conditions for Cypher queries
+   *
+   * @param variableName - Cypher variable name
+   * @param properties - Properties to match
+   * @returns Cypher WHERE conditions
+   */
+  private buildPropertyConditions(
+    variableName: string,
+    properties: Record<string, any>
+  ): string {
+    if (!properties || Object.keys(properties).length === 0) {
+      return 'true';
+    }
+
+    return Object.entries(properties)
+      .map(([key, value]) => {
+        if (value === null) {
+          return `${variableName}.${key} IS NULL`;
+        } else if (typeof value === 'boolean') {
+          return `${variableName}.${key} = ${value}`;
+        } else if (typeof value === 'number') {
+          return `${variableName}.${key} = ${value}`;
+        } else {
+          return `${variableName}.${key} = '${String(value)}'`;
+        }
+      })
+      .join(' AND ');
   }
 
   /**
@@ -474,16 +525,8 @@ export class VertexOperations<T extends Schema> {
       throw new ValidationError('Graph name is required to delete a vertex');
     }
 
-    // Convert properties to Cypher query conditions
-    const conditions = Object.entries(properties)
-      .map(([key, value]) => {
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof value === 'boolean') {
-          return `v.${key} = ${value}`;
-        }
-        return `toString(v.${key}) = '${String(value)}'`;
-      })
-      .join(' AND ');
+    // Build WHERE conditions with hardcoded values
+    const conditions = this.buildPropertyConditions('v', properties);
 
     // Build Cypher query
     const query = `
@@ -494,7 +537,11 @@ export class VertexOperations<T extends Schema> {
     `;
 
     // Execute query
-    const result = await this.queryExecutor.executeCypher(query, {}, targetGraph);
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      targetGraph
+    );
 
     // Check if any vertices were deleted
     return parseInt(result.rows[0].deleted, 10) > 0;
@@ -524,26 +571,11 @@ export class VertexOperations<T extends Schema> {
     // Validate data against schema
     this.validateVertexData(label, data, true);
 
-    // Convert properties to Cypher query conditions
-    const conditions = Object.entries(properties)
-      .map(([key, value]) => {
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof value === 'boolean') {
-          return `v.${key} = ${value}`;
-        }
-        return `toString(v.${key}) = '${String(value)}'`;
-      })
-      .join(' AND ');
+    // Build SET clauses for Cypher query with hardcoded values
+    const setClauses = this.buildSetClauses('v', data);
 
-    // Convert data to Cypher SET clauses
-    const setClauses = Object.entries(data)
-      .map(([key, value]) => {
-        const valueStr = typeof value === 'string'
-          ? `'${value}'`
-          : (typeof value === 'object' ? JSON.stringify(value) : value);
-        return `v.${key} = ${valueStr}`;
-      })
-      .join(', ');
+    // Build WHERE conditions with hardcoded values
+    const conditions = this.buildPropertyConditions('v', properties);
 
     // Build Cypher query
     const query = `
@@ -554,21 +586,107 @@ export class VertexOperations<T extends Schema> {
     `;
 
     // Execute query
-    const result = await this.queryExecutor.executeCypher(query, {}, targetGraph);
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      targetGraph
+    );
 
     if (result.rows.length === 0) {
       return null;
     }
 
-    // Parse the vertex from the result
-    const vertexData = JSON.parse(result.rows[0].v);
+    return this.transformToVertex(label, result.rows[0]);
+  }
 
-    // Transform to Vertex object
-    return {
-      id: vertexData.id || vertexData.identity.toString(),
-      label: label,
-      properties: vertexData.properties || {}
-    } as Vertex<T, L>;
+  /**
+   * Build SET clauses for Cypher queries with parameters
+   *
+   * @param variableName - Cypher variable name
+   * @param data - Data to set
+   * @returns Cypher SET clauses
+   */
+  private buildSetClausesForParams(
+    variableName: string,
+    data: Record<string, any>
+  ): string {
+    if (!data || Object.keys(data).length === 0) {
+      return `${variableName} = ${variableName}`;
+    }
+
+    return Object.entries(data)
+      .map(([key, value]) => {
+        if (value === null) {
+          return `${variableName}.${key} = null`;
+        } else if (typeof value === 'boolean') {
+          return `${variableName}.${key} = ${value}`;
+        } else if (typeof value === 'number') {
+          return `${variableName}.${key} = ${value}`;
+        } else {
+          return `${variableName}.${key} = $updateData.${key}`;
+        }
+      })
+      .join(', ');
+  }
+
+  /**
+   * Build SET clauses for Cypher queries
+   *
+   * @param variableName - Cypher variable name
+   * @param data - Data to set
+   * @returns Cypher SET clauses
+   */
+  private buildSetClauses(
+    variableName: string,
+    data: Record<string, any>
+  ): string {
+    if (!data || Object.keys(data).length === 0) {
+      return `${variableName} = ${variableName}`;
+    }
+
+    return Object.entries(data)
+      .map(([key, value]) => {
+        if (value === null) {
+          return `${variableName}.${key} = null`;
+        } else if (typeof value === 'boolean') {
+          return `${variableName}.${key} = ${value}`;
+        } else if (typeof value === 'number') {
+          return `${variableName}.${key} = ${value}`;
+        } else if (typeof value === 'string') {
+          return `${variableName}.${key} = '${value}'`;
+        } else {
+          return `${variableName}.${key} = ${JSON.stringify(value)}`;
+        }
+      })
+      .join(', ');
+  }
+
+  /**
+   * Format properties for Cypher query
+   *
+   * @param data - Properties to format
+   * @returns Formatted properties string for Cypher query
+   */
+  private formatPropertiesForCypher(data: Record<string, any>): string {
+    if (!data || Object.keys(data).length === 0) {
+      return '{}';
+    }
+
+    const props = Object.entries(data).map(([key, value]) => {
+      if (value === null) {
+        return `${key}: null`;
+      } else if (typeof value === 'boolean') {
+        return `${key}: ${value}`;
+      } else if (typeof value === 'number') {
+        return `${key}: ${value}`;
+      } else if (typeof value === 'string') {
+        return `${key}: '${value.replace(/'/g, "\\'")}'`;
+      } else {
+        return `${key}: ${JSON.stringify(value)}`;
+      }
+    });
+
+    return `{${props.join(', ')}}`;
   }
 
   /**
@@ -690,15 +808,50 @@ export class VertexOperations<T extends Schema> {
     // Handle Cypher query result
     if (row.v) {
       try {
-        const vertexData = JSON.parse(row.v);
+        // Apache AGE returns data in a specific format that might not be valid JSON
+        // We need to handle it specially
+        let vertexData;
+        if (typeof row.v === 'string') {
+          vertexData = JSON.parse(row.v);
+        } else if (typeof row.v === 'object') {
+          vertexData = row.v;
+        } else {
+          // Try to extract the data from the string representation
+          const str = String(row.v);
+          // Extract the vertex ID and properties from the string
+          const idMatch = str.match(/id=(\d+)/);
+          const propsMatch = str.match(/properties=({.*?})/);
+
+          vertexData = {
+            identity: idMatch ? parseInt(idMatch[1]) : 0,
+            properties: propsMatch ? JSON.parse(propsMatch[1].replace(/'/g, '"')) : {}
+          };
+        }
+
         return {
-          id: vertexData.id || vertexData.identity.toString(),
+          id: vertexData.id || (vertexData.identity ? vertexData.identity.toString() : '0'),
           label,
           properties: vertexData.properties || {}
         } as Vertex<T, L>;
       } catch (error) {
-        console.error('Error parsing vertex data:', error);
-        throw new Error(`Failed to parse vertex data: ${error.message}`);
+        console.error('Error parsing vertex data:', error, row.v);
+
+        // Fallback approach for AGE format
+        try {
+          // Try to extract data directly from the string
+          const str = String(row.v);
+          const labelMatch = str.match(/:"([^"]+)"/);
+          const idMatch = str.match(/id=(\d+)/);
+
+          return {
+            id: idMatch ? idMatch[1] : '0',
+            label,
+            properties: {}
+          } as Vertex<T, L>;
+        } catch (fallbackError) {
+          console.error('Fallback parsing also failed:', fallbackError);
+          throw new Error(`Failed to parse vertex data: ${error.message}`);
+        }
       }
     }
 

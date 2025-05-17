@@ -13,11 +13,7 @@ import {
   TEST_SCHEMA
 } from '../setup/integration';
 import { VertexOperations, EdgeOperations } from '../../src/db';
-
-// Mock SQLGenerator that doesn't validate the schema
-class MockSQLGenerator {
-  constructor(private schema: any) {}
-}
+import { SQLGenerator } from '../../src/sql/generator';
 
 // Graph name for the vertex and edge tests
 const VERTEX_EDGE_TEST_GRAPH = 'vertex_edge_test_graph';
@@ -92,10 +88,10 @@ describe('Vertex and Edge Operations Integration', () => {
       return;
     }
 
-    // Create mock SQL generator and operations
-    sqlGenerator = new MockSQLGenerator(testSchema);
-    vertexOperations = new VertexOperations(testSchema, queryExecutor, sqlGenerator as any);
-    edgeOperations = new EdgeOperations(testSchema, queryExecutor, sqlGenerator as any);
+    // Create SQL generator and operations
+    sqlGenerator = new SQLGenerator(testSchema);
+    vertexOperations = new VertexOperations(testSchema, queryExecutor, sqlGenerator, 'vertex_edge_test_graph');
+    edgeOperations = new EdgeOperations(testSchema, queryExecutor, sqlGenerator, 'vertex_edge_test_graph');
   });
 
   // Clean up after all tests
