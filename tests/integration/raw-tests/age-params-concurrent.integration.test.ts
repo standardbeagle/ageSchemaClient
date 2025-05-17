@@ -189,18 +189,22 @@ describe('age_params Table Isolation', () => {
 
     } finally {
       // Clean up and release connections
-      try {
-        connection1.release();
-        console.log('✓ Connection 1 released back to the pool');
-      } catch (error) {
-        console.error(`Error releasing connection 1: ${error.message}`);
+      if (connection1) {
+        try {
+          await connectionManager.releaseConnection(connection1);
+          console.log('✓ Connection 1 released back to the pool');
+        } catch (error) {
+          console.error(`Error releasing connection 1: ${error.message}`);
+        }
       }
 
-      try {
-        connection2.release();
-        console.log('✓ Connection 2 released back to the pool');
-      } catch (error) {
-        console.error(`Error releasing connection 2: ${error.message}`);
+      if (connection2) {
+        try {
+          await connectionManager.releaseConnection(connection2);
+          console.log('✓ Connection 2 released back to the pool');
+        } catch (error) {
+          console.error(`Error releasing connection 2: ${error.message}`);
+        }
       }
     }
   });

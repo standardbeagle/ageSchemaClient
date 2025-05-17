@@ -17,13 +17,16 @@ import { OrderDirection } from '../../src/query/types';
 // Graph name for the query builder parameter tests
 const PARAM_TEST_GRAPH = 'param_test_graph';
 
+// Import the schema types
+import { SchemaDefinition, PropertyType } from '../../src/schema/types';
+
 // Define a simple schema for testing
-const testSchema = {
+const testSchema: SchemaDefinition = {
   vertices: {
     Person: {
       properties: {
-        name: { type: 'string' },
-        age: { type: 'number' }
+        name: { type: PropertyType.STRING },
+        age: { type: PropertyType.NUMBER }
       },
       required: ['name']
     }
@@ -101,10 +104,23 @@ describe('QueryBuilder Parameter Integration', () => {
     await queryExecutor.executeSQL(`
       SET search_path = ag_catalog, public;
 
+      -- Create function with integer parameter
       CREATE OR REPLACE FUNCTION ${TEST_SCHEMA}.get_age_param(age_value int)
       RETURNS ag_catalog.agtype AS $$
       BEGIN
         RETURN jsonb_build_object('age', age_value)::text::ag_catalog.agtype;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      -- Create function with agtype parameter (needed for Cypher queries)
+      CREATE OR REPLACE FUNCTION ${TEST_SCHEMA}.get_age_param(age_value ag_catalog.agtype)
+      RETURNS ag_catalog.agtype AS $$
+      DECLARE
+        v_age int;
+      BEGIN
+        -- Extract the integer value from agtype
+        v_age := age_value::text::int;
+        RETURN jsonb_build_object('age', v_age)::text::ag_catalog.agtype;
       END;
       $$ LANGUAGE plpgsql;
     `);
@@ -123,8 +139,11 @@ describe('QueryBuilder Parameter Integration', () => {
       expect(JSON.parse(result.rows[0].name)).toBe('Alice');
       expect(JSON.parse(result.rows[0].age)).toBe(30);
     } finally {
-      // Clean up the function
-      await queryExecutor.executeSQL(`DROP FUNCTION IF EXISTS ${TEST_SCHEMA}.get_age_param(int)`);
+      // Clean up the functions
+      await queryExecutor.executeSQL(`
+        DROP FUNCTION IF EXISTS ${TEST_SCHEMA}.get_age_param(int);
+        DROP FUNCTION IF EXISTS ${TEST_SCHEMA}.get_age_param(ag_catalog.agtype);
+      `);
     }
   });
 
