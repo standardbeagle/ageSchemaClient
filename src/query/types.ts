@@ -250,6 +250,26 @@ export interface IQueryBuilder<T extends SchemaDefinition> {
   withParam(name: string, value: any): this;
 
   /**
+   * Set a parameter in the age_params temporary table
+   */
+  setParam(key: string, value: any): Promise<this>;
+
+  /**
+   * Add a WITH clause that calls a function to get parameters
+   */
+  withParamFunction(functionName: string, alias: string): this;
+
+  /**
+   * Add a WITH clause that calls the get_age_param function
+   */
+  withAgeParam(key: string, alias: string): this;
+
+  /**
+   * Add a WITH clause that calls the get_all_age_params function
+   */
+  withAllAgeParams(alias?: string): this;
+
+  /**
    * Execute the query
    */
   execute<R = any>(options?: QueryExecutionOptions): QueryBuilderResult<R>;

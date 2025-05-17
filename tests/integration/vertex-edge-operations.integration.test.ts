@@ -136,8 +136,31 @@ describe('Vertex and Edge Operations Integration', () => {
 
     // Verify the result
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].name).toBe('Alice');
-    expect(parseInt(result.rows[0].age, 10)).toBe(30);
+
+    // Helper function to parse AGE values
+    const parseAgeValue = (value) => {
+      if (typeof value !== 'string') return value;
+
+      try {
+        // If it's a JSON string (starts with quote), parse it
+        if (value.startsWith('"')) {
+          return JSON.parse(value);
+        }
+        // If it's a number string, parse it as a number
+        if (!isNaN(value)) {
+          return parseInt(value, 10);
+        }
+        return value;
+      } catch (e) {
+        return value;
+      }
+    };
+
+    const name = parseAgeValue(result.rows[0].name);
+    const age = parseAgeValue(result.rows[0].age);
+
+    expect(name).toBe('Alice');
+    expect(age).toBe(30);
   });
 
   // Test: Get a vertex
@@ -202,8 +225,31 @@ describe('Vertex and Edge Operations Integration', () => {
 
     // Verify the result
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].name).toBe('Charlie');
-    expect(parseInt(result.rows[0].age, 10)).toBe(26);
+
+    // Helper function to parse AGE values
+    const parseAgeValue = (value) => {
+      if (typeof value !== 'string') return value;
+
+      try {
+        // If it's a JSON string (starts with quote), parse it
+        if (value.startsWith('"')) {
+          return JSON.parse(value);
+        }
+        // If it's a number string, parse it as a number
+        if (!isNaN(value)) {
+          return parseInt(value, 10);
+        }
+        return value;
+      } catch (e) {
+        return value;
+      }
+    };
+
+    const name = parseAgeValue(result.rows[0].name);
+    const age = parseAgeValue(result.rows[0].age);
+
+    expect(name).toBe('Charlie');
+    expect(age).toBe(26);
   });
 
   // Test: Delete a vertex

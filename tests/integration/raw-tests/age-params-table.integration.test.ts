@@ -20,6 +20,7 @@ import {
 import { PgConnectionManager } from '../../../src/db/connector';
 import { QueryExecutor } from '../../../src/db/query';
 import { Connection } from '../../../src/db/types';
+import { QueryBuilder } from '../../../src/query/builder';
 import dotenv from 'dotenv';
 
 // Load environment variables from .env.test
@@ -43,6 +44,13 @@ const connectionConfig = {
     searchPath: 'ag_catalog, "$user", public',
     applicationName: 'ageSchemaClient-integration-test',
   },
+};
+
+// Define a simple schema for testing
+const testSchema = {
+  vertices: {},
+  edges: {},
+  version: '1.0.0'
 };
 
 describe('age_params Table Management', () => {
@@ -97,12 +105,9 @@ describe('age_params Table Management', () => {
         const orignalValue = emptyCheckResult.rows.length > 0 ? emptyCheckResult.rows[0].value : null;
         console.log(`Original value: ${JSON.stringify(orignalValue)}`);
 
-        // 2. Insert data into the age_params table
-        await testQueryExecutor.executeSQL(`
-          INSERT INTO age_params (key, value)
-          VALUES ('test_key', $1) 
-          ON CONFLICT (key) DO UPDATE SET value = $1
-        `, [`{"value": "test_value_${i}"}`]);
+        // 2. Insert data into the age_params table using QueryBuilder's setParam method
+        const queryBuilder = new QueryBuilder(testSchema, testQueryExecutor, AGE_GRAPH_NAME);
+        await queryBuilder.setParam('test_key', { value: `test_value_${i}` });
 
         // Verify the data was inserted
         const insertCheckResult = await testQueryExecutor.executeSQL(`
@@ -121,36 +126,12 @@ describe('age_params Table Management', () => {
         expect(valueObj.value).toBe(`test_value_${i}`);
         console.log(`✓ Data inserted into age_params table (key: ${insertCheckResult.rows[0].key}, value: ${JSON.stringify(valueObj)})`);
 
-        // 3. Use the data in a Cypher query
-        // Create a function to retrieve the parameter
-        await testQueryExecutor.executeSQL(`
-          CREATE OR REPLACE FUNCTION ${TEST_SCHEMA}.get_test_param()
-          RETURNS ag_catalog.agtype AS $$
-          DECLARE
-            result_json JSONB;
-          BEGIN
-            -- Get the parameter value
-            SELECT value INTO result_json
-            FROM age_params
-            WHERE key = 'test_key';
-
-            -- Return as agtype
-            RETURN result_json::text::ag_catalog.agtype;
-          END;
-          $$ LANGUAGE plpgsql;
-        `);
-
-        // Execute a Cypher query that uses the parameter
-        const cypher = `
-          WITH ${TEST_SCHEMA}.get_test_param() AS param
-          RETURN param.value AS test_value
-        `;
-
-        const cypherResult = await testQueryExecutor.executeCypher(
-          cypher,
-          {},
-          AGE_GRAPH_NAME
-        );
+        // 3. Use the data in a Cypher query with QueryBuilder's withAgeParam method
+        // Build a query that uses the withAgeParam method
+        const cypherResult = await queryBuilder
+          .withAgeParam('test_key', 'param')
+          .return('param.value AS test_value')
+          .execute();
 
         expect(cypherResult.rows).toHaveLength(1);
 
@@ -162,14 +143,12 @@ describe('age_params Table Management', () => {
         expect(testValueObj).toBe(`test_value_${i}`);
         console.log(`✓ Successfully used parameter in Cypher query (value: ${JSON.stringify(testValueObj)})`);
 
-        // Clean up the function
-        await testQueryExecutor.executeSQL(`
-          DROP FUNCTION IF EXISTS ${TEST_SCHEMA}.get_test_param()
-        `);
+        // Reset the query builder for next use
+        queryBuilder.reset();
       } finally {
         // 4. Release the connection back to the pool
         // This should trigger the cleanup of the age_params table
-        await connection.release();
+        connection.release();
         console.log('✓ Connection released back to the pool');
       }
     }

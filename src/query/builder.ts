@@ -197,6 +197,32 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
   }
 
   /**
+   * Set a parameter in the age_params temporary table
+   *
+   * This method inserts a parameter into the age_params temporary table
+   * using an INSERT ON CONFLICT UPDATE statement. The parameter can then
+   * be referenced in a Cypher query using the get_age_param() function.
+   *
+   * @param key - Parameter key
+   * @param value - Parameter value (will be converted to JSON)
+   * @returns This query builder
+   */
+  async setParam(key: string, value: any): Promise<this> {
+    // Convert the value to a JSON string
+    const jsonValue = JSON.stringify(value);
+
+    // Insert the parameter into the age_params table
+    // Use ON CONFLICT DO UPDATE to handle existing keys
+    await this.queryExecutor.executeSQL(`
+      INSERT INTO age_params (key, value)
+      VALUES ($1, $2)
+      ON CONFLICT (key) DO UPDATE SET value = $2
+    `, [key, jsonValue]);
+
+    return this;
+  }
+
+  /**
    * Add a WITH clause that calls a function to get parameters
    *
    * This is specifically for Apache AGE compatibility, as it requires
@@ -208,6 +234,37 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
    */
   withParamFunction(functionName: string, alias: string): this {
     this.queryParts.push(new WithPart([`${functionName}() AS ${alias}`]));
+    return this;
+  }
+
+  /**
+   * Add a WITH clause that calls the get_age_param function
+   *
+   * This method adds a WITH clause that calls the get_age_param function
+   * to retrieve a parameter from the age_params temporary table.
+   *
+   * @param key - Parameter key to retrieve
+   * @param alias - Alias for the parameter in the query
+   * @returns This query builder
+   */
+  withAgeParam(key: string, alias: string): this {
+    // Add a WITH clause that calls the get_age_param function
+    this.queryParts.push(new WithPart([`age_schema_client.get_age_param('${key}') AS ${alias}`]));
+    return this;
+  }
+
+  /**
+   * Add a WITH clause that calls the get_all_age_params function
+   *
+   * This method adds a WITH clause that calls the get_all_age_params function
+   * to retrieve all parameters from the age_params temporary table.
+   *
+   * @param alias - Alias for the parameters object in the query
+   * @returns This query builder
+   */
+  withAllAgeParams(alias: string = 'params'): this {
+    // Add a WITH clause that calls the get_all_age_params function
+    this.queryParts.push(new WithPart([`age_schema_client.get_all_age_params() AS ${alias}`]));
     return this;
   }
 
