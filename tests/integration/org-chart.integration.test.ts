@@ -166,10 +166,30 @@ describe('Organization Chart', () => {
       return;
     }
 
+    // Get employee data from the employees table
+    const employeesResult = await queryExecutor.executeSQL(`
+      SELECT
+        employee_id as id,
+        name,
+        title,
+        department,
+        hire_date::text as hire_date,
+        salary
+      FROM employees
+    `);
+
+    // Convert to array of objects
+    const employees = employeesResult.rows;
+
+    // Use the utility function to create a function that returns the employee data
+    const { createAgtypeArrayFunction, executeCypherWithUnwind } = await import('../../../src/db/utils');
+
+    // Create the function
+    await createAgtypeArrayFunction(queryExecutor, TEST_SCHEMA, 'get_employees_data', employees);
+
     // Create vertices for all employees using the function
-    // Note: No need to manually load AGE or set search_path
     const query = `
-      UNWIND ${TEST_SCHEMA}.get_employee_array() AS employee
+      UNWIND ${TEST_SCHEMA}.get_employees_data() AS employee
       CREATE (e:Employee {
         id: employee.id,
         name: employee.name,
@@ -194,9 +214,28 @@ describe('Organization Chart', () => {
       return;
     }
 
+    // Get relationship data from the employees table
+    const relationshipsResult = await queryExecutor.executeSQL(`
+      SELECT
+        employee_id,
+        manager_id,
+        hire_date::text as since
+      FROM employees
+      WHERE manager_id IS NOT NULL
+    `);
+
+    // Convert to array of objects
+    const relationships = relationshipsResult.rows;
+
+    // Use the utility function to create a function that returns the relationship data
+    const { createAgtypeArrayFunction } = await import('../../../src/db/utils');
+
+    // Create the function
+    await createAgtypeArrayFunction(queryExecutor, TEST_SCHEMA, 'get_relationships_data', relationships);
+
     // Create "MANAGED_BY" edges between employees and their managers
     const query = `
-      UNWIND ${TEST_SCHEMA}.get_relationship_array() AS rel
+      UNWIND ${TEST_SCHEMA}.get_relationships_data() AS rel
       MATCH (employee:Employee {id: rel.employee_id}), (manager:Employee {id: rel.manager_id})
       CREATE (employee)-[:MANAGED_BY {since: rel.since}]->(manager)
       RETURN count(*) AS created_relationships

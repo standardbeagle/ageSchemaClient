@@ -35,11 +35,38 @@ beforeAll(() => {
 });
 
 // Import the database teardown utilities
-import { releaseAllConnectionManagerConnections } from './dbTeardown';
+import { releaseAllConnectionManagerConnections, checkForConnectionLeaks, closeAllConnectionPools } from './dbTeardown';
+import { getResourceRegistry } from './resource-registry';
+
+// Check for connection leaks periodically
+const connectionLeakInterval = setInterval(() => {
+  checkForConnectionLeaks();
+}, 60000); // Check every minute
 
 // Global teardown to release all connections at the end of all tests
 afterAll(async () => {
+  // Clear the connection leak check interval
+  clearInterval(connectionLeakInterval);
+
+  // Check for connection leaks before cleanup
+  const hasLeaks = checkForConnectionLeaks();
+  if (hasLeaks) {
+    console.warn('Connection leaks detected before cleanup');
+  }
+
+  // Clean up any remaining resources
+  const resourceRegistry = getResourceRegistry();
+  const resourceCount = resourceRegistry.getResourceCount();
+  if (resourceCount > 0) {
+    console.warn(`Found ${resourceCount} resources that weren't properly cleaned up`);
+    await resourceRegistry.cleanupAll();
+  }
+
   // Release all connections from registered connection managers
-  // The pools will be closed when the process exits
   await releaseAllConnectionManagerConnections();
+
+  // Close all connection pools
+  await closeAllConnectionPools();
+
+  console.log('Global teardown complete');
 }, 30000); // 30 second timeout for releasing all connections

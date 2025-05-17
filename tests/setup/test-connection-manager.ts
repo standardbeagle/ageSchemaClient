@@ -2,14 +2,210 @@
  * Test connection manager for ageSchemaClient
  *
  * This file provides a singleton connection pool that can be shared across
- * test files. It ensures that only one pool is created and that connections
- * are properly released between tests.
+ * test files. It ensures that:
+ * 1. Only one pool is created and shared across all tests
+ * 2. Connections are properly configured for Apache AGE
+ * 3. Connections are properly released between tests
+ * 4. The pool is properly closed when tests are complete
+ * 5. AGE extension is loaded automatically for each new connection
+ * 6. Search path is set to include ag_catalog
+ * 7. Connections are properly tracked for cleanup
+ * 8. Connection leaks are detected and reported
  */
 
-import { PgConnectionManager } from '../../src/db/connector';
+import { PgConnectionManager, ConnectionHooks, Connection, ConnectionEvent } from '../../src/db/connector';
 
-// The singleton instance
-let instance: PgConnectionManager | null = null;
+/**
+ * TestConnectionManager class that implements the singleton pattern
+ */
+export class TestConnectionManager {
+  private static instance: TestConnectionManager | null = null;
+  private connectionManager: PgConnectionManager;
+  private activeConnections: Set<Connection> = new Set();
+
+  /**
+   * Private constructor to prevent direct instantiation
+   */
+  private constructor() {
+    console.log('Creating test connection manager...');
+    this.connectionManager = new PgConnectionManager(connectionConfig);
+
+    // Register hooks to track connections and ensure AGE is loaded
+    this.connectionManager.registerHooks({
+      afterConnect: this.afterConnectHook.bind(this),
+      beforeDisconnect: this.beforeDisconnectHook.bind(this),
+    });
+
+    // Check for connection leaks periodically
+    setInterval(() => {
+      const activeCount = this.activeConnections.size;
+      if (activeCount > 0) {
+        console.warn(`Warning: ${activeCount} connections are still active and may be leaking`);
+        this.activeConnections.forEach((conn, index) => {
+          console.warn(`  Connection ${index + 1}: acquired at ${conn['_acquiredAt']}`);
+        });
+      }
+    }, 60000); // Check every minute
+
+    // Register cleanup handler for process exit
+    process.on('exit', () => {
+      console.log('Process exiting, closing test connection pool...');
+      try {
+        // We can't use async functions in exit handlers, so we just try our best
+        // @ts-ignore - We know this is synchronous, but TypeScript doesn't
+        this.connectionManager.pool.end();
+        console.log('Test connection pool closed.');
+
+        // Log any active connections that weren't properly released
+        const activeCount = this.activeConnections.size;
+        if (activeCount > 0) {
+          console.warn(`Warning: ${activeCount} connections were not properly released`);
+        }
+      } catch (error) {
+        console.error(`Error closing test connection pool: ${(error as Error).message}`);
+      }
+    });
+  }
+
+  /**
+   * Get the singleton instance
+   * If it doesn't exist, it will be created
+   *
+   * @returns The singleton instance
+   */
+  public static getInstance(): TestConnectionManager {
+    if (!TestConnectionManager.instance) {
+      TestConnectionManager.instance = new TestConnectionManager();
+    }
+    return TestConnectionManager.instance;
+  }
+
+  /**
+   * Get a connection from the pool
+   * The connection will be automatically configured for Apache AGE
+   *
+   * @returns A connection
+   */
+  public async getConnection(): Promise<Connection> {
+    const connection = await this.connectionManager.getConnection();
+
+    // Add acquisition timestamp for tracking
+    connection['_acquiredAt'] = new Date().toISOString();
+    connection['_acquiredBy'] = new Error().stack?.split('\n')[2]?.trim() || 'unknown';
+
+    // Track the connection
+    this.activeConnections.add(connection);
+
+    console.log(`Connection acquired (active: ${this.activeConnections.size})`);
+
+    return connection;
+  }
+
+  /**
+   * Release a connection back to the pool
+   *
+   * @param connection - Connection to release
+   */
+  public async releaseConnection(connection: Connection): Promise<void> {
+    await this.connectionManager.releaseConnection(connection);
+
+    // Remove from tracked connections
+    this.activeConnections.delete(connection);
+
+    console.log(`Connection released (active: ${this.activeConnections.size})`);
+  }
+
+  /**
+   * Release all connections in the pool
+   * This is useful for test cleanup between test files
+   */
+  public async releaseAllConnections(): Promise<void> {
+    const activeCount = this.activeConnections.size;
+    if (activeCount > 0) {
+      console.warn(`Releasing ${activeCount} active connections`);
+
+      // Log connection acquisition details for debugging
+      this.activeConnections.forEach((conn, index) => {
+        console.warn(`  Connection ${index + 1}: acquired at ${conn['_acquiredAt']} by ${conn['_acquiredBy']}`);
+      });
+    }
+
+    await this.connectionManager.releaseAllConnections();
+
+    // Clear tracked connections
+    this.activeConnections.clear();
+
+    console.log('All connections released');
+  }
+
+  /**
+   * Close the connection pool
+   * This should be called when all tests are complete
+   */
+  public async closePool(): Promise<void> {
+    await this.connectionManager.closeAll();
+
+    // Clear tracked connections
+    this.activeConnections.clear();
+  }
+
+  /**
+   * Get the number of active connections
+   *
+   * @returns The number of active connections
+   */
+  public getActiveConnectionCount(): number {
+    return this.activeConnections.size;
+  }
+
+  /**
+   * Get pool statistics
+   *
+   * @returns Pool statistics
+   */
+  public getPoolStats(): any {
+    return this.connectionManager.getPoolStats();
+  }
+
+  /**
+   * After connect hook
+   * This is called after a connection is acquired from the pool
+   * It ensures that AGE is loaded and search_path is set
+   *
+   * @param connection - Connection
+   * @param event - Connection event
+   */
+  private async afterConnectHook(connection: Connection, event: ConnectionEvent): Promise<void> {
+    try {
+      // Load AGE extension
+      await connection.query('LOAD \'age\';');
+
+      // Verify search_path includes ag_catalog
+      const result = await connection.query('SHOW search_path');
+      const searchPath = result.rows[0].search_path;
+
+      if (!searchPath.includes('ag_catalog')) {
+        console.warn(`Warning: search_path does not include ag_catalog: ${searchPath}`);
+        // Set search_path to include ag_catalog
+        await connection.query('SET search_path TO ag_catalog, "$user", public');
+      }
+    } catch (error) {
+      console.error(`Error in afterConnect hook: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Before disconnect hook
+   * This is called before a connection is released back to the pool
+   *
+   * @param connection - Connection
+   * @param event - Connection event
+   */
+  private async beforeDisconnectHook(connection: Connection, event: ConnectionEvent): Promise<void> {
+    // Remove from tracked connections
+    this.activeConnections.delete(connection);
+  }
+}
 
 // Connection configuration for test database
 export const connectionConfig = {
@@ -19,15 +215,16 @@ export const connectionConfig = {
   user: process.env.PGUSER || 'age',
   password: process.env.PGPASSWORD || 'agepassword',
   pool: {
-    max: 5, // Increase the pool size to handle more concurrent connections
+    max: 10, // Increase the pool size to handle more concurrent connections
     idleTimeoutMillis: 60000, // How long a connection can be idle before being closed
-    connectionTimeoutMillis: 100, // Reduced timeout for local PostgreSQL server
+    connectionTimeoutMillis: 5000, // Increased timeout for more reliable connections
+    allowExitOnIdle: true, // Allow the pool to exit when idle
   },
   retry: {
-    maxAttempts: 5, // Fewer retry attempts for local server
-    delay: 100, // Very short delay for local server
-    maxDelay: 500, // Shorter maximum delay for local server
-    factor: 1.5, // Use exponential backoff
+    maxAttempts: 3, // Reasonable number of retry attempts
+    delay: 1000, // Initial delay between retries
+    maxDelay: 5000, // Maximum delay between retries
+    factor: 2, // Use exponential backoff
     jitter: 0.2, // Add jitter to avoid thundering herd
   },
   // PostgreSQL-specific options
@@ -35,6 +232,7 @@ export const connectionConfig = {
     // Ensure ag_catalog is in the search path for Apache AGE
     searchPath: 'ag_catalog, "$user", public',
     applicationName: 'ageSchemaClient-tests',
+    statementTimeout: 30000, // 30 seconds
   },
 };
 
@@ -45,27 +243,8 @@ export const connectionConfig = {
  * @returns The singleton connection manager instance
  */
 export function getTestConnectionManager(): PgConnectionManager {
-  if (!instance) {
-    console.log('Creating test connection manager...');
-    instance = new PgConnectionManager(connectionConfig);
-
-    // Register cleanup handler for process exit
-    process.on('exit', () => {
-      if (instance) {
-        console.log('Process exiting, closing test connection pool...');
-        // We can't use async functions in exit handlers, so we just try our best
-        try {
-          // @ts-ignore - We know this is synchronous, but TypeScript doesn't
-          instance.pool.end();
-          console.log('Test connection pool closed.');
-        } catch (error) {
-          console.error(`Error closing test connection pool: ${(error as Error).message}`);
-        }
-      }
-    });
-  }
-
-  return instance;
+  const testConnectionManager = TestConnectionManager.getInstance();
+  return testConnectionManager.connectionManager;
 }
 
 /**
@@ -73,7 +252,9 @@ export function getTestConnectionManager(): PgConnectionManager {
  * This is useful for test cleanup between test files
  */
 export async function releaseAllTestConnections(): Promise<void> {
-  if (instance) {
-    await instance.releaseAllConnections();
-  }
+  const testConnectionManager = TestConnectionManager.getInstance();
+  await testConnectionManager.releaseAllConnections();
 }
+
+// Note: We don't register a global afterAll hook here to avoid Vitest import issues
+// The pool will be closed in the global teardown function

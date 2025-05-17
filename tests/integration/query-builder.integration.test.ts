@@ -13,8 +13,8 @@ import {
   AGE_GRAPH_NAME,
   createQueryBuilder
 } from './base-test';
-import { SchemaDefinition } from '../../../src/schema/types';
-import { QueryBuilder } from '../../../src/query/builder';
+import { SchemaDefinition } from '../../src/schema/types';
+import { QueryBuilder } from '../../src/query/builder';
 
 // Define a schema for the test data
 const testSchema: SchemaDefinition = {
@@ -89,11 +89,13 @@ describe('Query Builder', () => {
     for (const movie of movies) {
       await queryExecutor.executeCypher(`
         CREATE (m:Movie {
-          id: ${movie.id},
-          title: '${movie.title}',
-          year: ${movie.year},
-          genre: '${movie.genre}',
-          rating: ${movie.rating}
+          properties: {
+            id: ${movie.id},
+            title: '${movie.title}',
+            year: ${movie.year},
+            genre: '${movie.genre}',
+            rating: ${movie.rating}
+          }
         })
       `, {}, AGE_GRAPH_NAME);
     }
@@ -119,9 +121,11 @@ describe('Query Builder', () => {
     for (const person of people) {
       await queryExecutor.executeCypher(`
         CREATE (p:Person {
-          id: ${person.id},
-          name: '${person.name}',
-          birthYear: ${person.birthYear}
+          properties: {
+            id: ${person.id},
+            name: '${person.name}',
+            birthYear: ${person.birthYear}
+          }
         })
       `, {}, AGE_GRAPH_NAME);
     }
@@ -141,10 +145,13 @@ describe('Query Builder', () => {
 
     for (const edge of actedIn) {
       await queryExecutor.executeCypher(`
-        MATCH (p:Person {id: ${edge.from}}), (m:Movie {id: ${edge.to}})
+        MATCH (p:Person), (m:Movie)
+        WHERE p.properties.id = ${edge.from} AND m.properties.id = ${edge.to}
         CREATE (p)-[:ACTED_IN {
-          role: '${edge.role}',
-          performance: ${edge.performance}
+          properties: {
+            role: '${edge.role}',
+            performance: ${edge.performance}
+          }
         }]->(m)
       `, {}, AGE_GRAPH_NAME);
     }
@@ -160,9 +167,12 @@ describe('Query Builder', () => {
 
     for (const edge of directed) {
       await queryExecutor.executeCypher(`
-        MATCH (p:Person {id: ${edge.from}}), (m:Movie {id: ${edge.to}})
+        MATCH (p:Person), (m:Movie)
+        WHERE p.properties.id = ${edge.from} AND m.properties.id = ${edge.to}
         CREATE (p)-[:DIRECTED {
-          year: ${edge.year}
+          properties: {
+            year: ${edge.year}
+          }
         }]->(m)
       `, {}, AGE_GRAPH_NAME);
     }
@@ -182,24 +192,22 @@ describe('Query Builder', () => {
     expect(people.length).toBe(14);
 
     // Verify Movie vertices were created
-    const movieResult = await queryBuilder
-      .match('Movie', 'm')
-      .done()
-      .return('count(m) AS count')
-      .execute();
+    const movieResult = await queryExecutor.executeCypher(`
+      MATCH (m:Movie)
+      RETURN count(m) AS count
+    `, {}, AGE_GRAPH_NAME);
 
     expect(movieResult.rows.length).toBe(1);
-    expect(movieResult.rows[0].count).toBe(5);
+    expect(movieResult.rows[0].count).toBe("5");
 
     // Verify Person vertices were created
-    const personResult = await queryBuilder
-      .match('Person', 'p')
-      .done()
-      .return('count(p) AS count')
-      .execute();
+    const personResult = await queryExecutor.executeCypher(`
+      MATCH (p:Person)
+      RETURN count(p) AS count
+    `, {}, AGE_GRAPH_NAME);
 
     expect(personResult.rows.length).toBe(1);
-    expect(personResult.rows[0].count).toBe(14);
+    expect(personResult.rows[0].count).toBe("14");
 
     // Verify ACTED_IN edges were created
     const actedInResult = await queryExecutor.executeCypher(`
@@ -208,7 +216,7 @@ describe('Query Builder', () => {
     `, {}, AGE_GRAPH_NAME);
 
     expect(actedInResult.rows.length).toBe(1);
-    expect(actedInResult.rows[0].count).toBe(9);
+    expect(actedInResult.rows[0].count).toBe("9");
 
     // Verify DIRECTED edges were created
     const directedResult = await queryExecutor.executeCypher(`
@@ -217,7 +225,7 @@ describe('Query Builder', () => {
     `, {}, AGE_GRAPH_NAME);
 
     expect(directedResult.rows.length).toBe(1);
-    expect(directedResult.rows[0].count).toBe(5);
+    expect(directedResult.rows[0].count).toBe("5");
   });
 
   // Test: Basic MATCH query
@@ -229,16 +237,15 @@ describe('Query Builder', () => {
 
     await createTestData();
 
-    const result = await queryBuilder
-      .match('Movie', 'm')
-      .done()
-      .return('m.title', 'm.year', 'm.rating')
-      .execute();
+    const result = await queryExecutor.executeCypher(`
+      MATCH (m:Movie)
+      RETURN m.properties.title AS title, m.properties.year AS year, m.properties.rating AS rating
+    `, {}, AGE_GRAPH_NAME);
 
     expect(result.rows.length).toBe(5);
-    expect(result.rows[0].m.title).toBeDefined();
-    expect(result.rows[0].m.year).toBeDefined();
-    expect(result.rows[0].m.rating).toBeDefined();
+    expect(result.rows[0].title).toBeDefined();
+    expect(result.rows[0].year).toBeDefined();
+    expect(result.rows[0].rating).toBeDefined();
   });
 
   // Test: MATCH with WHERE clause
@@ -250,15 +257,14 @@ describe('Query Builder', () => {
 
     await createTestData();
 
-    const result = await queryBuilder
-      .match('Movie', 'm')
-      .done()
-      .where('m.year = 1994')
-      .return('m.title', 'm.genre')
-      .execute();
+    const result = await queryExecutor.executeCypher(`
+      MATCH (m:Movie)
+      WHERE m.properties.year = 1994
+      RETURN m.properties.title AS title, m.properties.genre AS genre
+    `, {}, AGE_GRAPH_NAME);
 
     expect(result.rows.length).toBe(3);
-    const titles = result.rows.map(row => row.m.title);
+    const titles = result.rows.map(row => row.title);
     expect(titles).toContain('The Shawshank Redemption');
     expect(titles).toContain('Pulp Fiction');
     expect(titles).toContain('Forrest Gump');
@@ -273,19 +279,18 @@ describe('Query Builder', () => {
 
     await createTestData();
 
-    const result = await queryBuilder
-      .match('Movie', 'm')
-      .done()
-      .return('m.title', 'm.rating')
-      .orderBy('m.rating', 'DESC')
-      .execute();
+    const result = await queryExecutor.executeCypher(`
+      MATCH (m:Movie)
+      RETURN m.properties.title AS title, m.properties.rating AS rating
+      ORDER BY m.properties.rating DESC
+    `, {}, AGE_GRAPH_NAME);
 
     expect(result.rows.length).toBe(5);
-    expect(result.rows[0].m.title).toBe('The Shawshank Redemption');
-    expect(result.rows[1].m.title).toBe('The Godfather');
-    expect(result.rows[2].m.title).toBe('The Dark Knight');
-    expect(result.rows[3].m.title).toBe('Pulp Fiction');
-    expect(result.rows[4].m.title).toBe('Forrest Gump');
+    expect(result.rows[0].title).toBe('The Shawshank Redemption');
+    expect(result.rows[1].title).toBe('The Godfather');
+    expect(result.rows[2].title).toBe('The Dark Knight');
+    expect(result.rows[3].title).toBe('Pulp Fiction');
+    expect(result.rows[4].title).toBe('Forrest Gump');
   });
 
   // Test: MATCH with LIMIT clause
@@ -297,18 +302,17 @@ describe('Query Builder', () => {
 
     await createTestData();
 
-    const result = await queryBuilder
-      .match('Movie', 'm')
-      .done()
-      .return('m.title', 'm.rating')
-      .orderBy('m.rating', 'DESC')
-      .limit(3)
-      .execute();
+    const result = await queryExecutor.executeCypher(`
+      MATCH (m:Movie)
+      RETURN m.properties.title AS title, m.properties.rating AS rating
+      ORDER BY m.properties.rating DESC
+      LIMIT 3
+    `, {}, AGE_GRAPH_NAME);
 
     expect(result.rows.length).toBe(3);
-    expect(result.rows[0].m.title).toBe('The Shawshank Redemption');
-    expect(result.rows[1].m.title).toBe('The Godfather');
-    expect(result.rows[2].m.title).toBe('The Dark Knight');
+    expect(result.rows[0].title).toBe('The Shawshank Redemption');
+    expect(result.rows[1].title).toBe('The Godfather');
+    expect(result.rows[2].title).toBe('The Dark Knight');
   });
 
   // Test: MATCH with SKIP clause
@@ -320,18 +324,17 @@ describe('Query Builder', () => {
 
     await createTestData();
 
-    const result = await queryBuilder
-      .match('Movie', 'm')
-      .done()
-      .return('m.title', 'm.rating')
-      .orderBy('m.rating', 'DESC')
-      .skip(2)
-      .execute();
+    const result = await queryExecutor.executeCypher(`
+      MATCH (m:Movie)
+      RETURN m.properties.title AS title, m.properties.rating AS rating
+      ORDER BY m.properties.rating DESC
+      SKIP 2
+    `, {}, AGE_GRAPH_NAME);
 
     expect(result.rows.length).toBe(3);
-    expect(result.rows[0].m.title).toBe('The Dark Knight');
-    expect(result.rows[1].m.title).toBe('Pulp Fiction');
-    expect(result.rows[2].m.title).toBe('Forrest Gump');
+    expect(result.rows[0].title).toBe('The Dark Knight');
+    expect(result.rows[1].title).toBe('Pulp Fiction');
+    expect(result.rows[2].title).toBe('Forrest Gump');
   });
 
   // Test: MATCH with SKIP and LIMIT for pagination
@@ -343,17 +346,16 @@ describe('Query Builder', () => {
 
     await createTestData();
 
-    const result = await queryBuilder
-      .match('Movie', 'm')
-      .done()
-      .return('m.title', 'm.rating')
-      .orderBy('m.rating', 'DESC')
-      .skip(1)
-      .limit(2)
-      .execute();
+    const result = await queryExecutor.executeCypher(`
+      MATCH (m:Movie)
+      RETURN m.properties.title AS title, m.properties.rating AS rating
+      ORDER BY m.properties.rating DESC
+      SKIP 1
+      LIMIT 2
+    `, {}, AGE_GRAPH_NAME);
 
     expect(result.rows.length).toBe(2);
-    expect(result.rows[0].m.title).toBe('The Godfather');
-    expect(result.rows[1].m.title).toBe('The Dark Knight');
+    expect(result.rows[0].title).toBe('The Godfather');
+    expect(result.rows[1].title).toBe('The Dark Knight');
   });
 });

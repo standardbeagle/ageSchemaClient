@@ -10,20 +10,23 @@ import { PgConnectionManager } from '../../src/db/connector';
 import { afterAll, beforeAll } from 'vitest';
 import dotenv from 'dotenv';
 import { getTestConnectionManager, releaseAllTestConnections } from './test-connection-manager';
+import { ResourceRegistry, getResourceRegistry, ResourceType } from './resource-registry';
+import { generateSchemaName, generateGraphName } from './name-generator';
 
 // Load environment variables from .env.test
 dotenv.config({ path: '.env.test' });
 
-// Use the database specified in the environment variables
-// This is a test database that should be configured in .env.test
-// It should always be available for testing
-const testSchema = `test_${Date.now().toString(36).substring(2, 8)}`;
+// Get the resource registry
+const resourceRegistry = getResourceRegistry();
+
+// Generate a unique test schema name for isolation
+const testSchema = generateSchemaName();
 
 // Export the test schema name so it can be used in tests
 export const TEST_SCHEMA = testSchema;
 
-// Graph name for AGE tests
-export const AGE_GRAPH_NAME = process.env.AGE_GRAPH_NAME || 'test_graph';
+// Generate a unique graph name for AGE tests
+export const AGE_GRAPH_NAME = process.env.AGE_GRAPH_NAME || generateGraphName();
 
 // Shared connection manager and query executor for tests
 // Each test file gets its own connection manager
@@ -56,6 +59,9 @@ beforeAll(async () => {
     try {
       await queryExecutor.executeSQL(`CREATE SCHEMA IF NOT EXISTS ${testSchema}`);
       console.log(`Test schema ${testSchema} created successfully`);
+
+      // Register the schema for cleanup
+      resourceRegistry.registerSchema(testSchema, queryExecutor);
 
       // Set the search path to use our test schema first
       await queryExecutor.executeSQL(`SET search_path TO ${testSchema}, public`);
@@ -105,6 +111,9 @@ beforeAll(async () => {
       // Create a new graph
       await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.create_graph('${AGE_GRAPH_NAME}')`);
       console.log(`Integration test setup complete. Created graph ${AGE_GRAPH_NAME}`);
+
+      // Register the graph for cleanup
+      resourceRegistry.registerGraph(AGE_GRAPH_NAME, queryExecutor);
     } catch (error) {
       console.error(`AGE GRAPH ERROR: Could not create graph ${AGE_GRAPH_NAME}: ${error.message}`);
       console.error('All integration tests will be skipped due to graph creation failure.');
@@ -126,60 +135,26 @@ beforeAll(async () => {
 }, 30000); // Increase timeout to 30 seconds
 
 afterAll(async () => {
-  // Clean up resources
-  if (connectionManager) {
+  console.log('Tearing down integration test environment');
+
+  try {
+    // Clean up all registered resources
+    await resourceRegistry.cleanupAll();
+    console.log('All test resources cleaned up');
+
+    // Release connections but don't close the pool
+    // The pool will be closed when the process exits
     try {
-      if (queryExecutor) {
-        try {
-          // Check if AGE is available before trying to drop the graph
-          try {
-            // Verify AGE is available by checking for the existence of the ag_catalog schema
-            // and a known AGE function (create_graph)
-            const result = await queryExecutor.executeSQL(`
-              SELECT COUNT(*) > 0 as age_available
-              FROM pg_proc p
-              JOIN pg_namespace n ON p.pronamespace = n.oid
-              WHERE n.nspname = 'ag_catalog' AND p.proname = 'create_graph'
-            `);
-            const ageAvailable = result.rows[0].age_available;
-
-            if (ageAvailable) {
-              // Only try to drop the graph if AGE is available
-              await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${AGE_GRAPH_NAME}', true)`);
-            } else {
-              console.warn(`Warning: Apache AGE extension not available, skipping graph cleanup`);
-            }
-          } catch (ageError) {
-            console.warn(`Warning: Apache AGE extension not available, skipping graph cleanup`);
-            console.warn(`Error: ${ageError.message}`);
-          }
-        } catch (error) {
-          console.warn(`Warning: Could not drop graph ${AGE_GRAPH_NAME}: ${error.message}`);
-        }
-
-        // Drop the test schema
-        try {
-          await queryExecutor.executeSQL(`DROP SCHEMA IF EXISTS ${testSchema} CASCADE`);
-          console.log(`Test schema ${testSchema} dropped successfully`);
-        } catch (error) {
-          console.warn(`Warning: Could not drop test schema: ${error.message}`);
-        }
-      }
-
-      // Release connections but don't close the pool
-      // The pool will be closed when the process exits
-      try {
-        // Release active connections but don't close the pool
-        await releaseAllTestConnections();
-        console.log('Test database connections released (pool will be closed when process exits).');
-      } catch (error) {
-        console.error(`Error releasing connections: ${error.message}`);
-      }
-
-      console.log('Integration test teardown complete.');
+      // Release active connections but don't close the pool
+      await releaseAllTestConnections();
+      console.log('Test database connections released (pool will be closed when process exits).');
     } catch (error) {
-      console.error(`Error during integration test teardown: ${error.message}`);
+      console.error(`Error releasing connections: ${error.message}`);
     }
+
+    console.log('Integration test teardown complete.');
+  } catch (error) {
+    console.error(`Error during integration test teardown: ${error.message}`);
   }
 }, 30000); // Increase timeout to 30 seconds
 
@@ -293,7 +268,7 @@ export async function isAgeAvailable(): Promise<boolean> {
 
     // Step 9: Try to create and drop a test graph to verify full functionality
     try {
-      const testGraphName = `test_graph_${Date.now().toString(36).substring(2, 8)}`;
+      const testGraphName = generateGraphName('test_verify');
 
       // Create test graph
       await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.create_graph('${testGraphName}')`);

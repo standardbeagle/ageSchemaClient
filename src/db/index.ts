@@ -28,5 +28,8 @@ export * from './edge';
 // Export batch operations
 export * from './batch';
 
+// Export utility functions
+export * from './utils';
+
 // Version information
 export const dbVersion = '0.1.0';

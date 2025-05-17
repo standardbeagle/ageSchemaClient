@@ -35,6 +35,7 @@ export default defineConfig({
     // Setup files for integration tests
     setupFiles: [
       './tests/setup/global.ts',
+      './tests/setup/integration.ts',
     ],
     // Global setup and teardown files
     globalSetup: './tests/setup/globalSetup.ts',

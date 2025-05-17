@@ -8,6 +8,8 @@
  * 3. Connections are returned to the pool rather than explicitly closed
  * 4. Comprehensive AGE availability checks are performed
  * 5. Tests fail completely when there are connection issues
+ * 6. Test resources are properly isolated and cleaned up
+ * 7. Unique names are used for all database objects
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
@@ -15,19 +17,24 @@ import { QueryExecutor, TransactionManager, PgConnectionManager } from '../../sr
 import { QueryBuilder } from '../../src/query/builder';
 import { SchemaDefinition } from '../../src/schema/types';
 import dotenv from 'dotenv';
-import { getTestConnectionManager, releaseAllTestConnections } from '../setup/test-connection-manager';
+import { TestConnectionManager, getTestConnectionManager, releaseAllTestConnections } from '../setup/test-connection-manager';
+import { ResourceRegistry, getResourceRegistry, ResourceType } from '../setup/resource-registry';
+import { generateSchemaName, generateGraphName, generateTableName } from '../setup/name-generator';
 
 // Load environment variables from .env.test
 dotenv.config({ path: '.env.test' });
 
+// Get the resource registry
+const resourceRegistry = getResourceRegistry();
+
 // Generate a unique test schema name for isolation
-const testSchema = `test_${Date.now().toString(36).substring(2, 8)}`;
+const testSchema = generateSchemaName();
 
 // Export the test schema name so it can be used in tests
 export const TEST_SCHEMA = testSchema;
 
-// Graph name for AGE tests
-export const AGE_GRAPH_NAME = process.env.AGE_GRAPH_NAME || 'test_graph';
+// Generate a unique graph name for AGE tests
+export const AGE_GRAPH_NAME = process.env.AGE_GRAPH_NAME || generateGraphName();
 
 // Shared connection manager and query executor for tests
 export let connectionManager: PgConnectionManager;
@@ -149,11 +156,16 @@ export async function isAgeAvailable(): Promise<boolean> {
  * Setup function for integration tests
  *
  * @param testName - Name of the test suite
- * @returns Setup object with ageAvailable flag
+ * @returns Setup object with ageAvailable flag and test context
  */
-export async function setupIntegrationTest(testName: string): Promise<{ ageAvailable: boolean }> {
+export async function setupIntegrationTest(testName: string): Promise<{
+  ageAvailable: boolean;
+  testSchema: string;
+  graphName: string;
+}> {
   console.log(`Setting up integration test: ${testName}`);
   console.log(`Using test schema: ${testSchema}`);
+  console.log(`Using graph name: ${AGE_GRAPH_NAME}`);
 
   try {
     // Connect to the test database using the singleton connection manager
@@ -162,9 +174,15 @@ export async function setupIntegrationTest(testName: string): Promise<{ ageAvail
     queryExecutor = new QueryExecutor(connection);
     transactionManager = new TransactionManager(connection);
 
+    // Set the query executor for the resource registry
+    resourceRegistry.setQueryExecutor(queryExecutor);
+
     // Create a test schema for isolation
     await queryExecutor.executeSQL(`CREATE SCHEMA IF NOT EXISTS ${testSchema}`);
     console.log(`Test schema ${testSchema} created successfully`);
+
+    // Register the schema for cleanup
+    resourceRegistry.registerSchema(testSchema, queryExecutor);
 
     // Set the search path to include ag_catalog and our test schema
     await queryExecutor.executeSQL(`SET search_path TO ag_catalog, ${testSchema}, public`);
@@ -186,13 +204,16 @@ export async function setupIntegrationTest(testName: string): Promise<{ ageAvail
         // Create a new graph
         await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.create_graph('${AGE_GRAPH_NAME}')`);
         console.log(`Created graph ${AGE_GRAPH_NAME}`);
+
+        // Register the graph for cleanup
+        resourceRegistry.registerGraph(AGE_GRAPH_NAME, queryExecutor);
       } catch (error) {
         console.error(`Error creating graph ${AGE_GRAPH_NAME}: ${error.message}`);
-        return { ageAvailable: false };
+        return { ageAvailable: false, testSchema, graphName: AGE_GRAPH_NAME };
       }
     }
 
-    return { ageAvailable };
+    return { ageAvailable, testSchema, graphName: AGE_GRAPH_NAME };
   } catch (error) {
     console.error(`Error setting up integration test: ${error.message}`);
     throw error;
@@ -208,23 +229,9 @@ export async function teardownIntegrationTest(ageAvailable: boolean): Promise<vo
   console.log('Tearing down integration test');
 
   try {
-    if (ageAvailable) {
-      // Drop the test graph
-      try {
-        await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${AGE_GRAPH_NAME}', true)`);
-        console.log(`Dropped graph ${AGE_GRAPH_NAME}`);
-      } catch (error) {
-        console.warn(`Warning: Could not drop graph ${AGE_GRAPH_NAME}: ${error.message}`);
-      }
-    }
-
-    // Drop the test schema
-    try {
-      await queryExecutor.executeSQL(`DROP SCHEMA IF EXISTS ${testSchema} CASCADE`);
-      console.log(`Test schema ${testSchema} dropped successfully`);
-    } catch (error) {
-      console.warn(`Warning: Could not drop test schema: ${error.message}`);
-    }
+    // Clean up all registered resources
+    await resourceRegistry.cleanupAll();
+    console.log('All test resources cleaned up');
 
     // Release connections but don't close the pool
     await releaseAllTestConnections();

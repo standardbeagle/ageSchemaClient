@@ -14,6 +14,7 @@ import { CypherQueryGenerator } from './cypher-query-generator';
 import { SchemaValidator } from '../schema/validator';
 import { ValidationErrorCollection } from '../schema/errors';
 import { DatabaseError as DbError, DatabaseErrorType } from '../db/types';
+import { createArrayFunction, toAgType } from '../utils/age-type-utils';
 import fs from 'fs';
 import path from 'path';
 
@@ -852,25 +853,27 @@ export class SchemaLoader<T extends SchemaDefinition> {
       await this.queryExecutor.executeSQL(`LOAD 'age';`, [], { transaction });
       await this.queryExecutor.executeSQL(`SET search_path = ag_catalog, "$user", public;`, [], { transaction });
 
+      // Get vertex data from the temporary table
+      const vertexDataResult = await this.queryExecutor.executeSQL(`
+        SELECT jsonb_agg(jsonb_build_object(
+          'label', vertex_label::text,
+          'properties', properties
+        )) AS vertices
+        FROM ${tempTableName}
+      `, [], { transaction });
+
+      // Extract the vertex data
+      const vertexData = vertexDataResult.rows[0]?.vertices || [];
+
       // Create a function to convert vertex data to ag_catalog.agtype
       const functionName = `get_vertices_${Date.now()}`;
-      await this.queryExecutor.executeSQL(`
-        CREATE OR REPLACE FUNCTION ${mergedOptions.tempSchema}.${functionName}()
-        RETURNS ag_catalog.agtype AS $$
-        DECLARE
-          result_array ag_catalog.agtype;
-        BEGIN
-          SELECT jsonb_agg(jsonb_build_object(
-            'label', vertex_label::text,
-            'properties', properties
-          ))::text::ag_catalog.agtype
-          INTO result_array
-          FROM ${tempTableName};
-
-          RETURN result_array;
-        END;
-        $$ LANGUAGE plpgsql;
-      `, [], { transaction });
+      await createArrayFunction(
+        this.queryExecutor,
+        mergedOptions.tempSchema,
+        functionName,
+        vertexData,
+        { transaction }
+      );
 
       // Generate and execute Cypher query to create vertices
       const createVerticesQuery = this.cypherQueryGenerator.generateCreateVerticesQuery(
@@ -1192,27 +1195,29 @@ export class SchemaLoader<T extends SchemaDefinition> {
         percentage: 66
       });
 
+      // Get edge data from the temporary table
+      const edgeDataResult = await this.queryExecutor.executeSQL(`
+        SELECT jsonb_agg(jsonb_build_object(
+          'type', edge_type,
+          'from', from_id,
+          'to', to_id,
+          'properties', properties
+        )) AS edges
+        FROM ${tempTableName}
+      `, [], { transaction });
+
+      // Extract the edge data
+      const edgeData = edgeDataResult.rows[0]?.edges || [];
+
       // Create a function to convert edge data to ag_catalog.agtype
       const functionName = `get_edges_${Date.now()}`;
-      await this.queryExecutor.executeSQL(`
-        CREATE OR REPLACE FUNCTION ${mergedOptions.tempSchema}.${functionName}()
-        RETURNS ag_catalog.agtype AS $$
-        DECLARE
-          result_array ag_catalog.agtype;
-        BEGIN
-          SELECT jsonb_agg(jsonb_build_object(
-            'type', edge_type,
-            'from', from_id,
-            'to', to_id,
-            'properties', properties
-          ))::text::ag_catalog.agtype
-          INTO result_array
-          FROM ${tempTableName};
-
-          RETURN result_array;
-        END;
-        $$ LANGUAGE plpgsql;
-      `, [], { transaction });
+      await createArrayFunction(
+        this.queryExecutor,
+        mergedOptions.tempSchema,
+        functionName,
+        edgeData,
+        { transaction }
+      );
 
       // Generate and execute Cypher query to create edges
       const createEdgesQuery = this.cypherQueryGenerator.generateCreateEdgesQuery(
