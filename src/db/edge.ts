@@ -669,17 +669,9 @@ export class EdgeOperations<T extends SchemaDefinition> {
     return {
       id: edgeData.id || edgeData.identity.toString(),
       label: label,
-      properties: edgeData.properties || {},
-      from: {
-        id: fromData.id || fromData.identity.toString(),
-        label: fromData.label,
-        properties: fromData.properties || {}
-      },
-      to: {
-        id: toData.id || toData.identity.toString(),
-        label: toData.label,
-        properties: toData.properties || {}
-      }
+      fromId: fromData.id || fromData.identity.toString(),
+      toId: toData.id || toData.identity.toString(),
+      ...edgeData.properties || {}
     } as Edge<T, L>;
   }
 
@@ -1210,9 +1202,8 @@ export class EdgeOperations<T extends SchemaDefinition> {
           id: '0',
           label,
           fromId: '0',
-          toId: '0',
-          properties: {}
-        } as Edge<T, L>;
+          toId: '0'
+        } as unknown as Edge<T, L>;
       }
     }
 

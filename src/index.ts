@@ -40,4 +40,12 @@ export type {
 export * from './query';
 
 // Loader exports
-export * from './loader';
+export {
+  SchemaLoader,
+  CypherQueryGenerator,
+  SchemaLoaderError,
+  SchemaLoaderDatabaseError,
+  SchemaLoaderTransactionError,
+  TempResourceError,
+  loaderVersion
+} from './loader';

@@ -1,12 +1,13 @@
 /**
  * Singleton connection pool manager for ageSchemaClient
- * 
+ *
  * This file provides a singleton connection pool that can be shared across
  * the application, including tests. It ensures that only one pool is created
  * and that it's properly closed when the process exits.
  */
 
-import { PgConnectionManager, ConnectionConfig } from './connector';
+import { PgConnectionManager } from './connector';
+import { ConnectionConfig } from './types';
 
 // The singleton instance
 let instance: PgConnectionManager | null = null;
@@ -14,7 +15,7 @@ let instance: PgConnectionManager | null = null;
 /**
  * Get the singleton connection manager instance
  * If it doesn't exist, it will be created with the provided config
- * 
+ *
  * @param config The connection configuration
  * @returns The singleton connection manager instance
  */
@@ -22,7 +23,7 @@ export function getConnectionManager(config: ConnectionConfig): PgConnectionMana
   if (!instance) {
     console.log('Creating singleton connection manager...');
     instance = new PgConnectionManager(config);
-    
+
     // Register cleanup handler for process exit
     process.on('exit', () => {
       if (instance) {
@@ -38,7 +39,7 @@ export function getConnectionManager(config: ConnectionConfig): PgConnectionMana
       }
     });
   }
-  
+
   return instance;
 }
 

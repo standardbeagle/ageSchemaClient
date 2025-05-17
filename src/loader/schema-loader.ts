@@ -684,6 +684,7 @@ export class SchemaLoader<T extends SchemaDefinition> {
     // Start a transaction if one wasn't provided
     const transaction = mergedOptions.transaction || await this.queryExecutor.beginTransaction();
     let success = false;
+    let tempTableName = '';
 
     try {
       // Validate vertex data if required
@@ -931,7 +932,7 @@ export class SchemaLoader<T extends SchemaDefinition> {
     } finally {
       // Clean up temporary objects
       try {
-        if (success && !options.transaction) {
+        if (success && !options.transaction && tempTableName) {
           await this.queryExecutor.executeSQL(`DROP TABLE IF EXISTS ${tempTableName}`);
         }
       } catch (error) {
@@ -968,6 +969,7 @@ export class SchemaLoader<T extends SchemaDefinition> {
     // Start a transaction if one wasn't provided
     const transaction = mergedOptions.transaction || await this.queryExecutor.beginTransaction();
     let success = false;
+    let tempTableName = '';
 
     try {
       // Validate edge data if required
@@ -1275,7 +1277,7 @@ export class SchemaLoader<T extends SchemaDefinition> {
     } finally {
       // Clean up temporary objects
       try {
-        if (success && !options.transaction) {
+        if (success && !options.transaction && tempTableName) {
           await this.queryExecutor.executeSQL(`DROP TABLE IF EXISTS ${tempTableName}`);
         }
       } catch (error) {

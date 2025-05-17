@@ -1,6 +1,6 @@
 /**
  * SQL generation type definitions
- * 
+ *
  * @packageDocumentation
  */
 
@@ -36,7 +36,7 @@ export interface SQLResult {
    * SQL statement
    */
   sql: string;
-  
+
   /**
    * SQL parameters
    */
@@ -66,6 +66,7 @@ export enum SQLFilterOperator {
   LESS_THAN_OR_EQUALS = '<=',
   LIKE = 'LIKE',
   ILIKE = 'ILIKE',
+  NOT_LIKE = 'NOT LIKE',
   IN = 'IN',
   NOT_IN = 'NOT IN',
   IS_NULL = 'IS NULL',
@@ -80,12 +81,12 @@ export interface SQLFilterCondition {
    * Property name
    */
   property: string;
-  
+
   /**
    * Filter operator
    */
   operator: SQLFilterOperator;
-  
+
   /**
    * Filter value
    */
@@ -108,7 +109,7 @@ export interface SQLOrderBy {
    * Property name
    */
   property: string;
-  
+
   /**
    * Order direction
    */
@@ -123,17 +124,17 @@ export interface SQLQueryOptions {
    * Filter conditions
    */
   filters?: SQLFilterCondition[];
-  
+
   /**
    * Order by clauses
    */
   orderBy?: SQLOrderBy[];
-  
+
   /**
    * Limit results
    */
   limit?: number;
-  
+
   /**
    * Offset results
    */
@@ -148,12 +149,12 @@ export interface SQLVertexTableOptions {
    * Table name prefix
    */
   tablePrefix?: string;
-  
+
   /**
    * Include metadata columns
    */
   includeMetadata?: boolean;
-  
+
   /**
    * Primary key column name
    */
@@ -168,7 +169,7 @@ export interface SQLEdgeTableOptions extends SQLVertexTableOptions {
    * Source vertex ID column name
    */
   sourceIdColumn?: string;
-  
+
   /**
    * Target vertex ID column name
    */

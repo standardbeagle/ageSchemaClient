@@ -10,10 +10,10 @@
  */
 
 import { QueryExecutor, QueryResult } from './query';
-import { SQLGenerator } from './sql';
-import { PropertyType, Schema, VertexLabel } from '../schema/types';
+import { SQLGenerator } from '../sql/generator';
+import { PropertyType, VertexLabel, SchemaDefinition } from '../schema/types';
 import { ValidationError } from '../core/errors';
-import { SQLFilterOperator, SQLOrderDirection } from './types';
+import { SQLFilterOperator, SQLOrderDirection } from '../sql/types';
 
 /**
  * Vertex query options
@@ -65,14 +65,14 @@ export interface VertexQueryOptions {
 /**
  * Vertex data
  */
-export type VertexData<T extends Schema, L extends keyof T['vertices']> = {
+export type VertexData<T extends SchemaDefinition, L extends keyof T['vertices']> = {
   [K in keyof T['vertices'][L]['properties']]?: any;
 };
 
 /**
  * Vertex
  */
-export type Vertex<T extends Schema, L extends keyof T['vertices']> = {
+export type Vertex<T extends SchemaDefinition, L extends keyof T['vertices']> = {
   /**
    * Vertex ID
    */
@@ -92,7 +92,7 @@ export type Vertex<T extends Schema, L extends keyof T['vertices']> = {
 /**
  * Vertex operations
  */
-export class VertexOperations<T extends Schema> {
+export class VertexOperations<T extends SchemaDefinition> {
   /**
    * Create a new VertexOperations instance
    *
@@ -882,11 +882,11 @@ export class VertexOperations<T extends Schema> {
 
     // Add metadata fields if present
     if ('created_at' in row) {
-      vertex.createdAt = new Date(row.created_at);
+      (vertex as any).createdAt = new Date(row.created_at);
     }
 
     if ('updated_at' in row) {
-      vertex.updatedAt = new Date(row.updated_at);
+      (vertex as any).updatedAt = new Date(row.updated_at);
     }
 
     return vertex;
