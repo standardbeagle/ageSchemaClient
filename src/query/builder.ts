@@ -197,6 +197,21 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
   }
 
   /**
+   * Add a WITH clause that calls a function to get parameters
+   *
+   * This is specifically for Apache AGE compatibility, as it requires
+   * parameters to be passed via a function call in a WITH clause.
+   *
+   * @param functionName - Fully qualified function name (e.g., 'schema.get_params')
+   * @param alias - Alias for the function result (e.g., 'params')
+   * @returns This query builder
+   */
+  withParamFunction(functionName: string, alias: string): this {
+    this.queryParts.push(new WithPart([`${functionName}() AS ${alias}`]));
+    return this;
+  }
+
+  /**
    * Execute the query
    *
    * @param options - Query execution options
@@ -204,28 +219,90 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
    * @throws Error if query validation fails
    */
   async execute<R = any>(options: QueryExecutionOptions = {}): QueryBuilderResult<R> {
-    // Validate query against schema
-    if (options.validate !== false) {
-      const errors = this.validateQuery();
+    try {
+      // Validate query against schema
+      if (options.validate !== false) {
+        const errors = this.validateQuery();
 
-      if (errors.length > 0) {
-        throw new Error(`Query validation failed: ${errors.join(', ')}`);
+        if (errors.length > 0) {
+          throw new Error(`Query validation failed: ${errors.join(', ')}`);
+        }
       }
+
+      const params = this.getParameters();
+      const graphName = options.graphName || this.graphName;
+
+      // If there are no parameters, use the standard Cypher query
+      if (Object.keys(params).length === 0) {
+        const cypher = this.toCypher();
+        console.log('Executing Cypher query without parameters:', cypher);
+
+        return await this.queryExecutor.executeCypher<R>(
+          cypher,
+          {},
+          graphName,
+          {
+            timeout: options.timeout,
+            maxRetries: options.maxRetries,
+          }
+        );
+      }
+
+      // For queries with parameters, use the WITH clause approach
+      // This is more compatible with Apache AGE
+      console.log('Executing Cypher query with parameters using WITH clause');
+
+      // Add a WITH clause at the beginning of the query with all parameters
+      const withClauseParams = Object.entries(params)
+        .map(([key, value]) => {
+          // Convert the value to a string representation for the WITH clause
+          let valueStr;
+          if (typeof value === 'string') {
+            valueStr = `'${value.replace(/'/g, "''")}'`;
+          } else if (value === null) {
+            valueStr = 'null';
+          } else if (typeof value === 'number') {
+            valueStr = value.toString();
+          } else if (typeof value === 'boolean') {
+            valueStr = value ? 'true' : 'false';
+          } else if (Array.isArray(value) || typeof value === 'object') {
+            valueStr = `'${JSON.stringify(value)}'`;
+          } else {
+            valueStr = `'${value}'`;
+          }
+
+          return `${valueStr} AS ${key}`;
+        })
+        .join(', ');
+
+      // Prepend the WITH clause to the Cypher query
+      const cypher = `WITH ${withClauseParams}\n${this.toCypher()}`;
+      console.log('Modified Cypher query:', cypher);
+
+      return await this.queryExecutor.executeCypher<R>(
+        cypher,
+        {},
+        graphName,
+        {
+          timeout: options.timeout,
+          maxRetries: options.maxRetries,
+        }
+      );
+    } finally {
+      // Reset query parts and parameters after execution
+      this.reset();
     }
+  }
 
-    const cypher = this.toCypher();
-    const params = this.getParameters();
-    const graphName = options.graphName || this.graphName;
-
-    return this.queryExecutor.executeCypher<R>(
-      cypher,
-      params,
-      graphName,
-      {
-        timeout: options.timeout,
-        maxRetries: options.maxRetries,
-      }
-    );
+  /**
+   * Reset the query builder state
+   *
+   * @returns This query builder
+   */
+  reset(): this {
+    this.queryParts = [];
+    this.parameters = {};
+    return this;
   }
 
   /**

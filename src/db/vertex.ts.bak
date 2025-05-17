@@ -1,105 +1,97 @@
 /**
- * Vertex operations
+ * Vertex operations implementation
  *
- * This file contains operations for working with vertices in a graph database.
- * It provides methods for creating, reading, updating, and deleting vertices.
- *
- * Prompt log:
- * - Fixed boolean type casting issues in Cypher queries
- * - Added graph name validation to prevent errors
+ * @packageDocumentation
  */
 
+import { SchemaDefinition, VertexLabel, PropertyType } from '../schema/types';
 import { QueryExecutor, QueryResult } from './query';
-import { SQLGenerator } from './sql';
-import { PropertyType, Schema, VertexLabel } from '../schema/types';
+import { SQLGenerator } from '../sql/generator';
+import { SQLQueryOptions, SQLFilterCondition, SQLOrderDirection, SQLFilterOperator } from '../sql/types';
 import { ValidationError } from '../core/errors';
-import { SQLFilterOperator, SQLOrderDirection } from './types';
+
+/**
+ * Vertex data type
+ *
+ * Type-safe interface for vertex data based on schema definition
+ */
+export type VertexData<
+  T extends SchemaDefinition,
+  L extends keyof T['vertices']
+> = {
+  [K in keyof T['vertices'][L]['properties']]?:
+    T['vertices'][L]['properties'][K]['type'] extends PropertyType.STRING ? string :
+    T['vertices'][L]['properties'][K]['type'] extends PropertyType.INTEGER ? number :
+    T['vertices'][L]['properties'][K]['type'] extends PropertyType.FLOAT ? number :
+    T['vertices'][L]['properties'][K]['type'] extends PropertyType.BOOLEAN ? boolean :
+    T['vertices'][L]['properties'][K]['type'] extends PropertyType.DATE ? Date :
+    T['vertices'][L]['properties'][K]['type'] extends PropertyType.OBJECT ? Record<string, any> :
+    T['vertices'][L]['properties'][K]['type'] extends PropertyType.ARRAY ? any[] :
+    any
+} & {
+  id?: string;
+};
+
+/**
+ * Vertex type
+ *
+ * Type-safe interface for vertex objects based on schema definition
+ */
+export type Vertex<
+  T extends SchemaDefinition,
+  L extends keyof T['vertices']
+> = {
+  id: string;
+  label: L;
+} & VertexData<T, L> & {
+  createdAt?: Date;
+  updatedAt?: Date;
+};
 
 /**
  * Vertex query options
  */
 export interface VertexQueryOptions {
   /**
-   * Filters to apply
+   * Filter conditions
    */
-  filters?: {
-    /**
-     * Property to filter on
-     */
+  filters?: Array<{
     property: string;
-    /**
-     * Operator to use
-     */
     operator: SQLFilterOperator;
-    /**
-     * Value to compare against
-     */
     value: any;
-  }[];
+  }>;
 
   /**
-   * Properties to order by
+   * Order by clauses
    */
-  orderBy?: {
-    /**
-     * Property to order by
-     */
+  orderBy?: Array<{
     property: string;
-    /**
-     * Direction to order in
-     */
     direction: SQLOrderDirection;
-  }[];
+  }>;
 
   /**
-   * Maximum number of results to return
+   * Limit results
    */
   limit?: number;
 
   /**
-   * Number of results to skip
+   * Offset results
    */
   offset?: number;
 }
 
 /**
- * Vertex data
+ * Vertex operations class
+ *
+ * Provides type-safe methods for vertex creation, retrieval, update, and deletion
  */
-export type VertexData<T extends Schema, L extends keyof T['vertices']> = {
-  [K in keyof T['vertices'][L]['properties']]?: any;
-};
-
-/**
- * Vertex
- */
-export type Vertex<T extends Schema, L extends keyof T['vertices']> = {
+export class VertexOperations<T extends SchemaDefinition> {
   /**
-   * Vertex ID
-   */
-  id: string;
-
-  /**
-   * Vertex label
-   */
-  label: L;
-
-  /**
-   * Vertex properties
-   */
-  properties?: Record<string, any>;
-} & VertexData<T, L>;
-
-/**
- * Vertex operations
- */
-export class VertexOperations<T extends Schema> {
-  /**
-   * Create a new VertexOperations instance
+   * Create a new vertex operations instance
    *
-   * @param schema - Schema
+   * @param schema - Schema definition
    * @param queryExecutor - Query executor
    * @param sqlGenerator - SQL generator
-   * @param graphName - Graph name
    */
   constructor(
     private schema: T,
@@ -158,12 +150,6 @@ export class VertexOperations<T extends Schema> {
     id: string,
     graphName?: string
   ): Promise<Vertex<T, L> | null> {
-    // Ensure we have a graph name
-    const targetGraph = graphName || this.graphName;
-    if (!targetGraph) {
-      throw new ValidationError('Graph name is required to get a vertex');
-    }
-
     // Use Cypher query to get vertex by ID
     const query = `
       MATCH (v:${String(label)})
@@ -175,7 +161,7 @@ export class VertexOperations<T extends Schema> {
     const result = await this.queryExecutor.executeCypher(
       query,
       {},
-      targetGraph
+      graphName || this.graphName
     );
 
     if (result.rows.length === 0) {
@@ -198,21 +184,9 @@ export class VertexOperations<T extends Schema> {
     properties: Record<string, any>,
     graphName?: string
   ): Promise<Vertex<T, L> | null> {
-    // Ensure we have a graph name
-    const targetGraph = graphName || this.graphName;
-    if (!targetGraph) {
-      throw new ValidationError('Graph name is required to get a vertex');
-    }
-
     // Convert properties to Cypher query conditions
     const conditions = Object.entries(properties)
-      .map(([key, value]) => {
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof value === 'boolean') {
-          return `v.${key} = ${value}`;
-        }
-        return `toString(v.${key}) = '${String(value)}'`;
-      })
+      .map(([key, value]) => `toString(v.${key}) = '${String(value)}'`)
       .join(' AND ');
 
     // Build Cypher query
@@ -224,7 +198,7 @@ export class VertexOperations<T extends Schema> {
     `;
 
     // Execute query
-    const result = await this.queryExecutor.executeCypher(query, {}, targetGraph);
+    const result = await this.queryExecutor.executeCypher(query, {}, graphName || this.graphName);
 
     if (result.rows.length === 0) {
       return null;
@@ -253,12 +227,6 @@ export class VertexOperations<T extends Schema> {
     options: VertexQueryOptions = {},
     graphName?: string
   ): Promise<Vertex<T, L>[]> {
-    // Ensure we have a graph name
-    const targetGraph = graphName || this.graphName;
-    if (!targetGraph) {
-      throw new ValidationError('Graph name is required to get vertices');
-    }
-
     // Build Cypher query with options
     let query = `
       MATCH (v:${String(label)})
@@ -268,10 +236,6 @@ export class VertexOperations<T extends Schema> {
     if (options.filters && options.filters.length > 0) {
       const filterConditions = options.filters.map(filter => {
         const operator = this.mapFilterOperator(filter.operator);
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof filter.value === 'boolean') {
-          return `v.${filter.property} ${operator} ${filter.value}`;
-        }
         return `toString(v.${filter.property}) ${operator} '${String(filter.value)}'`;
       }).join(' AND ');
 
@@ -305,7 +269,7 @@ export class VertexOperations<T extends Schema> {
     const result = await this.queryExecutor.executeCypher(
       query,
       {},
-      targetGraph
+      graphName || this.graphName
     );
 
     // Transform results to Vertex objects
@@ -359,12 +323,6 @@ export class VertexOperations<T extends Schema> {
     data: Partial<VertexData<T, L>>,
     graphName?: string
   ): Promise<Vertex<T, L>> {
-    // Ensure we have a graph name
-    const targetGraph = graphName || this.graphName;
-    if (!targetGraph) {
-      throw new ValidationError('Graph name is required to update a vertex');
-    }
-
     // Validate data against schema
     this.validateVertexData(label, data, true);
 
@@ -390,7 +348,7 @@ export class VertexOperations<T extends Schema> {
     const result = await this.queryExecutor.executeCypher(
       query,
       {},
-      targetGraph
+      graphName || this.graphName
     );
 
     if (result.rows.length === 0) {
@@ -398,106 +356,6 @@ export class VertexOperations<T extends Schema> {
     }
 
     return this.transformToVertex(label, result.rows[0]);
-  }
-
-  /**
-   * Delete a vertex by ID
-   *
-   * @param label - Vertex label
-   * @param id - Vertex ID
-   * @param graphName - Graph name
-   * @returns Deleted vertex
-   */
-  async deleteVertexById<L extends keyof T['vertices']>(
-    label: L,
-    id: string,
-    graphName?: string
-  ): Promise<Vertex<T, L>> {
-    // Ensure we have a graph name
-    const targetGraph = graphName || this.graphName;
-    if (!targetGraph) {
-      throw new ValidationError('Graph name is required to delete a vertex');
-    }
-
-    // First get the vertex to return it after deletion
-    const getQuery = `
-      MATCH (v:${String(label)})
-      WHERE id(v) = ${id}
-      RETURN v
-    `;
-
-    const getResult = await this.queryExecutor.executeCypher(
-      getQuery,
-      {},
-      targetGraph
-    );
-
-    if (getResult.rows.length === 0) {
-      throw new Error(`Vertex with ID ${id} not found`);
-    }
-
-    // Store the vertex data
-    const vertex = this.transformToVertex(label, getResult.rows[0]);
-
-    // Now delete the vertex
-    const deleteQuery = `
-      MATCH (v:${String(label)})
-      WHERE id(v) = ${id}
-      DETACH DELETE v
-    `;
-
-    await this.queryExecutor.executeCypher(
-      deleteQuery,
-      {},
-      targetGraph
-    );
-
-    return vertex;
-  }
-
-  /**
-   * Delete a vertex by properties
-   *
-   * @param label - Vertex label
-   * @param properties - Properties to match
-   * @param graphName - Graph name
-   * @returns True if the vertex was deleted
-   */
-  async deleteVertex<L extends keyof T['vertices']>(
-    label: L,
-    properties: Record<string, any>,
-    graphName?: string
-  ): Promise<boolean> {
-    // Ensure we have a graph name
-    const targetGraph = graphName || this.graphName;
-    if (!targetGraph) {
-      throw new ValidationError('Graph name is required to delete a vertex');
-    }
-
-    // Convert properties to Cypher query conditions
-    const conditions = Object.entries(properties)
-      .map(([key, value]) => {
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof value === 'boolean') {
-          return `v.${key} = ${value}`;
-        }
-        return `toString(v.${key}) = '${String(value)}'`;
-      })
-      .join(' AND ');
-
-    // Build Cypher query
-    const query = `
-      MATCH (v:${String(label)})
-      WHERE ${conditions}
-      DETACH DELETE v
-      RETURN count(*) AS deleted
-    `;
-
-    // Execute query
-    const result = await this.queryExecutor.executeCypher(query, {}, targetGraph);
-
-    // Check if any vertices were deleted
-    return parseInt(result.rows[0].deleted, 10) > 0;
   }
 
   /**
@@ -515,24 +373,12 @@ export class VertexOperations<T extends Schema> {
     data: Partial<VertexData<T, L>>,
     graphName?: string
   ): Promise<Vertex<T, L> | null> {
-    // Ensure we have a graph name
-    const targetGraph = graphName || this.graphName;
-    if (!targetGraph) {
-      throw new ValidationError('Graph name is required to update a vertex');
-    }
-
     // Validate data against schema
     this.validateVertexData(label, data, true);
 
     // Convert properties to Cypher query conditions
     const conditions = Object.entries(properties)
-      .map(([key, value]) => {
-        // Handle boolean values specially to avoid type casting issues
-        if (typeof value === 'boolean') {
-          return `v.${key} = ${value}`;
-        }
-        return `toString(v.${key}) = '${String(value)}'`;
-      })
+      .map(([key, value]) => `toString(v.${key}) = '${String(value)}'`)
       .join(' AND ');
 
     // Convert data to Cypher SET clauses
@@ -554,7 +400,7 @@ export class VertexOperations<T extends Schema> {
     `;
 
     // Execute query
-    const result = await this.queryExecutor.executeCypher(query, {}, targetGraph);
+    const result = await this.queryExecutor.executeCypher(query, {}, graphName || this.graphName);
 
     if (result.rows.length === 0) {
       return null;
@@ -569,6 +415,129 @@ export class VertexOperations<T extends Schema> {
       label: label,
       properties: vertexData.properties || {}
     } as Vertex<T, L>;
+  }
+
+  /**
+   * Delete a vertex by ID
+   *
+   * @param label - Vertex label
+   * @param id - Vertex ID
+   * @returns Deleted vertex
+   */
+  async deleteVertexById<L extends keyof T['vertices']>(
+    label: L,
+    id: string,
+    graphName?: string
+  ): Promise<Vertex<T, L>> {
+    // First get the vertex to return it after deletion
+    const getQuery = `
+      MATCH (v:${String(label)})
+      WHERE id(v) = ${id}
+      RETURN v
+    `;
+
+    const getResult = await this.queryExecutor.executeCypher(
+      getQuery,
+      {},
+      graphName || this.graphName
+    );
+
+    if (getResult.rows.length === 0) {
+      throw new Error(`Vertex with ID ${id} not found`);
+    }
+
+    // Store the vertex data
+    const vertex = this.transformToVertex(label, getResult.rows[0]);
+
+    // Now delete the vertex
+    const deleteQuery = `
+      MATCH (v:${String(label)})
+      WHERE id(v) = ${id}
+      DETACH DELETE v
+    `;
+
+    await this.queryExecutor.executeCypher(
+      deleteQuery,
+      {},
+      graphName || this.graphName
+    );
+
+    return vertex;
+  }
+
+  /**
+   * Delete a vertex by properties
+   *
+   * @param label - Vertex label
+   * @param properties - Properties to match
+   * @param graphName - Graph name
+   * @returns True if the vertex was deleted
+   */
+  async deleteVertex<L extends keyof T['vertices']>(
+    label: L,
+    properties: Record<string, any>,
+    graphName?: string
+  ): Promise<boolean> {
+    // Convert properties to Cypher query conditions
+    const conditions = Object.entries(properties)
+      .map(([key, value]) => `toString(v.${key}) = '${String(value)}'`)
+      .join(' AND ');
+
+    // Build Cypher query
+    const query = `
+      MATCH (v:${String(label)})
+      WHERE ${conditions}
+      DETACH DELETE v
+      RETURN count(*) AS deleted
+    `;
+
+    // Execute query
+    const result = await this.queryExecutor.executeCypher(query, {}, graphName || this.graphName);
+
+    // Check if any vertices were deleted
+    return parseInt(result.rows[0].deleted, 10) > 0;
+  }
+
+  /**
+   * Create multiple vertices in a batch operation
+   *
+   * @param label - Vertex label
+   * @param dataArray - Array of vertex data
+   * @returns Array of created vertices
+   */
+  async createVerticesBatch<L extends keyof T['vertices']>(
+    label: L,
+    dataArray: VertexData<T, L>[],
+    graphName?: string
+  ): Promise<Vertex<T, L>[]> {
+    if (dataArray.length === 0) {
+      return [];
+    }
+
+    // Validate all data items against schema
+    dataArray.forEach(data => this.validateVertexData(label, data));
+
+    // Process vertices one by one using Cypher
+    const results: Vertex<T, L>[] = [];
+
+    for (const data of dataArray) {
+      const query = `
+        CREATE (v:${String(label)} $props)
+        RETURN v
+      `;
+
+      const result = await this.queryExecutor.executeCypher(
+        query,
+        { props: data },
+        graphName || this.graphName
+      );
+
+      if (result.rows.length > 0) {
+        results.push(this.transformToVertex(label, result.rows[0]));
+      }
+    }
+
+    return results;
   }
 
   /**

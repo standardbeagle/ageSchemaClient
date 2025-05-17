@@ -111,6 +111,20 @@ export class SQLGenerator {
   }
 
   /**
+   * Generate SQL to create a vertex
+   *
+   * @param label - Vertex label
+   * @param data - Vertex data
+   * @returns SQL query and parameters
+   */
+  public generateCreateVertexSQL(
+    label: string,
+    data: Record<string, unknown>
+  ): SQLResult {
+    return this.generateInsertVertexSQL(label, data);
+  }
+
+  /**
    * Generate INSERT statement for a vertex
    *
    * @param label - Vertex label

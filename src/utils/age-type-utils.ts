@@ -197,6 +197,8 @@ export async function createTempTableWithParams(
   params: Record<string, any>,
   options?: { transaction?: any }
 ): Promise<void> {
+  console.log(`Creating temp table ${schemaName}.${tableName} with params:`, params);
+
   // Create column definitions
   const columns = Object.entries(params)
     .map(([key, value]) => {
@@ -209,6 +211,8 @@ export async function createTempTableWithParams(
       return `${key} ${type}`;
     })
     .join(', ');
+
+  console.log(`Column definitions: ${columns}`);
 
   // Create values
   const keys = Object.keys(params).join(', ');
@@ -226,12 +230,26 @@ export async function createTempTableWithParams(
     })
     .join(', ');
 
-  // Create the temporary table
-  await queryExecutor.executeSQL(`
+  console.log(`Keys: ${keys}`);
+  console.log(`Values: ${values}`);
+
+  // Create the SQL for the temporary table
+  const sql = `
     DROP TABLE IF EXISTS ${schemaName}.${tableName};
     CREATE TABLE ${schemaName}.${tableName} (${columns});
     INSERT INTO ${schemaName}.${tableName} (${keys}) VALUES (${values});
-  `, [], options);
+  `;
+
+  console.log(`Executing SQL: ${sql}`);
+
+  // Create the temporary table
+  try {
+    await queryExecutor.executeSQL(sql, [], options);
+    console.log(`Temp table ${schemaName}.${tableName} created successfully`);
+  } catch (error) {
+    console.error(`Error creating temp table: ${error.message}`);
+    throw error;
+  }
 }
 
 /**
@@ -251,7 +269,9 @@ export async function createParamFunctionFromTable(
   tableName: string,
   options?: { transaction?: any }
 ): Promise<void> {
-  await queryExecutor.executeSQL(`
+  console.log(`Creating function ${schemaName}.${functionName} to return data from ${schemaName}.${tableName}`);
+
+  const sql = `
     CREATE OR REPLACE FUNCTION ${schemaName}.${functionName}()
     RETURNS ag_catalog.agtype AS $$
     DECLARE
@@ -264,7 +284,17 @@ export async function createParamFunctionFromTable(
       RETURN result_array;
     END;
     $$ LANGUAGE plpgsql;
-  `, [], options);
+  `;
+
+  console.log(`Executing SQL: ${sql}`);
+
+  try {
+    await queryExecutor.executeSQL(sql, [], options);
+    console.log(`Function ${schemaName}.${functionName} created successfully`);
+  } catch (error) {
+    console.error(`Error creating function: ${error.message}`);
+    throw error;
+  }
 }
 
 /**
@@ -284,27 +314,45 @@ export async function executeCypherWithParams(
   graphName: string,
   cypher: string,
   params: Record<string, any>,
-  options?: { transaction?: any }
+  options?: { transaction?: any, timeout?: number, maxRetries?: number }
 ): Promise<any> {
+  console.log('Executing Cypher with params using temp table approach');
+  console.log(`Schema: ${schemaName}, Graph: ${graphName}`);
+  console.log(`Cypher query: ${cypher}`);
+  console.log(`Parameters: ${JSON.stringify(params)}`);
+
   // Generate unique names for the temp table and function
   const timestamp = Date.now();
   const tableName = `temp_params_${timestamp}`;
   const functionName = `get_params_${timestamp}`;
 
-  // Create the temp table with parameters
-  await createTempTableWithParams(queryExecutor, schemaName, tableName, params, options);
-
-  // Create the function to return parameters as agtype
-  await createParamFunctionFromTable(queryExecutor, schemaName, functionName, tableName, options);
-
   try {
+    console.log(`Creating temp table ${schemaName}.${tableName}`);
+    // Create the temp table with parameters
+    await createTempTableWithParams(queryExecutor, schemaName, tableName, params, options);
+
+    console.log(`Creating function ${schemaName}.${functionName}`);
+    // Create the function to return parameters as agtype
+    await createParamFunctionFromTable(queryExecutor, schemaName, functionName, tableName, options);
+
+    console.log('Executing Cypher query with function');
     // Execute the Cypher query
     return await queryExecutor.executeCypher(cypher, {}, graphName, options);
+  } catch (error) {
+    console.error(`Error in executeCypherWithParams: ${error.message}`);
+    console.error(error.stack);
+    throw error;
   } finally {
-    // Clean up the temp table and function
-    await queryExecutor.executeSQL(`
-      DROP TABLE IF EXISTS ${schemaName}.${tableName};
-      DROP FUNCTION IF EXISTS ${schemaName}.${functionName}();
-    `, [], options);
+    console.log('Cleaning up temp table and function');
+    try {
+      // Clean up the temp table and function
+      await queryExecutor.executeSQL(`
+        DROP TABLE IF EXISTS ${schemaName}.${tableName};
+        DROP FUNCTION IF EXISTS ${schemaName}.${functionName}();
+      `, [], options);
+      console.log('Cleanup successful');
+    } catch (cleanupError) {
+      console.error(`Error during cleanup: ${cleanupError.message}`);
+    }
   }
 }

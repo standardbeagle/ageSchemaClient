@@ -1,0 +1,336 @@
+/**
+ * Integration tests for schema validation in ageSchemaClient
+ *
+ * These tests verify that the schema validation functionality works correctly
+ * when integrated with the database operations.
+ */
+
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import {
+  queryExecutor,
+  isAgeAvailable,
+  TEST_SCHEMA,
+  loadSchemaFixture
+} from '../setup/integration';
+import { SchemaValidator } from '../../src/schema/validator';
+import { VertexOperations, EdgeOperations } from '../../src/db';
+import { ValidationError } from '../../src/core/errors';
+
+// Mock SQLGenerator that doesn't validate the schema
+class MockSQLGenerator {
+  constructor(private schema: any) {}
+}
+
+// Graph name for the schema validation tests
+const SCHEMA_TEST_GRAPH = 'schema_test_graph';
+
+// Define a schema for testing
+const testSchema = {
+  vertices: {
+    Person: {
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        age: { type: 'number', minimum: 0, maximum: 120 },
+        email: { type: 'string', format: 'email' },
+        active: { type: 'boolean' }
+      },
+      required: ['id', 'name', 'email']
+    },
+    Company: {
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        founded: { type: 'number', minimum: 1800 },
+        website: { type: 'string', format: 'uri' }
+      },
+      required: ['id', 'name']
+    }
+  },
+  edges: {
+    KNOWS: {
+      properties: {
+        since: { type: 'number', minimum: 1900 }
+      },
+      fromVertex: 'Person',
+      toVertex: 'Person'
+    },
+    WORKS_AT: {
+      properties: {
+        role: { type: 'string', enum: ['Employee', 'Manager', 'Director', 'CEO'] },
+        since: { type: 'number', minimum: 1900 },
+        salary: { type: 'number', minimum: 0 }
+      },
+      required: ['role', 'since'],
+      fromVertex: 'Person',
+      toVertex: 'Company'
+    }
+  },
+  version: '1.0.0'
+};
+
+describe('Schema Validation Integration', () => {
+  let ageAvailable = false;
+  let vertexOperations: VertexOperations<typeof testSchema>;
+  let edgeOperations: EdgeOperations<typeof testSchema>;
+  let sqlGenerator: SQLGenerator;
+  let schemaValidator: SchemaValidator;
+
+  // Set up the test environment
+  beforeAll(async () => {
+    // Check if AGE is available
+    ageAvailable = await isAgeAvailable();
+
+    if (!ageAvailable) {
+      console.warn('Apache AGE extension is not available, tests will be skipped');
+      return;
+    }
+
+    // Drop the test graph if it exists
+    try {
+      await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${SCHEMA_TEST_GRAPH}', true)`);
+    } catch (error) {
+      console.warn(`Warning: Could not drop graph ${SCHEMA_TEST_GRAPH}: ${error.message}`);
+    }
+
+    // Create the test graph
+    try {
+      await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.create_graph('${SCHEMA_TEST_GRAPH}')`);
+    } catch (error) {
+      console.error(`Error creating graph ${SCHEMA_TEST_GRAPH}: ${error.message}`);
+      ageAvailable = false;
+      return;
+    }
+
+    // Create mock SQL generator, schema validator, and operations
+    sqlGenerator = new MockSQLGenerator(testSchema);
+    schemaValidator = new SchemaValidator(testSchema);
+    vertexOperations = new VertexOperations(testSchema, queryExecutor, sqlGenerator as any);
+    edgeOperations = new EdgeOperations(testSchema, queryExecutor, sqlGenerator as any);
+  });
+
+  // Clean up after all tests
+  afterAll(async () => {
+    if (!ageAvailable) {
+      return;
+    }
+
+    // Drop the test graph
+    try {
+      await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${SCHEMA_TEST_GRAPH}', true)`);
+    } catch (error) {
+      console.warn(`Warning: Could not drop graph ${SCHEMA_TEST_GRAPH}: ${error.message}`);
+    }
+  });
+
+  // Test: Validate a valid vertex
+  it('should validate a valid vertex', () => {
+    // Create a valid vertex
+    const vertex = {
+      id: '1',
+      name: 'Alice',
+      age: 30,
+      email: 'alice@example.com',
+      active: true
+    };
+
+    // Validate the vertex
+    const result = schemaValidator.validateVertex('Person', vertex);
+
+    // Verify the result
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  // Test: Validate an invalid vertex
+  it('should detect an invalid vertex', () => {
+    // Create an invalid vertex (missing required field, invalid age)
+    const vertex = {
+      id: '2',
+      name: 'Bob',
+      age: -5, // Invalid: age must be >= 0
+      // Missing required email field
+      active: true
+    };
+
+    // Validate the vertex
+    const result = schemaValidator.validateVertex('Person', vertex);
+
+    // Verify the result
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+
+    // Check for specific errors
+    const ageError = result.errors.find(e => e.path === 'age');
+    expect(ageError).toBeDefined();
+
+    const emailError = result.errors.find(e => e.path === 'email');
+    expect(emailError).toBeDefined();
+  });
+
+  // Test: Validate a valid edge
+  it('should validate a valid edge', () => {
+    // Create a valid edge
+    const edge = {
+      role: 'Manager',
+      since: 2010,
+      salary: 75000
+    };
+
+    // Validate the edge
+    const result = schemaValidator.validateEdge('WORKS_AT', edge);
+
+    // Verify the result
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  // Test: Validate an invalid edge
+  it('should detect an invalid edge', () => {
+    // Create an invalid edge (invalid role, missing required field)
+    const edge = {
+      role: 'Intern', // Invalid: not in enum
+      // Missing required since field
+      salary: 30000
+    };
+
+    // Validate the edge
+    const result = schemaValidator.validateEdge('WORKS_AT', edge);
+
+    // Verify the result
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+
+    // Check for specific errors
+    const roleError = result.errors.find(e => e.path === 'role');
+    expect(roleError).toBeDefined();
+
+    const sinceError = result.errors.find(e => e.path === 'since');
+    expect(sinceError).toBeDefined();
+  });
+
+  // Test: Create a valid vertex in the database
+  it('should create a valid vertex in the database', async () => {
+    if (!ageAvailable) {
+      console.warn('Skipping test: AGE not available');
+      return;
+    }
+
+    // Create a valid vertex
+    const vertex = await vertexOperations.createVertex(
+      'Person',
+      {
+        id: '3',
+        name: 'Charlie',
+        age: 35,
+        email: 'charlie@example.com',
+        active: true
+      },
+      SCHEMA_TEST_GRAPH
+    );
+
+    // Verify the vertex was created
+    expect(vertex).toBeDefined();
+    expect(vertex.label).toBe('Person');
+    expect(vertex.properties.id).toBe('3');
+    expect(vertex.properties.name).toBe('Charlie');
+    expect(vertex.properties.age).toBe(35);
+    expect(vertex.properties.email).toBe('charlie@example.com');
+    expect(vertex.properties.active).toBe(true);
+  });
+
+  // Test: Fail to create an invalid vertex in the database
+  it('should fail to create an invalid vertex in the database', async () => {
+    if (!ageAvailable) {
+      console.warn('Skipping test: AGE not available');
+      return;
+    }
+
+    // Try to create an invalid vertex
+    try {
+      await vertexOperations.createVertex(
+        'Person',
+        {
+          id: '4',
+          name: 'Dave',
+          age: 150, // Invalid: age must be <= 120
+          email: 'not-an-email' // Invalid: not a valid email format
+        },
+        SCHEMA_TEST_GRAPH
+      );
+
+      // If we get here, the test failed
+      expect(true).toBe(false);
+    } catch (error) {
+      // Verify the error
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(error.message).toContain('Validation failed');
+    }
+  });
+
+  // Test: Create a valid edge in the database
+  it('should create a valid edge in the database', async () => {
+    if (!ageAvailable) {
+      console.warn('Skipping test: AGE not available');
+      return;
+    }
+
+    // Create vertices
+    await queryExecutor.executeCypher(`
+      CREATE (p1:Person {id: '5', name: 'Eve', email: 'eve@example.com'})
+      CREATE (p2:Person {id: '6', name: 'Frank', email: 'frank@example.com'})
+      RETURN p1, p2
+    `, {}, SCHEMA_TEST_GRAPH);
+
+    // Create a valid edge
+    const edge = await edgeOperations.createEdge(
+      'KNOWS',
+      { id: '5' },
+      { id: '6' },
+      { since: 2015 },
+      SCHEMA_TEST_GRAPH
+    );
+
+    // Verify the edge was created
+    expect(edge).toBeDefined();
+    expect(edge.label).toBe('KNOWS');
+    expect(edge.properties.since).toBe(2015);
+  });
+
+  // Test: Fail to create an invalid edge in the database
+  it('should fail to create an invalid edge in the database', async () => {
+    if (!ageAvailable) {
+      console.warn('Skipping test: AGE not available');
+      return;
+    }
+
+    // Create vertices
+    await queryExecutor.executeCypher(`
+      CREATE (p:Person {id: '7', name: 'Grace', email: 'grace@example.com'})
+      CREATE (c:Company {id: '1', name: 'Acme Inc.'})
+      RETURN p, c
+    `, {}, SCHEMA_TEST_GRAPH);
+
+    // Try to create an invalid edge
+    try {
+      await edgeOperations.createEdge(
+        'WORKS_AT',
+        { id: '7' },
+        { id: '1' },
+        {
+          role: 'Intern', // Invalid: not in enum
+          // Missing required since field
+          salary: 30000
+        },
+        SCHEMA_TEST_GRAPH
+      );
+
+      // If we get here, the test failed
+      expect(true).toBe(false);
+    } catch (error) {
+      // Verify the error
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(error.message).toContain('Validation failed');
+    }
+  });
+});

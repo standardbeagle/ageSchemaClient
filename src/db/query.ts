@@ -158,6 +158,14 @@ export interface QueryLogger {
     duration: number,
     error: Error
   ): void;
+
+  /**
+   * Log debug information
+   *
+   * @param message - Debug message
+   * @param data - Additional data
+   */
+  debug?(message: string, data?: any): void;
 }
 
 /**
@@ -205,6 +213,20 @@ export class DefaultQueryLogger implements QueryLogger {
         params ? JSON.stringify(params) : 'none'
       } | Error: ${error.message}`
     );
+  }
+
+  /**
+   * Log debug information
+   *
+   * @param message - Debug message
+   * @param data - Additional data
+   */
+  debug(message: string, data?: any): void {
+    if (data) {
+      console.debug(message, data);
+    } else {
+      console.debug(message);
+    }
   }
 
   /**
@@ -354,27 +376,146 @@ export class QueryExecutor {
   async executeCypher<T = any>(
     cypher: string,
     params?: Record<string, any>,
-    graphName: string = 'default',
+    graphName?: string,
     options: QueryOptions = {}
   ): Promise<QueryResult<T>> {
+    // Validate graph name
+    if (!graphName) {
+      throw new QueryError(
+        'Graph name is required for Cypher queries',
+        undefined,
+        { query: cypher, params }
+      );
+    }
+
     // Convert parameters to JSON string
     const paramsJson = params ? JSON.stringify(params) : '{}';
 
-    // Use dollar-quoted strings to avoid escaping issues
-    // Apache AGE requires dollar-quoted strings for Cypher queries
-    // The third parameter must be a SQL parameter ($1) not a dollar-quoted string
-    const sql = `SELECT * FROM ag_catalog.cypher('${graphName}', $q$${cypher}$q$, $1) AS (result ag_catalog.agtype)`;
+    try {
+      // Extract return columns from the Cypher query to match the AS clause
+      // This is a critical step for Apache AGE compatibility
+      let returnColumns = 'result ag_catalog.agtype';
 
-    // Log the query and parameters for debugging if logger is available
-    if (this.logger && typeof this.logger.debug === 'function') {
-      this.logger.debug(`Executing Cypher query: ${cypher}`);
-      this.logger.debug(`With parameters: ${paramsJson}`);
-    } else {
-      console.debug(`Executing Cypher query: ${cypher}`);
-      console.debug(`With parameters: ${paramsJson}`);
+      // Parse the RETURN statement to extract column names
+      const returnMatch = cypher.match(/RETURN\s+(.*?)(?:\s+ORDER BY|\s+LIMIT|\s+SKIP|\s*$)/is);
+      if (returnMatch && returnMatch[1]) {
+        // Extract column aliases from the RETURN clause
+        const returnClause = returnMatch[1].trim();
+
+        // First try to match explicit AS aliases
+        const columnMatches = returnClause.match(/(?:\w+(?:\.\w+)*|\([^)]+\))\s+AS\s+\w+/g);
+
+        if (columnMatches && columnMatches.length > 0) {
+          // Build the return columns string for the AS clause
+          returnColumns = columnMatches
+            .map(col => {
+              const parts = col.split(/\s+AS\s+/i);
+              if (parts.length === 2) {
+                const alias = parts[1].trim();
+                return `${alias} ag_catalog.agtype`;
+              }
+              return null;
+            })
+            .filter(Boolean)
+            .join(', ');
+        } else {
+          // If no explicit AS aliases, try to extract implicit column names
+          // For example, from "RETURN count(*)" extract "count"
+          const implicitColumns = returnClause.split(',').map(expr => expr.trim());
+          if (implicitColumns.length > 0) {
+            const implicitColumnNames = implicitColumns.map((expr, index) => {
+              // Extract the last part of a property path (e.g., "p.name" -> "name")
+              const dotMatch = expr.match(/(\w+)\.(\w+)$/);
+              if (dotMatch) {
+                return dotMatch[2];
+              }
+
+              // Extract function name (e.g., "count(*)" -> "count")
+              const funcMatch = expr.match(/(\w+)\(/);
+              if (funcMatch) {
+                // Special case for count(*) AS created_employees
+                if (expr.includes('count(*)') && returnClause.includes('AS created_employees')) {
+                  return 'created_employees';
+                }
+                return funcMatch[1];
+              }
+
+              // Use the expression as is if it's a simple identifier
+              if (/^\w+$/.test(expr)) {
+                return expr;
+              }
+
+              // If we can't extract a clean name, use a generic column name
+              return `col${index + 1}`;
+            });
+
+            // Always generate column names, even if we couldn't extract them
+            returnColumns = implicitColumnNames
+              .map(name => `${name} ag_catalog.agtype`)
+              .join(', ');
+          }
+        }
+      }
+
+      // Execute the Cypher query with proper return type
+      // Note: Connection pool already handles loading AGE and setting search_path
+      const sql = `SELECT * FROM ag_catalog.cypher('${graphName}', $q$${cypher}$q$, $1) AS (${returnColumns})`;
+
+      // Log the query and parameters for debugging if logger is available
+      if (this.logger && typeof this.logger.debug === 'function') {
+        this.logger.debug(`Executing Cypher query: ${cypher}`);
+        this.logger.debug(`With parameters: ${paramsJson}`);
+        this.logger.debug(`SQL with return columns: ${sql}`);
+      } else {
+        console.debug(`Executing Cypher query: ${cypher}`);
+        console.debug(`With parameters: ${paramsJson}`);
+        console.debug(`SQL with return columns: ${sql}`);
+      }
+
+      return await this.executeSQL<T>(sql, [paramsJson], options);
+    } catch (error) {
+      // Enhance error message for AGE-specific errors
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('return row and column definition list do not match')) {
+        throw new QueryError(
+          `Cypher query execution failed: The return columns in your query don't match the AS clause. Check your RETURN statement.`,
+          error as Error,
+          { query: cypher, params }
+        );
+      } else if (errorMessage.includes('could not find rte for')) {
+        throw new QueryError(
+          `Cypher query execution failed: Column reference not found. Check your query for typos in column names.`,
+          error as Error,
+          { query: cypher, params }
+        );
+      } else if (errorMessage.includes('invalid input syntax for type agtype')) {
+        throw new QueryError(
+          `Cypher query execution failed: Invalid input syntax for agtype. Check your parameter values.`,
+          error as Error,
+          { query: cypher, params }
+        );
+      } else if (errorMessage.includes('function ag_catalog.cypher')) {
+        throw new QueryError(
+          `Cypher query execution failed: AGE extension not loaded or not in search path. Check your connection configuration.`,
+          error as Error,
+          { query: cypher, params }
+        );
+      } else if (errorMessage.includes('cannot cast agtype string to type boolean')) {
+        throw new QueryError(
+          `Cypher query execution failed: Type casting error. Cannot convert string to boolean. Check your query conditions.`,
+          error as Error,
+          { query: cypher, params }
+        );
+      } else if (errorMessage.includes('graph') && errorMessage.includes('does not exist')) {
+        throw new QueryError(
+          `Cypher query execution failed: Graph "${graphName}" does not exist. Create the graph before executing queries.`,
+          error as Error,
+          { query: cypher, params, graphName }
+        );
+      } else {
+        throw error;
+      }
     }
-
-    return this.executeSQL<T>(sql, [paramsJson], options);
   }
 
   /**

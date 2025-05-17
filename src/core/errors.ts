@@ -1,6 +1,6 @@
 /**
  * Error classes for core operations
- * 
+ *
  * @packageDocumentation
  */
 
@@ -17,7 +17,7 @@ export class BaseError extends Error {
 
   /**
    * Create a new BaseError
-   * 
+   *
    * @param message - Error message
    * @param code - Error code
    * @param cause - Error cause
@@ -26,7 +26,7 @@ export class BaseError extends Error {
     super(message);
     this.name = 'BaseError';
     this.code = code;
-    
+
     // Maintain proper stack trace in Node.js
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
@@ -40,12 +40,17 @@ export class BaseError extends Error {
 export class ValidationError extends BaseError {
   /**
    * Create a new ValidationError
-   * 
+   *
    * @param message - Error message
    * @param cause - Error cause
    */
   constructor(message: string, cause?: unknown) {
-    super(message, ErrorCode.SCHEMA_VALIDATION_ERROR, cause);
+    // Ensure message includes "Validation failed" for consistent error handling
+    const enhancedMessage = message.includes('Validation failed')
+      ? message
+      : `Validation failed: ${message}`;
+
+    super(enhancedMessage, ErrorCode.SCHEMA_VALIDATION_ERROR, cause);
     this.name = 'ValidationError';
   }
 }
@@ -56,7 +61,7 @@ export class ValidationError extends BaseError {
 export class ConnectionError extends BaseError {
   /**
    * Create a new ConnectionError
-   * 
+   *
    * @param message - Error message
    * @param cause - Error cause
    */
@@ -72,7 +77,7 @@ export class ConnectionError extends BaseError {
 export class QueryError extends BaseError {
   /**
    * Create a new QueryError
-   * 
+   *
    * @param message - Error message
    * @param cause - Error cause
    */
@@ -88,7 +93,7 @@ export class QueryError extends BaseError {
 export class TransactionError extends BaseError {
   /**
    * Create a new TransactionError
-   * 
+   *
    * @param message - Error message
    * @param cause - Error cause
    */

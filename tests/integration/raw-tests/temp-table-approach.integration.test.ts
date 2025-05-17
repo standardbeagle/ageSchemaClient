@@ -1,11 +1,15 @@
 /**
- * Integration test for Apache AGE parameter passing using temporary tables
+ * Raw integration test for Apache AGE parameter passing using temporary tables
  *
- * This test demonstrates an approach to pass parameters to Cypher queries
- * in Apache AGE by using temporary tables and functions.
+ * This test demonstrates the raw Cypher syntax for passing parameters to Cypher queries
+ * in Apache AGE by using temporary tables and functions. It focuses on the raw SQL and
+ * Cypher syntax without using the higher-level features of the library.
  *
- * It includes examples for both simple property types and complex data structures
- * like arrays of objects, as well as a combined vertex/edge object structure.
+ * Key Apache AGE syntax patterns demonstrated:
+ * 1. Using WITH to pass parameters from PostgreSQL functions to Cypher
+ * 2. Using UNWIND with PostgreSQL functions that return ag_catalog.agtype
+ * 3. Proper type handling between PostgreSQL and Apache AGE
+ * 4. Handling complex data structures like arrays and nested objects
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -83,6 +87,7 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     }
 
     // 1. Create a temporary table to store parameters
+    // This demonstrates the raw SQL approach to create a table for parameter storage
     await queryExecutor.executeSQL(`
       CREATE TABLE ${TEST_SCHEMA}.temp_params (
         id SERIAL PRIMARY KEY,
@@ -92,6 +97,7 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     `);
 
     // 2. Insert parameters into the temp table
+    // This demonstrates how to convert JavaScript objects to JSONB for storage
     const params = {
       name: "Test Person",
       age: 30,
@@ -106,13 +112,16 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
       `, [key, JSON.stringify(value)]);
     }
 
-    // 3. Create a function to retrieve parameters as agtype
+    // 3. Create a function to retrieve parameters as JSONB
+    // This demonstrates how to create a PostgreSQL function that returns
+    // a JSONB object that can be used with Apache AGE Cypher
     await queryExecutor.executeSQL(`
       CREATE OR REPLACE FUNCTION ${TEST_SCHEMA}.get_params()
       RETURNS JSONB AS $$
       DECLARE
         result_json JSONB;
       BEGIN
+        -- Use jsonb_object_agg to convert rows to a single JSONB object
         SELECT jsonb_object_agg(param_name, param_value)
         INTO result_json
         FROM ${TEST_SCHEMA}.temp_params;
@@ -125,7 +134,10 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     // 4. Execute a Cypher query using the function to get parameters
     try {
       // First create a simple vertex using the parameters
-      // Use a simpler approach without returning the vertex
+      // This demonstrates the raw Cypher syntax for:
+      // 1. Calling a PostgreSQL function from Cypher using WITH
+      // 2. Accessing properties from the returned JSON object
+      // 3. Creating a vertex with properties from the JSON object
       const createResult = await queryExecutor.executeSQL(`
         SELECT * FROM ag_catalog.cypher('${PARAM_TEST_GRAPH}', $$
           WITH ${TEST_SCHEMA}.get_params() AS params_json
@@ -143,6 +155,9 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
       expect(createResult.rows[0].success).toBe(1);
 
       // Now query the vertex to verify the parameters were passed correctly
+      // This demonstrates the raw Cypher syntax for:
+      // 1. Using MATCH to find vertices
+      // 2. Returning specific properties with explicit type casting
       const queryResult = await queryExecutor.executeSQL(`
         SELECT * FROM ag_catalog.cypher('${PARAM_TEST_GRAPH}', $$
           MATCH (p:Person)
@@ -174,6 +189,7 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     }
 
     // 1. Create a temporary table to store complex parameters
+    // This demonstrates the same table structure as the simple case
     await queryExecutor.executeSQL(`
       CREATE TABLE ${TEST_SCHEMA}.complex_params (
         id SERIAL PRIMARY KEY,
@@ -183,6 +199,8 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     `);
 
     // 2. Define complex parameters with arrays of objects
+    // This demonstrates how to structure complex nested data in JavaScript
+    // that will be passed to Apache AGE
     const complexParams = {
       // Array of department objects
       departments: [
@@ -190,7 +208,7 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
         { id: 2, name: "Marketing", budget: 500000 },
         { id: 3, name: "Sales", budget: 750000 }
       ],
-      // Array of employee objects
+      // Array of employee objects with nested arrays (skills)
       employees: [
         { id: 101, name: "Alice Smith", departmentId: 1, skills: ["JavaScript", "TypeScript", "React"] },
         { id: 102, name: "Bob Johnson", departmentId: 1, skills: ["Python", "Django", "PostgreSQL"] },
@@ -207,7 +225,11 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
       `, [key, JSON.stringify(value)]);
     }
 
-    // Create functions that return agtype for UNWIND for each department and employee
+    // 3. Create functions that return ag_catalog.agtype for UNWIND
+    // This demonstrates how to:
+    // 1. Convert JSONB arrays to ag_catalog.agtype arrays for use with UNWIND
+    // 2. Handle type conversions for numeric and string values
+    // 3. Properly format the data for Apache AGE
     await queryExecutor.executeSQL(`
       SET search_path = ag_catalog, public;
       CREATE OR REPLACE FUNCTION ${TEST_SCHEMA}.get_departments()
@@ -215,13 +237,16 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
       DECLARE
         result_array ag_catalog.agtype;
       BEGIN
+        -- Use jsonb_agg to create a JSONB array, then convert to ag_catalog.agtype
+        -- This is critical for proper handling by Apache AGE's UNWIND
         SELECT jsonb_agg(jsonb_build_object(
-          'id', (elem->>'id')::int,
-          'name', elem->>'name',
-          'budget', (elem->>'budget')::numeric
-        ))::text::ag_catalog.agtype
+          'id', (elem->>'id')::int,          -- Convert string ID to integer
+          'name', elem->>'name',             -- Keep name as string
+          'budget', (elem->>'budget')::numeric -- Convert budget to numeric
+        ))::text::ag_catalog.agtype          -- Convert to ag_catalog.agtype via text
         INTO result_array
         FROM (
+          -- Extract each array element as a separate row
           SELECT jsonb_array_elements(param_value) as elem
           FROM ${TEST_SCHEMA}.complex_params
           WHERE param_name = 'departments'
@@ -231,17 +256,19 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
       $$ LANGUAGE plpgsql;
     `);
 
+    // Create a function for employees with nested arrays (skills)
     await queryExecutor.executeSQL(`
       CREATE OR REPLACE FUNCTION ${TEST_SCHEMA}.get_employees()
       RETURNS ag_catalog.agtype AS $$
       DECLARE
-        result_array agtype;
+        result_array ag_catalog.agtype;
       BEGIN
+        -- Similar approach as departments, but preserving the nested skills array
         SELECT jsonb_agg(jsonb_build_object(
           'id', (elem->>'id')::int,
           'name', elem->>'name',
           'departmentId', (elem->>'departmentId')::int,
-          'skills', elem->'skills' -- Keep skills as a JSONB array
+          'skills', elem->'skills' -- Keep skills as a JSONB array without type conversion
         ))::text::ag_catalog.agtype
         INTO result_array
         FROM (
@@ -255,7 +282,10 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     `);
 
     try {
-      // Create Department vertices using UNWIND
+      // 4. Create Department vertices using UNWIND
+      // This demonstrates the raw Cypher syntax for:
+      // 1. Using UNWIND with a PostgreSQL function that returns ag_catalog.agtype
+      // 2. Creating vertices with properties from each unwound item
       const createDeptResult = await queryExecutor.executeCypher(`
         UNWIND ${TEST_SCHEMA}.get_departments() AS dept
         CREATE (d:Department {
@@ -270,30 +300,34 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
       expect(createDeptResult.rows).toHaveLength(1);
       // Log the actual structure to debug
       console.log('Department creation result structure:', JSON.stringify(createDeptResult.rows[0]));
-      // Check the result structure - it might be nested differently
-      // The result is in the format {"result":"3"} where "3" is a string
-      const resultValue = createDeptResult.rows[0].result;
+      // The result is in the format {"created_departments":"3"} where "3" is a string
+      const resultValue = createDeptResult.rows[0].created_departments;
       expect(parseInt(resultValue, 10)).toBe(3);
 
-      // Create Employee vertices using UNWIND
+      // 5. Create Employee vertices using UNWIND
+      // This demonstrates handling complex nested data (skills array)
       const createEmpResult = await queryExecutor.executeCypher(`
         UNWIND ${TEST_SCHEMA}.get_employees() AS emp
         CREATE (e:Employee {
           id: emp.id,
           name: emp.name,
           departmentId: emp.departmentId,
-          skills: emp.skills // Store the skills array directly
+          skills: emp.skills // Store the skills array directly as an agtype array
         })
         RETURN count(e) AS created_employees
       `, {}, PARAM_TEST_GRAPH);
 
       // Verify employees were created
       expect(createEmpResult.rows).toHaveLength(1);
-      // The result is in the format {"result":"4"} where "4" is a string
-      const empResultValue = createEmpResult.rows[0].result;
+      // The result is in the format {"created_employees":"4"} where "4" is a string
+      const empResultValue = createEmpResult.rows[0].created_employees;
       expect(parseInt(empResultValue, 10)).toBe(4);
 
-      // Create WORKS_IN relationships between Employees and Departments
+      // 6. Create WORKS_IN relationships between Employees and Departments
+      // This demonstrates the raw Cypher syntax for:
+      // 1. Using UNWIND with a function to iterate over data
+      // 2. Using MATCH to find existing vertices
+      // 3. Creating relationships between vertices
       const createRelResult = await queryExecutor.executeCypher(`
         UNWIND ${TEST_SCHEMA}.get_employees() AS emp_data
         MATCH (emp:Employee {id: emp_data.id})
@@ -304,8 +338,8 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
 
       expect(createRelResult.rows).toHaveLength(1);
       // All 4 employees should have a department
-      // The result is in the format {"result":"4"} where "4" is a string
-      const relResultValue = createRelResult.rows[0].result;
+      // The result is in the format {"created_relationships":"4"} where "4" is a string
+      const relResultValue = createRelResult.rows[0].created_relationships;
       expect(parseInt(relResultValue, 10)).toBe(4);
 
 
@@ -429,16 +463,20 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     }
 
     // 1. Create a temporary table to store the graph data
+    // This demonstrates a more flexible table structure that can store
+    // both vertex and edge data in the same table
     await queryExecutor.executeSQL(`
       CREATE TABLE ${TEST_SCHEMA}.graph_data (
         id SERIAL PRIMARY KEY,
-        data_type TEXT NOT NULL,
-        data_key TEXT NOT NULL,
-        data_value JSONB NOT NULL
+        data_type TEXT NOT NULL,     -- 'vertex' or 'edge'
+        data_key TEXT NOT NULL,      -- vertex/edge type (e.g., 'departments', 'WORKS_IN')
+        data_value JSONB NOT NULL    -- The actual data as JSONB
       )
     `);
 
     // 2. Define the combined vertex and edge data structure
+    // This demonstrates a more complex hierarchical data structure with
+    // both vertices and edges in a single object
     const graphData = {
       vertex: {
         departments: [
@@ -461,7 +499,9 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     };
 
     // 3. Insert the graph data into the temp table
-    // For vertices
+    // This demonstrates how to store hierarchical data in a flat table structure
+
+    // For vertices - store each vertex type as a separate row
     for (const [vertexType, vertices] of Object.entries(graphData.vertex)) {
       await queryExecutor.executeSQL(`
         INSERT INTO ${TEST_SCHEMA}.graph_data (data_type, data_key, data_value)
@@ -469,7 +509,7 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
       `, ['vertex', vertexType, JSON.stringify(vertices)]);
     }
 
-    // For edges
+    // For edges - store each edge type as a separate row
     for (const [edgeType, edges] of Object.entries(graphData.edge)) {
       await queryExecutor.executeSQL(`
         INSERT INTO ${TEST_SCHEMA}.graph_data (data_type, data_key, data_value)
@@ -478,6 +518,10 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     }
 
     // 4. Create a function to retrieve vertices by type
+    // This demonstrates:
+    // 1. Creating a function that accepts an ag_catalog.agtype parameter
+    // 2. Converting between text and ag_catalog.agtype
+    // 3. Handling parameter passing for dynamic data retrieval
     await queryExecutor.executeSQL(`
       SET search_path = ag_catalog, public;
       -- Create function to retrieve vertices by type
@@ -488,10 +532,13 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
         result_array ag_catalog.agtype;
       BEGIN
         -- Extract the text value from the agtype parameter
+        -- This is necessary because parameters come in as ag_catalog.agtype
         SELECT vertex_type::text INTO vertex_type_text;
-        -- Remove quotes if present
+        -- Remove quotes if present (handles both single and double quotes)
         vertex_type_text := REPLACE(REPLACE(vertex_type_text, '"', ''), '''', '');
 
+        -- Get the data for the specified vertex type and convert to ag_catalog.agtype
+        -- This direct conversion is critical for proper handling by UNWIND
         SELECT data_value::text::ag_catalog.agtype
         INTO result_array
         FROM ${TEST_SCHEMA}.graph_data
@@ -503,6 +550,7 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
     `);
 
     // 5. Create a function to retrieve edges by type
+    // Similar approach as the vertex function, but for edges
     await queryExecutor.executeSQL(`
       -- Create function to retrieve edges by type
       CREATE OR REPLACE FUNCTION ${TEST_SCHEMA}.get_edges(edge_type ag_catalog.agtype)
@@ -516,6 +564,7 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
         -- Remove quotes if present
         edge_type_text := REPLACE(REPLACE(edge_type_text, '"', ''), '''', '');
 
+        -- Get the data for the specified edge type and convert to ag_catalog.agtype
         SELECT data_value::text::ag_catalog.agtype
         INTO result_array
         FROM ${TEST_SCHEMA}.graph_data
@@ -528,7 +577,10 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
 
     try {
       // 6. Create department vertices
-      // Pass the vertex type as a parameter to avoid the agtype parameter issue
+      // This demonstrates:
+      // 1. Passing a parameter to executeCypher that will be used in the function call
+      // 2. Using UNWIND with a function that accepts a parameter
+      // 3. Creating vertices from the unwound data
       const createDeptResult = await queryExecutor.executeCypher(`
         UNWIND ${TEST_SCHEMA}.get_vertices($vertex_type) AS dept
         CREATE (d:Department {
@@ -541,12 +593,12 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
 
       // Verify departments were created
       expect(createDeptResult.rows).toHaveLength(1);
-      // The result is in the format {"result":"2"} where "2" is a string
-      const deptResultValue = createDeptResult.rows[0].result;
+      // The result is in the format {"created_departments":"2"} where "2" is a string
+      const deptResultValue = createDeptResult.rows[0].created_departments;
       expect(parseInt(deptResultValue, 10)).toBe(2);
 
       // 7. Create employee vertices
-      // Pass the vertex type as a parameter to avoid the agtype parameter issue
+      // Similar approach as departments, but for employees
       const createEmpResult = await queryExecutor.executeCypher(`
         UNWIND ${TEST_SCHEMA}.get_vertices($vertex_type) AS emp
         CREATE (e:Employee {
@@ -559,12 +611,15 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
 
       // Verify employees were created
       expect(createEmpResult.rows).toHaveLength(1);
-      // The result is in the format {"result":"2"} where "2" is a string
-      const empResultValue2 = createEmpResult.rows[0].result;
+      // The result is in the format {"created_employees":"2"} where "2" is a string
+      const empResultValue2 = createEmpResult.rows[0].created_employees;
       expect(parseInt(empResultValue2, 10)).toBe(2);
 
       // 8. Create WORKS_IN relationships
-      // Pass the edge type as a parameter to avoid the agtype parameter issue
+      // This demonstrates:
+      // 1. Using UNWIND with edges data
+      // 2. Using MATCH to find the vertices to connect
+      // 3. Creating relationships with properties
       const createWorksInResult = await queryExecutor.executeCypher(`
         UNWIND ${TEST_SCHEMA}.get_edges($edge_type) AS rel
         MATCH (emp:Employee {id: rel.from}), (dept:Department {id: rel.to})
@@ -574,12 +629,12 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
 
       // Verify WORKS_IN relationships were created
       expect(createWorksInResult.rows).toHaveLength(1);
-      // The result is in the format {"result":"1"} where "1" is a string
-      const worksInResultValue = createWorksInResult.rows[0].result;
+      // The result is in the format {"created_relationships":"1"} where "1" is a string
+      const worksInResultValue = createWorksInResult.rows[0].created_relationships;
       expect(parseInt(worksInResultValue, 10)).toBe(1);
 
       // 9. Create WORKS_FOR relationships
-      // Pass the edge type as a parameter to avoid the agtype parameter issue
+      // Similar approach as WORKS_IN, but connecting employees to employees
       const createWorksForResult = await queryExecutor.executeCypher(`
         UNWIND ${TEST_SCHEMA}.get_edges($edge_type) AS rel
         MATCH (emp1:Employee {id: rel.from}), (emp2:Employee {id: rel.to})
@@ -589,8 +644,8 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
 
       // Verify WORKS_FOR relationships were created
       expect(createWorksForResult.rows).toHaveLength(1);
-      // The result is in the format {"result":"1"} where "1" is a string
-      const worksForResultValue = createWorksForResult.rows[0].result;
+      // The result is in the format {"created_relationships":"1"} where "1" is a string
+      const worksForResultValue = createWorksForResult.rows[0].created_relationships;
       expect(parseInt(worksForResultValue, 10)).toBe(1);
 
       // 10. Query the graph to verify the employee-department relationships

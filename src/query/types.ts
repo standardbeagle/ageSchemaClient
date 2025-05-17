@@ -173,6 +173,11 @@ export interface QueryExecutionOptions {
   graphName?: string;
 
   /**
+   * Schema name for temp tables and functions
+   */
+  schemaName?: string;
+
+  /**
    * Query timeout in milliseconds
    */
   timeout?: number;

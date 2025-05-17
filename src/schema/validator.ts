@@ -13,6 +13,7 @@ import {
 } from './types';
 import { SchemaValidationError } from './errors';
 import { ErrorCollector } from './error-collector';
+import { ValidationResult, createSuccessResult, createFailureResult } from './validator-result';
 
 /**
  * Schema validator configuration
@@ -78,9 +79,66 @@ export class SchemaValidator {
    *
    * @param label - Vertex label
    * @param data - Vertex data
+   * @returns Validation result
+   * @throws SchemaValidationError if validation fails and throwOnError is true
+   */
+  public validateVertex(label: string, data: unknown, throwOnError: boolean = true): ValidationResult {
+    const errorCollector = new ErrorCollector();
+
+    this.validateVertexInternal(label, data, errorCollector);
+
+    if (errorCollector.hasErrors()) {
+      if (throwOnError) {
+        errorCollector.throwIfErrors();
+      }
+
+      return createFailureResult(errorCollector.getErrors().map(error => ({
+        message: error.message,
+        path: error.path || errorCollector.getCurrentPath() || '',
+        type: error.constructor.name
+      })));
+    }
+
+    return createSuccessResult();
+  }
+
+  /**
+   * Validate an edge against the schema
+   *
+   * @param label - Edge label
+   * @param data - Edge data
+   * @param throwOnError - Whether to throw an error if validation fails
+   * @returns Validation result
+   * @throws SchemaValidationError if validation fails and throwOnError is true
+   */
+  public validateEdge(label: string, data: unknown, throwOnError: boolean = true): ValidationResult {
+    const errorCollector = new ErrorCollector();
+
+    this.validateEdgeInternal(label, data, errorCollector);
+
+    if (errorCollector.hasErrors()) {
+      if (throwOnError) {
+        errorCollector.throwIfErrors();
+      }
+
+      return createFailureResult(errorCollector.getErrors().map(error => ({
+        message: error.message,
+        path: error.path || errorCollector.getCurrentPath() || '',
+        type: error.constructor.name
+      })));
+    }
+
+    return createSuccessResult();
+  }
+
+  /**
+   * Validate a vertex against the schema and throw an error if validation fails
+   *
+   * @param label - Vertex label
+   * @param data - Vertex data
    * @throws SchemaValidationError if validation fails
    */
-  public validateVertex(label: string, data: unknown): void {
+  public validateVertexAndThrow(label: string, data: unknown): void {
     const errorCollector = new ErrorCollector();
 
     this.validateVertexInternal(label, data, errorCollector);
@@ -89,13 +147,13 @@ export class SchemaValidator {
   }
 
   /**
-   * Validate an edge against the schema
+   * Validate an edge against the schema and throw an error if validation fails
    *
    * @param label - Edge label
    * @param data - Edge data
    * @throws SchemaValidationError if validation fails
    */
-  public validateEdge(label: string, data: unknown): void {
+  public validateEdgeAndThrow(label: string, data: unknown): void {
     const errorCollector = new ErrorCollector();
 
     this.validateEdgeInternal(label, data, errorCollector);
@@ -109,9 +167,44 @@ export class SchemaValidator {
    * @param property - Property name
    * @param definition - Property definition
    * @param value - Property value
+   * @param throwOnError - Whether to throw an error if validation fails
+   * @returns Validation result
+   * @throws SchemaValidationError if validation fails and throwOnError is true
+   */
+  public validateProperty(
+    property: string,
+    definition: PropertyDefinition,
+    value: unknown,
+    throwOnError: boolean = true
+  ): ValidationResult {
+    const errorCollector = new ErrorCollector();
+
+    this.validatePropertyInternal(property, definition, value, errorCollector);
+
+    if (errorCollector.hasErrors()) {
+      if (throwOnError) {
+        errorCollector.throwIfErrors();
+      }
+
+      return createFailureResult(errorCollector.getErrors().map(error => ({
+        message: error.message,
+        path: error.path || errorCollector.getCurrentPath() || '',
+        type: error.constructor.name
+      })));
+    }
+
+    return createSuccessResult();
+  }
+
+  /**
+   * Validate a property value against a property definition and throw an error if validation fails
+   *
+   * @param property - Property name
+   * @param definition - Property definition
+   * @param value - Property value
    * @throws SchemaValidationError if validation fails
    */
-  public validateProperty(property: string, definition: PropertyDefinition, value: unknown): void {
+  public validatePropertyAndThrow(property: string, definition: PropertyDefinition, value: unknown): void {
     const errorCollector = new ErrorCollector();
 
     this.validatePropertyInternal(property, definition, value, errorCollector);

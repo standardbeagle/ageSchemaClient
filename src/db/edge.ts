@@ -99,7 +99,8 @@ export class EdgeOperations<T extends SchemaDefinition> {
   constructor(
     private schema: T,
     private queryExecutor: QueryExecutor,
-    private sqlGenerator: SQLGenerator
+    private sqlGenerator: SQLGenerator,
+    private graphName?: string
   ) {}
 
   /**
@@ -109,13 +110,15 @@ export class EdgeOperations<T extends SchemaDefinition> {
    * @param fromVertex - Source vertex
    * @param toVertex - Target vertex
    * @param data - Edge data
+   * @param graphName - Optional graph name to override the default
    * @returns Created edge
    */
   async createEdge<L extends keyof T['edges']>(
     label: L,
     fromVertex: Vertex<T, any>,
     toVertex: Vertex<T, any>,
-    data: EdgeData<T, L> = {}
+    data: EdgeData<T, L> = {},
+    graphName?: string
   ): Promise<Edge<T, L>> {
     // Validate data against schema
     this.validateEdgeData(label, data);
@@ -123,17 +126,40 @@ export class EdgeOperations<T extends SchemaDefinition> {
     // Validate vertex types against edge constraints
     this.validateVertexTypes(label, fromVertex, toVertex);
 
-    // Generate and execute SQL
-    const { sql, params } = this.sqlGenerator.generateInsertEdgeSQL(
-      label as string,
-      fromVertex.id,
-      toVertex.id,
-      data
-    );
-    const result = await this.queryExecutor.executeSQL(sql, params);
+    // Ensure we have a graph name
+    const targetGraph = graphName || this.graphName;
+    if (!targetGraph) {
+      throw new ValidationError('Graph name is required to create an edge');
+    }
 
-    // Transform and return result
-    return this.transformToEdge(label, result.rows[0]);
+    // Use Cypher query for edge creation
+    const query = `
+      MATCH (a), (b)
+      WHERE id(a) = ${fromVertex.id} AND id(b) = ${toVertex.id}
+      CREATE (a)-[r:${String(label)} $props]->(b)
+      RETURN a, r, b
+    `;
+
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      { props: data },
+      targetGraph
+    );
+
+    // Parse the edge from the result
+    const edgeData = JSON.parse(result.rows[0].r);
+    const fromData = JSON.parse(result.rows[0].a);
+    const toData = JSON.parse(result.rows[0].b);
+
+    // Transform to Edge object
+    return {
+      id: edgeData.id || edgeData.identity.toString(),
+      label: label,
+      fromId: fromVertex.id,
+      toId: toVertex.id,
+      ...data,
+      properties: edgeData.properties || {}
+    } as Edge<T, L>;
   }
 
   /**
@@ -145,21 +171,141 @@ export class EdgeOperations<T extends SchemaDefinition> {
    */
   async getEdgeById<L extends keyof T['edges']>(
     label: L,
-    id: string
+    id: string,
+    graphName?: string
   ): Promise<Edge<T, L> | null> {
-    const { sql, params } = this.sqlGenerator.generateSelectEdgeSQL(label as string, {
-      filters: [
-        { property: 'id', operator: SQLFilterOperator.EQUALS, value: id }
-      ]
-    });
+    // Ensure we have a graph name
+    const targetGraph = graphName || this.graphName;
+    if (!targetGraph) {
+      throw new ValidationError('Graph name is required to get an edge');
+    }
 
-    const result = await this.queryExecutor.executeSQL(sql, params);
+    // Use Cypher query to get edge by ID
+    const query = `
+      MATCH (a)-[r:${String(label)}]->(b)
+      WHERE id(r) = ${id}
+      RETURN a, r, b
+      LIMIT 1
+    `;
+
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      targetGraph
+    );
 
     if (result.rows.length === 0) {
       return null;
     }
 
-    return this.transformToEdge(label, result.rows[0]);
+    // Parse the edge from the result
+    const edgeData = JSON.parse(result.rows[0].r);
+    const fromData = JSON.parse(result.rows[0].a);
+    const toData = JSON.parse(result.rows[0].b);
+
+    // Transform to Edge object
+    return {
+      id: edgeData.id || edgeData.identity.toString(),
+      label: label,
+      fromId: fromData.id || fromData.identity.toString(),
+      toId: toData.id || toData.identity.toString(),
+      properties: edgeData.properties || {}
+    } as Edge<T, L>;
+  }
+
+  /**
+   * Get an edge by properties
+   *
+   * @param label - Edge label
+   * @param fromProperties - Properties to match for the source vertex
+   * @param toProperties - Properties to match for the target vertex
+   * @param edgeProperties - Properties to match for the edge
+   * @param graphName - Graph name
+   * @returns Edge or null if not found
+   */
+  async getEdge<L extends keyof T['edges']>(
+    label: L,
+    fromProperties: Record<string, any>,
+    toProperties: Record<string, any>,
+    edgeProperties?: Record<string, any>,
+    graphName?: string
+  ): Promise<Edge<T, L> | null> {
+    // Ensure we have a graph name
+    const targetGraph = graphName || this.graphName;
+    if (!targetGraph) {
+      throw new ValidationError('Graph name is required to get an edge');
+    }
+
+    // Convert properties to Cypher query conditions
+    const fromConditions = Object.entries(fromProperties)
+      .map(([key, value]) => {
+        // Handle boolean values specially to avoid type casting issues
+        if (typeof value === 'boolean') {
+          return `a.${key} = ${value}`;
+        }
+        return `toString(a.${key}) = '${String(value)}'`;
+      })
+      .join(' AND ');
+
+    const toConditions = Object.entries(toProperties)
+      .map(([key, value]) => {
+        // Handle boolean values specially to avoid type casting issues
+        if (typeof value === 'boolean') {
+          return `b.${key} = ${value}`;
+        }
+        return `toString(b.${key}) = '${String(value)}'`;
+      })
+      .join(' AND ');
+
+    let edgeConditions = '';
+    if (edgeProperties && Object.keys(edgeProperties).length > 0) {
+      edgeConditions = ' AND ' + Object.entries(edgeProperties)
+        .map(([key, value]) => {
+          // Handle boolean values specially to avoid type casting issues
+          if (typeof value === 'boolean') {
+            return `r.${key} = ${value}`;
+          }
+          return `toString(r.${key}) = '${String(value)}'`;
+        })
+        .join(' AND ');
+    }
+
+    // Build Cypher query
+    const query = `
+      MATCH (a)-[r:${String(label)}]->(b)
+      WHERE ${fromConditions} AND ${toConditions}${edgeConditions}
+      RETURN a, r, b
+      LIMIT 1
+    `;
+
+    // Execute query
+    const result = await this.queryExecutor.executeCypher(query, {}, graphName || this.graphName);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    // Parse the edge from the result
+    const edgeData = JSON.parse(result.rows[0].r);
+    const fromData = JSON.parse(result.rows[0].a);
+    const toData = JSON.parse(result.rows[0].b);
+
+    // Transform to Edge object
+    return {
+      id: edgeData.id || edgeData.identity.toString(),
+      label: label,
+      properties: edgeData.properties || {},
+      from: {
+        id: fromData.id || fromData.identity.toString(),
+        label: fromData.label,
+        properties: fromData.properties || {}
+      },
+      to: {
+        id: toData.id || toData.identity.toString(),
+        label: toData.label,
+        properties: toData.properties || {}
+      }
+    } as Edge<T, L>;
   }
 
   /**
@@ -171,27 +317,111 @@ export class EdgeOperations<T extends SchemaDefinition> {
    */
   async getEdgesByLabel<L extends keyof T['edges']>(
     label: L,
-    options: EdgeQueryOptions = {}
+    options: EdgeQueryOptions = {},
+    graphName?: string
   ): Promise<Edge<T, L>[]> {
-    // Convert query options to SQL query options
-    const sqlOptions: SQLQueryOptions = {
-      filters: options.filters?.map(filter => ({
-        property: filter.property,
-        operator: filter.operator,
-        value: filter.value
-      })),
-      orderBy: options.orderBy?.map(order => ({
-        property: order.property,
-        direction: order.direction
-      })),
-      limit: options.limit,
-      offset: options.offset
-    };
+    // Ensure we have a graph name
+    const targetGraph = graphName || this.graphName;
+    if (!targetGraph) {
+      throw new ValidationError('Graph name is required to get edges');
+    }
 
-    const { sql, params } = this.sqlGenerator.generateSelectEdgeSQL(label as string, sqlOptions);
-    const result = await this.queryExecutor.executeSQL(sql, params);
+    // Build Cypher query with options
+    let query = `
+      MATCH (a)-[r:${String(label)}]->(b)
+    `;
 
-    return result.rows.map(row => this.transformToEdge(label, row));
+    // Add WHERE clause for filters
+    if (options.filters && options.filters.length > 0) {
+      const filterConditions = options.filters.map(filter => {
+        const operator = this.mapFilterOperator(filter.operator);
+        // Handle boolean values specially to avoid type casting issues
+        if (typeof filter.value === 'boolean') {
+          return `r.${filter.property} ${operator} ${filter.value}`;
+        }
+        return `toString(r.${filter.property}) ${operator} '${String(filter.value)}'`;
+      }).join(' AND ');
+
+      query += `\nWHERE ${filterConditions}`;
+    }
+
+    // Add RETURN clause
+    query += `\nRETURN a, r, b`;
+
+    // Add ORDER BY clause
+    if (options.orderBy && options.orderBy.length > 0) {
+      const orderClauses = options.orderBy.map(order => {
+        const direction = order.direction === SQLOrderDirection.ASC ? 'ASC' : 'DESC';
+        return `r.${order.property} ${direction}`;
+      }).join(', ');
+
+      query += `\nORDER BY ${orderClauses}`;
+    }
+
+    // Add LIMIT clause
+    if (options.limit !== undefined) {
+      query += `\nLIMIT ${options.limit}`;
+    }
+
+    // Add SKIP clause
+    if (options.offset !== undefined) {
+      query += `\nSKIP ${options.offset}`;
+    }
+
+    // Execute query
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      graphName || this.graphName
+    );
+
+    // Transform results to Edge objects
+    return result.rows.map(row => {
+      const edgeData = JSON.parse(row.r);
+      const fromData = JSON.parse(row.a);
+      const toData = JSON.parse(row.b);
+
+      return {
+        id: edgeData.id || edgeData.identity.toString(),
+        label: label,
+        fromId: fromData.id || fromData.identity.toString(),
+        toId: toData.id || toData.identity.toString(),
+        properties: edgeData.properties || {}
+      } as Edge<T, L>;
+    });
+  }
+
+  /**
+   * Map SQL filter operator to Cypher operator
+   *
+   * @param operator - SQL filter operator
+   * @returns Cypher operator
+   */
+  private mapFilterOperator(operator: SQLFilterOperator): string {
+    switch (operator) {
+      case SQLFilterOperator.EQUALS:
+        return '=';
+      case SQLFilterOperator.NOT_EQUALS:
+        return '<>';
+      case SQLFilterOperator.GREATER_THAN:
+        return '>';
+      case SQLFilterOperator.GREATER_THAN_OR_EQUALS:
+        return '>=';
+      case SQLFilterOperator.LESS_THAN:
+        return '<';
+      case SQLFilterOperator.LESS_THAN_OR_EQUALS:
+        return '<=';
+      case SQLFilterOperator.LIKE:
+        return 'CONTAINS';
+      case SQLFilterOperator.NOT_LIKE:
+        return 'NOT CONTAINS';
+      case SQLFilterOperator.IN:
+        return 'IN';
+      case SQLFilterOperator.NOT_IN:
+        return 'NOT IN';
+      default:
+        return '=';
+    }
   }
 
   /**
@@ -205,66 +435,343 @@ export class EdgeOperations<T extends SchemaDefinition> {
   async getEdgesBetweenVertices<L extends keyof T['edges']>(
     label: L,
     fromVertex: Vertex<T, any>,
-    toVertex: Vertex<T, any>
+    toVertex: Vertex<T, any>,
+    graphName?: string
   ): Promise<Edge<T, L>[]> {
-    const { sql, params } = this.sqlGenerator.generateSelectEdgeSQL(label as string, {
-      filters: [
-        { property: 'source_id', operator: SQLFilterOperator.EQUALS, value: fromVertex.id },
-        { property: 'target_id', operator: SQLFilterOperator.EQUALS, value: toVertex.id }
-      ]
+    // Ensure we have a graph name
+    const targetGraph = graphName || this.graphName;
+    if (!targetGraph) {
+      throw new ValidationError('Graph name is required to get edges between vertices');
+    }
+
+    // Use Cypher query to get edges between vertices
+    const query = `
+      MATCH (a)-[r:${String(label)}]->(b)
+      WHERE id(a) = ${fromVertex.id} AND id(b) = ${toVertex.id}
+      RETURN a, r, b
+    `;
+
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      targetGraph
+    );
+
+    // Transform results to Edge objects
+    return result.rows.map(row => {
+      const edgeData = JSON.parse(row.r);
+      const fromData = JSON.parse(row.a);
+      const toData = JSON.parse(row.b);
+
+      return {
+        id: edgeData.id || edgeData.identity.toString(),
+        label: label,
+        fromId: fromVertex.id,
+        toId: toVertex.id,
+        properties: edgeData.properties || {}
+      } as Edge<T, L>;
     });
-
-    const result = await this.queryExecutor.executeSQL(sql, params);
-
-    return result.rows.map(row => this.transformToEdge(label, row));
   }
 
   /**
-   * Update an edge
+   * Update an edge by ID
    *
    * @param label - Edge label
    * @param id - Edge ID
    * @param data - Edge data to update
    * @returns Updated edge
    */
-  async updateEdge<L extends keyof T['edges']>(
+  async updateEdgeById<L extends keyof T['edges']>(
     label: L,
     id: string,
-    data: Partial<EdgeData<T, L>>
+    data: Partial<EdgeData<T, L>>,
+    graphName?: string
   ): Promise<Edge<T, L>> {
     // Validate data against schema
     this.validateEdgeData(label, data, true);
 
-    // Generate and execute SQL
-    const { sql, params } = this.sqlGenerator.generateUpdateEdgeSQL(label as string, id, data);
-    const result = await this.queryExecutor.executeSQL(sql, params);
+    // Ensure we have a graph name
+    const targetGraph = graphName || this.graphName;
+    if (!targetGraph) {
+      throw new ValidationError('Graph name is required to update an edge');
+    }
+
+    // Convert data to Cypher SET clauses
+    const setClauses = Object.entries(data)
+      .map(([key, value]) => {
+        const valueStr = typeof value === 'string'
+          ? `'${value}'`
+          : (typeof value === 'object' ? JSON.stringify(value) : value);
+        return `r.${key} = ${valueStr}`;
+      })
+      .join(', ');
+
+    // Build Cypher query
+    const query = `
+      MATCH (a)-[r:${String(label)}]->(b)
+      WHERE id(r) = ${id}
+      SET ${setClauses}
+      RETURN a, r, b
+    `;
+
+    // Execute query
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      targetGraph
+    );
 
     if (result.rows.length === 0) {
       throw new Error(`Edge with ID ${id} not found`);
     }
 
-    return this.transformToEdge(label, result.rows[0]);
+    // Parse the edge from the result
+    const edgeData = JSON.parse(result.rows[0].r);
+    const fromData = JSON.parse(result.rows[0].a);
+    const toData = JSON.parse(result.rows[0].b);
+
+    // Transform to Edge object
+    return {
+      id: edgeData.id || edgeData.identity.toString(),
+      label: label,
+      fromId: fromData.id || fromData.identity.toString(),
+      toId: toData.id || toData.identity.toString(),
+      properties: edgeData.properties || {}
+    } as Edge<T, L>;
   }
 
   /**
-   * Delete an edge
+   * Update an edge by properties
+   *
+   * @param label - Edge label
+   * @param fromProperties - Properties to match for the source vertex
+   * @param toProperties - Properties to match for the target vertex
+   * @param edgeProperties - Properties to match for the edge
+   * @param data - Edge data to update
+   * @param graphName - Graph name
+   * @returns Updated edge or null if not found
+   */
+  async updateEdge<L extends keyof T['edges']>(
+    label: L,
+    fromProperties: Record<string, any>,
+    toProperties: Record<string, any>,
+    edgeProperties: Record<string, any>,
+    data: Partial<EdgeData<T, L>>,
+    graphName?: string
+  ): Promise<Edge<T, L> | null> {
+    // Validate data against schema
+    this.validateEdgeData(label, data, true);
+
+    // Ensure we have a graph name
+    const targetGraph = graphName || this.graphName;
+    if (!targetGraph) {
+      throw new ValidationError('Graph name is required to update an edge');
+    }
+
+    // Convert properties to Cypher query conditions
+    const fromConditions = Object.entries(fromProperties)
+      .map(([key, value]) => {
+        // Handle boolean values specially to avoid type casting issues
+        if (typeof value === 'boolean') {
+          return `a.${key} = ${value}`;
+        }
+        return `toString(a.${key}) = '${String(value)}'`;
+      })
+      .join(' AND ');
+
+    const toConditions = Object.entries(toProperties)
+      .map(([key, value]) => {
+        // Handle boolean values specially to avoid type casting issues
+        if (typeof value === 'boolean') {
+          return `b.${key} = ${value}`;
+        }
+        return `toString(b.${key}) = '${String(value)}'`;
+      })
+      .join(' AND ');
+
+    const edgeConditionsArray = Object.entries(edgeProperties)
+      .map(([key, value]) => {
+        // Handle boolean values specially to avoid type casting issues
+        if (typeof value === 'boolean') {
+          return `r.${key} = ${value}`;
+        }
+        return `toString(r.${key}) = '${String(value)}'`;
+      });
+
+    const edgeConditions = edgeConditionsArray.length > 0
+      ? ' AND ' + edgeConditionsArray.join(' AND ')
+      : '';
+
+    // Convert data to Cypher SET clauses
+    const setClauses = Object.entries(data)
+      .map(([key, value]) => {
+        const valueStr = typeof value === 'string'
+          ? `'${value}'`
+          : (typeof value === 'object' ? JSON.stringify(value) : value);
+        return `r.${key} = ${valueStr}`;
+      })
+      .join(', ');
+
+    // Build Cypher query
+    const query = `
+      MATCH (a)-[r:${String(label)}]->(b)
+      WHERE ${fromConditions} AND ${toConditions}${edgeConditions}
+      SET ${setClauses}
+      RETURN a, r, b
+    `;
+
+    // Execute query
+    const result = await this.queryExecutor.executeCypher(query, {}, graphName || this.graphName);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    // Parse the edge from the result
+    const edgeData = JSON.parse(result.rows[0].r);
+    const fromData = JSON.parse(result.rows[0].a);
+    const toData = JSON.parse(result.rows[0].b);
+
+    // Transform to Edge object
+    return {
+      id: edgeData.id || edgeData.identity.toString(),
+      label: label,
+      properties: edgeData.properties || {},
+      from: {
+        id: fromData.id || fromData.identity.toString(),
+        label: fromData.label,
+        properties: fromData.properties || {}
+      },
+      to: {
+        id: toData.id || toData.identity.toString(),
+        label: toData.label,
+        properties: toData.properties || {}
+      }
+    } as Edge<T, L>;
+  }
+
+  /**
+   * Delete an edge by ID
    *
    * @param label - Edge label
    * @param id - Edge ID
    * @returns Deleted edge
    */
-  async deleteEdge<L extends keyof T['edges']>(
+  async deleteEdgeById<L extends keyof T['edges']>(
     label: L,
-    id: string
+    id: string,
+    graphName?: string
   ): Promise<Edge<T, L>> {
-    const { sql, params } = this.sqlGenerator.generateDeleteEdgeSQL(label as string, id);
-    const result = await this.queryExecutor.executeSQL(sql, params);
+    // Ensure we have a graph name
+    const targetGraph = graphName || this.graphName;
+    if (!targetGraph) {
+      throw new ValidationError('Graph name is required to delete an edge');
+    }
+
+    // Use Cypher query to delete edge by ID
+    const query = `
+      MATCH (a)-[r:${String(label)}]->(b)
+      WHERE id(r) = ${id}
+      WITH a, r, b
+      DELETE r
+      RETURN a, r, b
+    `;
+
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      targetGraph
+    );
 
     if (result.rows.length === 0) {
       throw new Error(`Edge with ID ${id} not found`);
     }
 
-    return this.transformToEdge(label, result.rows[0]);
+    // Parse the edge from the result
+    const edgeData = JSON.parse(result.rows[0].r);
+    const fromData = JSON.parse(result.rows[0].a);
+    const toData = JSON.parse(result.rows[0].b);
+
+    // Transform to Edge object
+    return {
+      id: edgeData.id || edgeData.identity.toString(),
+      label: label,
+      fromId: fromData.id || fromData.identity.toString(),
+      toId: toData.id || toData.identity.toString(),
+      properties: edgeData.properties || {}
+    } as Edge<T, L>;
+  }
+
+  /**
+   * Delete an edge by properties
+   *
+   * @param label - Edge label
+   * @param fromProperties - Properties to match for the source vertex
+   * @param toProperties - Properties to match for the target vertex
+   * @param edgeProperties - Properties to match for the edge
+   * @param graphName - Graph name
+   * @returns True if the edge was deleted
+   */
+  async deleteEdge<L extends keyof T['edges']>(
+    label: L,
+    fromProperties: Record<string, any>,
+    toProperties: Record<string, any>,
+    edgeProperties?: Record<string, any>,
+    graphName?: string
+  ): Promise<boolean> {
+    // Ensure we have a graph name
+    const targetGraph = graphName || this.graphName;
+    if (!targetGraph) {
+      throw new ValidationError('Graph name is required to delete an edge');
+    }
+
+    // Convert properties to Cypher query conditions
+    const fromConditions = Object.entries(fromProperties)
+      .map(([key, value]) => {
+        // Handle boolean values specially to avoid type casting issues
+        if (typeof value === 'boolean') {
+          return `a.${key} = ${value}`;
+        }
+        return `toString(a.${key}) = '${String(value)}'`;
+      })
+      .join(' AND ');
+
+    const toConditions = Object.entries(toProperties)
+      .map(([key, value]) => {
+        // Handle boolean values specially to avoid type casting issues
+        if (typeof value === 'boolean') {
+          return `b.${key} = ${value}`;
+        }
+        return `toString(b.${key}) = '${String(value)}'`;
+      })
+      .join(' AND ');
+
+    let edgeConditions = '';
+    if (edgeProperties && Object.keys(edgeProperties).length > 0) {
+      edgeConditions = ' AND ' + Object.entries(edgeProperties)
+        .map(([key, value]) => {
+          // Handle boolean values specially to avoid type casting issues
+          if (typeof value === 'boolean') {
+            return `r.${key} = ${value}`;
+          }
+          return `toString(r.${key}) = '${String(value)}'`;
+        })
+        .join(' AND ');
+    }
+
+    // Build Cypher query
+    const query = `
+      MATCH (a)-[r:${String(label)}]->(b)
+      WHERE ${fromConditions} AND ${toConditions}${edgeConditions}
+      DELETE r
+      RETURN count(*) AS deleted
+    `;
+
+    // Execute query
+    const result = await this.queryExecutor.executeCypher(query, {}, graphName || this.graphName);
+
+    // Check if any edges were deleted
+    return parseInt(result.rows[0].deleted, 10) > 0;
   }
 
   /**
@@ -278,17 +785,42 @@ export class EdgeOperations<T extends SchemaDefinition> {
   async deleteEdgesBetweenVertices<L extends keyof T['edges']>(
     label: L,
     fromVertex: Vertex<T, any>,
-    toVertex: Vertex<T, any>
+    toVertex: Vertex<T, any>,
+    graphName?: string
   ): Promise<Edge<T, L>[]> {
-    const { sql, params } = this.sqlGenerator.generateDeleteEdgesBetweenVerticesSQL(
-      label as string,
-      fromVertex.id,
-      toVertex.id
+    // Use Cypher query to delete edges between vertices
+    const query = `
+      MATCH (a)-[r:${String(label)}]->(b)
+      WHERE id(a) = ${fromVertex.id} AND id(b) = ${toVertex.id}
+      WITH a, r, b
+      DELETE r
+      RETURN a, r, b
+    `;
+
+    const result = await this.queryExecutor.executeCypher(
+      query,
+      {},
+      graphName || this.graphName
     );
 
-    const result = await this.queryExecutor.executeSQL(sql, params);
+    if (result.rows.length === 0) {
+      return [];
+    }
 
-    return result.rows.map(row => this.transformToEdge(label, row));
+    // Transform results to Edge objects
+    return result.rows.map(row => {
+      const edgeData = JSON.parse(row.r);
+      const fromData = JSON.parse(row.a);
+      const toData = JSON.parse(row.b);
+
+      return {
+        id: edgeData.id || edgeData.identity.toString(),
+        label: label,
+        fromId: fromVertex.id,
+        toId: toVertex.id,
+        properties: edgeData.properties || {}
+      } as Edge<T, L>;
+    });
   }
 
   /**
@@ -304,7 +836,8 @@ export class EdgeOperations<T extends SchemaDefinition> {
       fromVertex: Vertex<T, any>;
       toVertex: Vertex<T, any>;
       data?: EdgeData<T, L>;
-    }>
+    }>,
+    graphName?: string
   ): Promise<Edge<T, L>[]> {
     if (edges.length === 0) {
       return [];
@@ -316,18 +849,38 @@ export class EdgeOperations<T extends SchemaDefinition> {
       this.validateVertexTypes(label, edge.fromVertex, edge.toVertex);
     });
 
-    // Convert to format expected by SQL generator
-    const edgeData = edges.map(edge => ({
-      sourceId: edge.fromVertex.id,
-      targetId: edge.toVertex.id,
-      data: edge.data || {}
-    }));
+    // Process edges one by one using Cypher
+    const results: Edge<T, L>[] = [];
 
-    // Generate and execute SQL
-    const { sql, params } = this.sqlGenerator.generateBatchInsertEdgeSQL(label as string, edgeData);
-    const result = await this.queryExecutor.executeSQL(sql, params);
+    for (const edge of edges) {
+      const query = `
+        MATCH (a), (b)
+        WHERE id(a) = ${edge.fromVertex.id} AND id(b) = ${edge.toVertex.id}
+        CREATE (a)-[r:${String(label)} $props]->(b)
+        RETURN a, r, b
+      `;
 
-    return result.rows.map(row => this.transformToEdge(label, row));
+      const result = await this.queryExecutor.executeCypher(
+        query,
+        { props: edge.data || {} },
+        graphName || this.graphName
+      );
+
+      if (result.rows.length > 0) {
+        const edgeData = JSON.parse(result.rows[0].r);
+
+        results.push({
+          id: edgeData.id || edgeData.identity.toString(),
+          label: label,
+          fromId: edge.fromVertex.id,
+          toId: edge.toVertex.id,
+          ...(edge.data || {}),
+          properties: edgeData.properties || {}
+        } as Edge<T, L>);
+      }
+    }
+
+    return results;
   }
 
   /**
@@ -355,6 +908,25 @@ export class EdgeOperations<T extends SchemaDefinition> {
           throw new ValidationError(`Required property '${requiredProp}' is missing`);
         }
       }
+    }
+
+    // Validate property types and constraints
+    for (const [propName, propValue] of Object.entries(data)) {
+      const propDef = edgeDef.properties[propName];
+
+      if (!propDef) {
+        throw new ValidationError(`Property '${propName}' is not defined in schema for edge label ${String(label)}`);
+      }
+
+      // Skip null values if property is nullable
+      if (propValue === null) {
+        if (propDef.nullable !== true) {
+          throw new ValidationError(`Property '${propName}' cannot be null`);
+        }
+        continue;
+      }
+
+      // Type validation could be added here if needed
     }
 
     // Validate property types
@@ -449,6 +1021,14 @@ export class EdgeOperations<T extends SchemaDefinition> {
   ): void {
     const edgeDef = this.schema.edges[label as string] as EdgeLabel;
 
+    if (!fromVertex || !fromVertex.label) {
+      throw new ValidationError(`Source vertex is invalid or missing label`);
+    }
+
+    if (!toVertex || !toVertex.label) {
+      throw new ValidationError(`Target vertex is invalid or missing label`);
+    }
+
     // Validate source vertex
     if (typeof edgeDef.fromVertex === 'string') {
       if (fromVertex.label !== edgeDef.fromVertex) {
@@ -456,8 +1036,13 @@ export class EdgeOperations<T extends SchemaDefinition> {
           `Source vertex must have label '${edgeDef.fromVertex}', got '${String(fromVertex.label)}'`
         );
       }
-    } else {
-      // TODO: Implement complex vertex constraint validation
+    } else if (Array.isArray(edgeDef.fromVertex)) {
+      // If fromVertex is an array of allowed labels
+      if (!edgeDef.fromVertex.includes(fromVertex.label as string)) {
+        throw new ValidationError(
+          `Source vertex must have one of these labels: [${edgeDef.fromVertex.join(', ')}], got '${String(fromVertex.label)}'`
+        );
+      }
     }
 
     // Validate target vertex
@@ -467,8 +1052,13 @@ export class EdgeOperations<T extends SchemaDefinition> {
           `Target vertex must have label '${edgeDef.toVertex}', got '${String(toVertex.label)}'`
         );
       }
-    } else {
-      // TODO: Implement complex vertex constraint validation
+    } else if (Array.isArray(edgeDef.toVertex)) {
+      // If toVertex is an array of allowed labels
+      if (!edgeDef.toVertex.includes(toVertex.label as string)) {
+        throw new ValidationError(
+          `Target vertex must have one of these labels: [${edgeDef.toVertex.join(', ')}], got '${String(toVertex.label)}'`
+        );
+      }
     }
   }
 
