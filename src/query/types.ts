@@ -240,6 +240,11 @@ export interface IQueryBuilder<T extends SchemaDefinition> {
   unwind(expression: string, alias: string): this;
 
   /**
+   * Add a parameter to the query
+   */
+  withParam(name: string, value: any): this;
+
+  /**
    * Execute the query
    */
   execute<R = any>(options?: QueryExecutionOptions): QueryBuilderResult<R>;

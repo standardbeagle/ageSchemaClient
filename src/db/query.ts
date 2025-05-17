@@ -360,25 +360,19 @@ export class QueryExecutor {
     // Convert parameters to JSON string
     const paramsJson = params ? JSON.stringify(params) : '{}';
 
-    // Ensure AGE extension is loaded and search_path includes ag_catalog
-    // This is redundant if the connection pool is properly configured,
-    // but we include it as a safety measure
-    try {
-      // Load AGE extension
-      await this.executeSQL('LOAD \'age\';');
-
-      // Set search_path to include ag_catalog
-      await this.executeSQL('SET search_path TO ag_catalog, "$user", public');
-    } catch (error) {
-      console.error('Failed to load AGE or set search_path:', error);
-      // Continue execution even if these operations fail
-      // The connection pool might already handle these operations
-    }
-
     // Use dollar-quoted strings to avoid escaping issues
     // Apache AGE requires dollar-quoted strings for Cypher queries
     // The third parameter must be a SQL parameter ($1) not a dollar-quoted string
     const sql = `SELECT * FROM ag_catalog.cypher('${graphName}', $q$${cypher}$q$, $1) AS (result ag_catalog.agtype)`;
+
+    // Log the query and parameters for debugging if logger is available
+    if (this.logger && typeof this.logger.debug === 'function') {
+      this.logger.debug(`Executing Cypher query: ${cypher}`);
+      this.logger.debug(`With parameters: ${paramsJson}`);
+    } else {
+      console.debug(`Executing Cypher query: ${cypher}`);
+      console.debug(`With parameters: ${paramsJson}`);
+    }
 
     return this.executeSQL<T>(sql, [paramsJson], options);
   }

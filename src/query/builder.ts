@@ -185,6 +185,18 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
   }
 
   /**
+   * Add a parameter to the query
+   *
+   * @param name - Parameter name
+   * @param value - Parameter value
+   * @returns This query builder
+   */
+  withParam(name: string, value: any): this {
+    this.parameters[name] = value;
+    return this;
+  }
+
+  /**
    * Execute the query
    *
    * @param options - Query execution options
