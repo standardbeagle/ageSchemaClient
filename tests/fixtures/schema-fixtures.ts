@@ -3,6 +3,7 @@
  */
 
 import { SchemaDefinition } from '../../src/schema/types';
+import { documentKnowledgeSchema } from './document-knowledge-schema';
 
 /**
  * Basic schema for testing
@@ -99,21 +100,22 @@ const orgChartSchema: SchemaDefinition = {
  */
 const schemaFixtures: Record<string, SchemaDefinition> = {
   'basic-schema': basicSchema,
-  'org-chart-schema': orgChartSchema
+  'org-chart-schema': orgChartSchema,
+  'document-knowledge-schema': documentKnowledgeSchema
 };
 
 /**
  * Load a schema fixture by name
- * 
+ *
  * @param name - Name of the schema fixture to load
  * @returns Schema definition
  */
 export function loadSchemaFixture(name: string): SchemaDefinition {
   const schema = schemaFixtures[name];
-  
+
   if (!schema) {
     throw new Error(`Schema fixture '${name}' not found`);
   }
-  
+
   return schema;
 }

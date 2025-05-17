@@ -111,7 +111,7 @@ describe('Apache AGE Single Function Data Loading', () => {
         v_edge_count int := 0;
       BEGIN
         -- Insert vertex data
-        FOR v_vertex_type, v_vertex_data IN SELECT * FROM jsonb_each(p_graph_data->'vertex')
+        FOR v_vertex_type, v_vertex_data IN SELECT * FROM jsonb_each(p_graph_data->'vertices')
         LOOP
           INSERT INTO ${TEST_SCHEMA}.graph_data_store (data_type, data_key, data_value)
           VALUES ('vertex', v_vertex_type, v_vertex_data);
@@ -120,7 +120,7 @@ describe('Apache AGE Single Function Data Loading', () => {
         END LOOP;
 
         -- Insert edge data
-        FOR v_edge_type, v_edge_data IN SELECT * FROM jsonb_each(p_graph_data->'edge')
+        FOR v_edge_type, v_edge_data IN SELECT * FROM jsonb_each(p_graph_data->'edges')
         LOOP
           INSERT INTO ${TEST_SCHEMA}.graph_data_store (data_type, data_key, data_value)
           VALUES ('edge', v_edge_type, v_edge_data);
@@ -334,9 +334,9 @@ describe('Apache AGE Single Function Data Loading', () => {
       $$ LANGUAGE plpgsql;
     `);
 
-    // 2. Define the combined vertex and edge data structure
+    // 2. Define the combined vertices and edges data structure
     const graphData = {
-      vertex: {
+      vertices: {
         departments: [
           { id: 101, name: "Engineering", budget: 1000000 },
           { id: 102, name: "Marketing", budget: 500000 },
@@ -349,7 +349,7 @@ describe('Apache AGE Single Function Data Loading', () => {
           { id: 4, name: "Dave Brown", title: "Sales Rep", departmentId: 103 }
         ]
       },
-      edge: {
+      edges: {
         WORKS_IN: [
           { from: 1, to: 101, since: '2020-01-01' },
           { from: 2, to: 101, since: '2019-05-15' },

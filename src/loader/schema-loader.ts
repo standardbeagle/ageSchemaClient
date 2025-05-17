@@ -338,13 +338,13 @@ export interface LoadResult {
  */
 export interface GraphData {
   /**
-   * Vertex data
+   * Vertices data
    */
-  vertex: Record<string, any[]>;
+  vertices: Record<string, any[]>;
   /**
-   * Edge data
+   * Edges data
    */
-  edge: Record<string, any[]>;
+  edges: Record<string, any[]>;
 }
 
 /**
@@ -417,12 +417,16 @@ export class SchemaLoader<T extends SchemaDefinition> {
     const startTime = Date.now();
     const graphName = options?.graphName || this.options.defaultGraphName!;
 
+    // Get vertices and edges data
+    const verticesData = data.vertices;
+    const edgesData = data.edges;
+
     this.logger.info(`Starting to load graph data for graph '${graphName}'`);
     this.logger.debug('Graph data summary:', {
-      vertexTypes: Object.keys(data.vertex || {}),
-      edgeTypes: Object.keys(data.edge || {}),
-      vertexCount: Object.values(data.vertex || {}).reduce((sum, list) => sum + list.length, 0),
-      edgeCount: Object.values(data.edge || {}).reduce((sum, list) => sum + list.length, 0)
+      vertexTypes: Object.keys(verticesData),
+      edgeTypes: Object.keys(edgesData),
+      vertexCount: Object.values(verticesData).reduce((sum, list) => sum + list.length, 0),
+      edgeCount: Object.values(edgesData).reduce((sum, list) => sum + list.length, 0)
     });
 
     // Merge options with defaults
@@ -440,8 +444,8 @@ export class SchemaLoader<T extends SchemaDefinition> {
       success: true,
       vertexCount: 0,
       edgeCount: 0,
-      vertexTypes: Object.keys(data.vertex || {}),
-      edgeTypes: Object.keys(data.edge || {}),
+      vertexTypes: Object.keys(verticesData),
+      edgeTypes: Object.keys(edgesData),
       duration: 0,
       errors: [],
       warnings: []
@@ -470,7 +474,7 @@ export class SchemaLoader<T extends SchemaDefinition> {
 
     try {
       // Load vertices first
-      if (data.vertex && Object.keys(data.vertex).length > 0) {
+      if (Object.keys(verticesData).length > 0) {
         this.logger.info(`Loading vertices for graph '${graphName}'`);
         const vertexOptions = {
           ...options,
@@ -490,7 +494,7 @@ export class SchemaLoader<T extends SchemaDefinition> {
             } : undefined
         };
 
-        const vertexResult = await this.loadVertices(data.vertex, vertexOptions);
+        const vertexResult = await this.loadVertices(verticesData, vertexOptions);
 
         if (!vertexResult.success) {
           this.logger.error('Failed to load vertices', vertexResult.errors);
@@ -526,7 +530,7 @@ export class SchemaLoader<T extends SchemaDefinition> {
       }
 
       // Then load edges
-      if (data.edge && Object.keys(data.edge).length > 0) {
+      if (Object.keys(edgesData).length > 0) {
         this.logger.info(`Loading edges for graph '${graphName}'`);
         const edgeOptions = {
           ...options,
@@ -546,7 +550,7 @@ export class SchemaLoader<T extends SchemaDefinition> {
             } : undefined
         };
 
-        const edgeResult = await this.loadEdges(data.edge, edgeOptions);
+        const edgeResult = await this.loadEdges(edgesData, edgeOptions);
 
         if (!edgeResult.success) {
           this.logger.error('Failed to load edges', edgeResult.errors);
@@ -1373,10 +1377,10 @@ export class SchemaLoader<T extends SchemaDefinition> {
         };
       }
 
-      // Ensure vertex and edge properties exist
+      // Ensure vertices and edges properties exist
       const graphData: GraphData = {
-        vertex: data.vertex || {},
-        edge: data.edge || {}
+        vertices: data.vertices || {},
+        edges: data.edges || {}
       };
 
       this.logger.debug('File content validated, loading graph data');

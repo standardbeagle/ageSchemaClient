@@ -1,6 +1,6 @@
 /**
  * Error handling example for SchemaLoader
- * 
+ *
  * This example demonstrates how to:
  * 1. Handle validation errors
  * 2. Handle database errors
@@ -8,9 +8,9 @@
  * 4. Process error information from LoadResult
  */
 
-import { 
-  SchemaLoader, 
-  SchemaDefinition, 
+import {
+  SchemaLoader,
+  SchemaDefinition,
   PostgresQueryExecutor,
   ValidationError,
   DatabaseError
@@ -65,10 +65,10 @@ const schemaLoader = new SchemaLoader(schema, queryExecutor, {
  */
 async function handleValidationErrors() {
   console.log('Demonstrating validation error handling...');
-  
+
   // Data with validation errors
   const invalidData = {
-    vertex: {
+    vertices: {
       Person: [
         { name: 'Tom Hanks', age: 65 },
         { name: 'Invalid Person', age: -10 }, // Invalid age (negative)
@@ -80,32 +80,32 @@ async function handleValidationErrors() {
         { year: 2000 } // Missing required title
       ]
     },
-    edge: {
+    edges: {
       ACTED_IN: [
         { from: 1, to: 4, role: 'Sam Baldwin' },
         { from: 2, to: 4 } // Missing required role
       ]
     }
   };
-  
+
   try {
     console.log('Loading data with validation errors...');
-    
+
     const result = await schemaLoader.loadGraphData(invalidData, {
       graphName: 'mygraph',
       validateData: true // Ensure validation is enabled
     });
-    
+
     // This should not be reached if validation fails
     if (result.success) {
       console.log('Unexpectedly succeeded in loading invalid data');
     } else {
       console.error('Loading failed as expected:');
-      
+
       // Process and display validation errors
       result.errors?.forEach(error => {
         console.error(`- ${error.message}`);
-        
+
         if (error instanceof ValidationError) {
           console.error('  Validation errors:');
           error.validationErrors.forEach(validationError => {
@@ -125,36 +125,36 @@ async function handleValidationErrors() {
  */
 async function handleDatabaseErrors() {
   console.log('\nDemonstrating database error handling...');
-  
+
   // Valid data but we'll use an invalid graph name
   const validData = {
-    vertex: {
+    vertices: {
       Person: [
         { name: 'Tom Hanks', age: 65 },
         { name: 'Meg Ryan', age: 59 }
       ]
     },
-    edge: {}
+    edges: {}
   };
-  
+
   try {
     console.log('Loading data with an invalid graph name...');
-    
+
     const result = await schemaLoader.loadGraphData(validData, {
       graphName: 'invalid-graph-name-with-special-characters!@#$',
       validateData: true
     });
-    
+
     // This should not be reached if the database operation fails
     if (result.success) {
       console.log('Unexpectedly succeeded in loading with invalid graph name');
     } else {
       console.error('Loading failed as expected:');
-      
+
       // Process and display database errors
       result.errors?.forEach(error => {
         console.error(`- ${error.message}`);
-        
+
         if (error instanceof DatabaseError) {
           console.error('  Original database error:');
           console.error(`  - Code: ${error.originalError.code}`);
@@ -173,21 +173,21 @@ async function handleDatabaseErrors() {
  */
 async function handleErrorsWithTryCatch() {
   console.log('\nDemonstrating try-catch error handling...');
-  
+
   // Valid data
   const validData = {
-    vertex: {
+    vertices: {
       Person: [
         { name: 'Tom Hanks', age: 65 },
         { name: 'Meg Ryan', age: 59 }
       ]
     },
-    edge: {}
+    edges: {}
   };
-  
+
   try {
     console.log('Attempting to load data with an invalid connection...');
-    
+
     // Create a schema loader with an invalid connection
     const invalidQueryExecutor = new PostgresQueryExecutor({
       host: 'non-existent-host',
@@ -196,9 +196,9 @@ async function handleErrorsWithTryCatch() {
       user: 'postgres',
       password: 'password'
     });
-    
+
     const invalidSchemaLoader = new SchemaLoader(schema, invalidQueryExecutor);
-    
+
     // This should throw a connection error
     await invalidSchemaLoader.loadGraphData(validData, {
       graphName: 'mygraph'
@@ -206,7 +206,7 @@ async function handleErrorsWithTryCatch() {
   } catch (error) {
     console.error('Caught expected connection error:');
     console.error(`- ${error.message}`);
-    
+
     if (error instanceof DatabaseError) {
       console.error('  Original database error:');
       console.error(`  - Code: ${error.originalError.code}`);
@@ -227,7 +227,7 @@ if (require.main === module) {
       await queryExecutor.close();
     }
   }
-  
+
   runExamples().catch(console.error);
 }
 

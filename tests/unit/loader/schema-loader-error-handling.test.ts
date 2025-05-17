@@ -116,7 +116,7 @@ describe('SchemaLoader Error Handling', () => {
       // Mock beginTransaction to throw an error
       (queryExecutor.beginTransaction as jest.Mock).mockRejectedValue(new Error('Connection error'));
 
-      const result = await schemaLoader.loadGraphData({ vertex: {}, edge: {} });
+      const result = await schemaLoader.loadGraphData({ vertices: {}, edges: {} });
 
       expect(result.success).toBe(false);
       expect(result.errors![0]).toBeInstanceOf(SchemaLoaderTransactionError);
@@ -134,7 +134,7 @@ describe('SchemaLoader Error Handling', () => {
       // Mock beginTransaction to return the mock transaction
       (queryExecutor.beginTransaction as jest.Mock).mockResolvedValue(mockTransaction);
 
-      const result = await schemaLoader.loadGraphData({ vertex: {}, edge: {} });
+      const result = await schemaLoader.loadGraphData({ vertices: {}, edges: {} });
 
       expect(result.success).toBe(false);
       expect(result.errors![0]).toBeInstanceOf(SchemaLoaderTransactionError);
@@ -158,10 +158,10 @@ describe('SchemaLoader Error Handling', () => {
 
       // Create test data with vertices
       const testData = {
-        vertex: {
+        vertices: {
           Person: [{ name: 'Test Person', age: 30 }]
         },
-        edge: {}
+        edges: {}
       };
 
       const result = await schemaLoader.loadGraphData(testData);
