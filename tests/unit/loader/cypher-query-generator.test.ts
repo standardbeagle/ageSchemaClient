@@ -106,7 +106,7 @@ describe('CypherQueryGenerator', () => {
       expect(query).toContain('RETURN id(v) AS vertex_id');
       expect(query).toContain('edge_endpoints AS');
       expect(query).toContain(`FROM ${edgeTable}`);
-      expect(query).toContain('SELECT \n        e.from_id, \n        e.to_id,');
+      expect(query).toContain('SELECT\n        e.from_id,\n        e.to_id,');
       expect(query).toContain('from_exists');
       expect(query).toContain('to_exists');
     });

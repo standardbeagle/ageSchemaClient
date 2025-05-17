@@ -99,12 +99,18 @@ beforeAll(async () => {
 
     // Only try to initialize AGE graph if we've reached this point (AGE is available)
     try {
-      // Drop the graph if it exists
+      // Drop the graph if it exists - suppress console output for expected errors
       try {
+        // Temporarily redirect console output
+        const originalConsoleError = console.error;
+        console.error = () => {}; // No-op function
+
         await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${AGE_GRAPH_NAME}', true)`);
+
+        // Restore console output
+        console.error = originalConsoleError;
       } catch (error) {
-        // Ignore error if graph doesn't exist
-        console.warn(`Warning: Could not drop graph ${AGE_GRAPH_NAME}: ${error.message}`);
+        // Ignore error if graph doesn't exist - don't log expected errors
       }
 
       // Create a new graph
@@ -277,8 +283,11 @@ export async function isAgeAvailable(): Promise<boolean> {
       await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${testGraphName}', true)`);
       console.log(`Successfully dropped test graph ${testGraphName}`);
     } catch (graphError) {
-      console.warn(`Warning: Failed to create/drop test graph: ${graphError.message}`);
-      console.warn('This indicates a problem with AGE functionality');
+      // Only log if it's not an expected error about graph already existing or not existing
+      if (!graphError.message.includes('already exists') && !graphError.message.includes('does not exist')) {
+        console.warn(`Warning: Failed to create/drop test graph: ${graphError.message}`);
+        console.warn('This indicates a problem with AGE functionality');
+      }
       return false;
     }
 

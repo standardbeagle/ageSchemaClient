@@ -42,11 +42,18 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
       throw new Error('Apache AGE extension is not available, tests will be skipped');
     }
 
-    // Drop the test graph if it exists
+    // Drop the test graph if it exists - suppress console output for expected errors
     try {
+      // Temporarily redirect console output
+      const originalConsoleError = console.error;
+      console.error = () => {}; // No-op function
+
       await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${PARAM_TEST_GRAPH}', true)`);
+
+      // Restore console output
+      console.error = originalConsoleError;
     } catch (error) {
-      console.warn(`Warning: Could not drop graph ${PARAM_TEST_GRAPH}: ${error.message}`);
+      // Ignore error if graph doesn't exist - don't log expected errors
     }
 
     // Create the test graph
@@ -62,11 +69,18 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
   afterAll(async () => {
     if (!ageAvailable) return;
 
-    // Drop the test graph
+    // Drop the test graph - suppress console output for expected errors
     try {
+      // Temporarily redirect console output
+      const originalConsoleError = console.error;
+      console.error = () => {}; // No-op function
+
       await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${PARAM_TEST_GRAPH}', true)`);
+
+      // Restore console output
+      console.error = originalConsoleError;
     } catch (error) {
-      console.warn(`Warning: Could not drop graph ${PARAM_TEST_GRAPH}: ${error.message}`);
+      // Ignore error if graph doesn't exist - don't log expected errors
     }
 
     // Drop the test tables and functions
@@ -82,7 +96,7 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
       await queryExecutor.executeSQL(`DROP FUNCTION IF EXISTS ${TEST_SCHEMA}.get_vertices(ag_catalog.agtype)`);
       await queryExecutor.executeSQL(`DROP FUNCTION IF EXISTS ${TEST_SCHEMA}.get_edges(ag_catalog.agtype)`);
     } catch (error) {
-      console.warn(`Warning: Could not drop tables/functions: ${error.message}`);
+      // Ignore errors when dropping tables/functions - these are expected if they don't exist
     }
   });
 
@@ -293,8 +307,6 @@ describe('Apache AGE Parameter Passing with Temp Tables', () => {
 
       // Verify departments were created
       expect(createDeptResult.rows).toHaveLength(1);
-      // Log the actual structure to debug
-      console.log('Department creation result structure:', JSON.stringify(createDeptResult.rows[0]));
       // The result is in the format {"created_departments":"3"} where "3" is a string
       const resultValue = createDeptResult.rows[0].created_departments;
       expect(parseInt(resultValue, 10)).toBe(3);

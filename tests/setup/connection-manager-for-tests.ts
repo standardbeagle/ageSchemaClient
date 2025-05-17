@@ -96,8 +96,6 @@ export class ConnectionManagerForTests {
     // Track the connection
     this.activeConnections.add(connection);
 
-    console.log(`Connection acquired (active: ${this.activeConnections.size})`);
-
     return connection;
   }
 
@@ -111,8 +109,6 @@ export class ConnectionManagerForTests {
 
     // Remove from tracked connections
     this.activeConnections.delete(connection);
-
-    console.log(`Connection released (active: ${this.activeConnections.size})`);
   }
 
   /**
@@ -120,22 +116,16 @@ export class ConnectionManagerForTests {
    * This is useful for test cleanup between test files
    */
   public async releaseAllConnections(): Promise<void> {
+    // Only log if there are more than 1 active connections to reduce noise
     const activeCount = this.activeConnections.size;
-    if (activeCount > 0) {
+    if (activeCount > 1) {
       console.warn(`Releasing ${activeCount} active connections`);
-
-      // Log connection acquisition details for debugging
-      this.activeConnections.forEach((conn, index) => {
-        console.warn(`  Connection ${index + 1}: acquired at ${conn['_acquiredAt']} by ${conn['_acquiredBy']}`);
-      });
     }
 
     await this.connectionManager.releaseAllConnections();
 
     // Clear tracked connections
     this.activeConnections.clear();
-
-    console.log('All connections released');
   }
 
 

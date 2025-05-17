@@ -603,6 +603,29 @@ export class PgConnectionManager implements ConnectionManager {
   }
 
   /**
+   * Close all connections and end the pool
+   *
+   * @returns Promise that resolves when the pool is closed
+   */
+  async closeAll(): Promise<void> {
+    try {
+      // First release all active connections
+      await this.releaseAllConnections();
+
+      // Then end the pool
+      await this.pool.end();
+
+      console.log('Connection pool closed successfully');
+    } catch (error) {
+      console.error('Error closing connection pool:', error);
+      throw new PoolError(
+        `Failed to close connection pool: ${(error as Error).message}`,
+        error as Error
+      );
+    }
+  }
+
+  /**
    * Trigger a hook
    *
    * @param hookName - Hook name
