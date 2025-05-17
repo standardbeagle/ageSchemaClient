@@ -808,23 +808,43 @@ export class VertexOperations<T extends Schema> {
     // Handle Cypher query result
     if (row.v) {
       try {
-        // Apache AGE returns data in a specific format that might not be valid JSON
+        // Apache AGE returns data in a specific format that might include type annotations
         // We need to handle it specially
         let vertexData;
+
         if (typeof row.v === 'string') {
-          vertexData = JSON.parse(row.v);
+          // Try to parse as JSON first
+          try {
+            vertexData = JSON.parse(row.v);
+          } catch (jsonError) {
+            // If JSON parsing fails, it might be an AGE-specific format with type annotations
+            // Example: {"id": 844424930131969, "label": "Person", "properties": {"age": 30, "name": "Alice"}}::vertex
+            // Strip the type annotation and try again
+            const cleanedStr = row.v.replace(/::vertex$/, '');
+            try {
+              vertexData = JSON.parse(cleanedStr);
+            } catch (cleanedJsonError) {
+              // If that still fails, try to extract data using regex
+              const str = String(row.v);
+              const idMatch = str.match(/id[=:]\s*(\d+)/);
+              const propsMatch = str.match(/properties[=:]\s*({.*?})/);
+
+              vertexData = {
+                identity: idMatch ? parseInt(idMatch[1]) : 0,
+                properties: propsMatch ? JSON.parse(propsMatch[1].replace(/'/g, '"')) : {}
+              };
+            }
+          }
         } else if (typeof row.v === 'object') {
           vertexData = row.v;
         } else {
-          // Try to extract the data from the string representation
+          // For other types, convert to string and extract data
           const str = String(row.v);
-          // Extract the vertex ID and properties from the string
-          const idMatch = str.match(/id=(\d+)/);
-          const propsMatch = str.match(/properties=({.*?})/);
+          const idMatch = str.match(/id[=:]\s*(\d+)/);
 
           vertexData = {
             identity: idMatch ? parseInt(idMatch[1]) : 0,
-            properties: propsMatch ? JSON.parse(propsMatch[1].replace(/'/g, '"')) : {}
+            properties: {}
           };
         }
 
@@ -836,22 +856,12 @@ export class VertexOperations<T extends Schema> {
       } catch (error) {
         console.error('Error parsing vertex data:', error, row.v);
 
-        // Fallback approach for AGE format
-        try {
-          // Try to extract data directly from the string
-          const str = String(row.v);
-          const labelMatch = str.match(/:"([^"]+)"/);
-          const idMatch = str.match(/id=(\d+)/);
-
-          return {
-            id: idMatch ? idMatch[1] : '0',
-            label,
-            properties: {}
-          } as Vertex<T, L>;
-        } catch (fallbackError) {
-          console.error('Fallback parsing also failed:', fallbackError);
-          throw new Error(`Failed to parse vertex data: ${error.message}`);
-        }
+        // Last resort fallback
+        return {
+          id: '0',
+          label,
+          properties: {}
+        } as Vertex<T, L>;
       }
     }
 

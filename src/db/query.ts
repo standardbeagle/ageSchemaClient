@@ -314,24 +314,72 @@ export class QueryExecutor {
         }
 
         // Execute query with timeout if specified
-        const result = await (timeoutPromise
-          ? Promise.race([
-              this.connection.query(queryConfig),
-              timeoutPromise,
-            ])
-          : this.connection.query(queryConfig));
+        try {
+          let queryPromise: Promise<QueryResult<T>>;
 
-        // Clear timeout if set
-        if (timeoutId) {
-          clearTimeout(timeoutId);
+          try {
+            queryPromise = this.connection.query(queryConfig);
+          } catch (directError) {
+            // Create a more detailed error with context
+            const contextError = new Error(
+              `Query execution failed directly: ${directError?.message || 'Unknown error'}\n` +
+              `SQL: ${sql}\n` +
+              `Params: ${JSON.stringify(params)}`
+            );
+
+            // Preserve the original error's stack if possible
+            if (directError && directError.stack) {
+              contextError.stack = directError.stack;
+            }
+
+            throw contextError;
+          }
+
+          const result = await (timeoutPromise
+            ? Promise.race([queryPromise, timeoutPromise])
+            : queryPromise);
+
+          // Clear timeout if set
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+
+          // Check if result is null or undefined
+          if (result === null || result === undefined) {
+            throw new Error(
+              `Query execution returned null or undefined result\n` +
+              `SQL: ${sql}\n` +
+              `Params: ${JSON.stringify(params)}`
+            );
+          }
+
+          const duration = Date.now() - startTime;
+
+          // Log query
+          this.logger.logQuery(sql, params, duration, result);
+
+          return result;
+        } catch (queryError) {
+          // Handle null or undefined errors with context
+          if (queryError === null || queryError === undefined) {
+            const contextError = new Error(
+              `Query execution failed with null or undefined error\n` +
+              `SQL: ${sql}\n` +
+              `Params: ${JSON.stringify(params)}`
+            );
+
+            throw contextError;
+          }
+
+          // Add context to other errors
+          if (typeof queryError === 'object' && !queryError.contextAdded) {
+            const originalMessage = queryError.message || String(queryError);
+            queryError.message = `${originalMessage}\nSQL: ${sql}\nParams: ${JSON.stringify(params)}`;
+            queryError.contextAdded = true;
+          }
+
+          throw queryError;
         }
-
-        const duration = Date.now() - startTime;
-
-        // Log query
-        this.logger.logQuery(sql, params, duration, result);
-
-        return result;
       } catch (error) {
         const duration = Date.now() - (lastError ? 0 : Date.now());
         lastError = error as Error;
@@ -356,12 +404,13 @@ export class QueryExecutor {
       }
     }
 
+    throw lastError;
     // All retry attempts failed or non-retryable error
-    throw new QueryError(
-      `Query execution failed: ${lastError?.message}`,
-      lastError || undefined,
-      { query: sql, params }
-    );
+    // throw new QueryError(
+    //   `Query execution failed: ${lastError?.message}`,
+    //   lastError || undefined,
+    //   { query: sql, params }
+    // );
   }
 
   /**
@@ -457,24 +506,154 @@ export class QueryExecutor {
       // Convert parameters to JSON string
       const paramsJson = params ? JSON.stringify(params) : '{}';
 
-      // Execute the Cypher query with proper return type
-      const sql = `SELECT * FROM ag_catalog.cypher('${graphName}', $q$${cypher}$q$, $1) AS (${returnColumns})`;
+      // Execute the setup commands separately (not as prepared statements)
+      try {
+        // Check if we have a connection
+        if (!this.connection) {
+          console.error('No connection available for executing Cypher query');
+          throw new Error('No connection available for executing Cypher query');
+        }
 
-      // Log the query and parameters for debugging if logger is available
-      if (this.logger && typeof this.logger.debug === 'function') {
-        this.logger.debug(`Executing Cypher query: ${cypher}`);
-        this.logger.debug(`With parameters: ${paramsJson}`);
-        this.logger.debug(`SQL with return columns: ${sql}`);
-      } else {
-        console.debug(`Executing Cypher query: ${cypher}`);
-        console.debug(`With parameters: ${paramsJson}`);
-        console.debug(`SQL with return columns: ${sql}`);
+        try {
+          // Load AGE extension - use direct query without prepared statement
+          await this.connection.query("LOAD 'age'");
+
+          // Set search path to include ag_catalog - use direct query without prepared statement
+          await this.connection.query("SET search_path TO ag_catalog, \"$user\", public");
+
+          // Verify search path
+          const searchPathResult = await this.connection.query('SHOW search_path');
+          const currentSearchPath = searchPathResult.rows[0].search_path;
+
+          // Check if ag_catalog is in the search path
+          if (!currentSearchPath.includes('ag_catalog')) {
+            console.warn(`Warning: search_path does not include ag_catalog: ${currentSearchPath}`);
+          }
+        } catch (setupError) {
+          console.error('Error during connection setup:', setupError);
+          throw new QueryError(
+            `Cypher query setup failed: ${setupError?.message || 'Unknown error'}`,
+            setupError as Error,
+            { query: cypher, params, graphName, stage: 'setup' }
+          );
+        }
+
+        // Build the Cypher query
+        const sql = `SELECT * FROM ag_catalog.cypher('${graphName}', $q$${cypher}$q$, $1) AS (${returnColumns})`;
+
+        // Log the query and parameters for debugging if logger is available
+        if (this.logger && typeof this.logger.debug === 'function') {
+          this.logger.debug(`Executing Cypher query: ${cypher}`);
+          this.logger.debug(`With parameters: ${paramsJson}`);
+          this.logger.debug(`SQL with return columns: ${sql}`);
+        } else {
+          console.debug(`Executing Cypher query: ${cypher}`);
+          console.debug(`With parameters: ${paramsJson}`);
+          console.debug(`SQL with return columns: ${sql}`);
+        }
+
+        // Record start time for query execution
+        const startTime = Date.now();
+
+        try {
+          // Execute the Cypher query directly using the connection
+          // This approach is more reliable for Cypher queries
+          console.debug('Executing Cypher query directly');
+          console.debug('SQL:', sql);
+          console.debug('Parameters:', [paramsJson]);
+
+          // Create query config
+          const queryConfig = {
+            text: sql,
+            values: [paramsJson],
+            rowMode: options?.rowMode || 'object',
+          };
+
+          // Execute the query directly
+          const result = await this.connection.query(queryConfig);
+
+          // Log the query execution
+          const duration = Date.now() - startTime;
+          this.logger.logQuery(sql, [paramsJson], duration, result);
+
+          return result;
+        } catch (executionError) {
+          // Add detailed context to the error
+          console.error('Error executing Cypher query SQL:', executionError);
+
+          // Create a detailed error message
+          let detailedMessage = 'Cypher query execution failed';
+
+          if (executionError === null || executionError === undefined) {
+            detailedMessage += ': Received null or undefined error';
+          } else if (executionError.message) {
+            detailedMessage += `: ${executionError.message}`;
+          } else {
+            detailedMessage += `: Error of type ${typeof executionError}: ${String(executionError)}`;
+          }
+
+          // Add query details to the error message
+          detailedMessage += `\nCypher: ${cypher}`;
+          detailedMessage += `\nParameters: ${paramsJson}`;
+          detailedMessage += `\nGraph: ${graphName}`;
+          detailedMessage += `\nSQL: ${sql}`;
+
+          throw new QueryError(
+            detailedMessage,
+            executionError as Error,
+            { query: cypher, params, graphName, sql }
+          );
+        }
+      } catch (error) {
+        // This catch block handles any errors not caught by the inner try-catch blocks
+        console.error('Unhandled error in executeCypher:', error);
+
+        if (error instanceof QueryError) {
+          // Pass through QueryError instances
+          throw error;
+        }
+
+        // Create a new QueryError with detailed context
+        const errorMessage = error?.message ||
+                            (error ? `Error of type ${typeof error}: ${String(error)}` : 'Unknown error');
+
+        throw new QueryError(
+          `Cypher query failed: ${errorMessage}`,
+          error as Error,
+          { query: cypher, params, graphName }
+        );
+      }
+    } catch (error) {
+      console.error('Error executing Cypher query:', error);
+
+      // Handle null or undefined errors
+      if (error === null || error === undefined) {
+        throw new QueryError(
+          `Cypher query execution failed: Unknown error (null or undefined)`,
+          undefined,
+          { query: cypher, params, graphName }
+        );
       }
 
-      return await this.executeSQL<T>(sql, [paramsJson], options);
-    } catch (error) {
+      // Pass through QueryError instances
+      if (error instanceof QueryError) {
+        throw error;
+      }
+
+      // Handle errors without a message property
+      if (!error.message) {
+        // Get a more descriptive error message
+        const errorMessage = `Error of type ${typeof error}: ${String(error)}`;
+
+        throw new QueryError(
+          `Cypher query execution failed: ${errorMessage}`,
+          error,
+          { query: cypher, params, graphName }
+        );
+      }
+
       // Enhance error message for AGE-specific errors
-      const errorMessage = (error as Error).message;
+      const errorMessage = (error as Error)?.message;
       if (errorMessage.includes('return row and column definition list do not match')) {
         throw new QueryError(
           `Cypher query execution failed: The return columns in your query don't match the AS clause. Check your RETURN statement.`,

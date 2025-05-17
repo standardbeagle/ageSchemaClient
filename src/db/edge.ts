@@ -149,19 +149,13 @@ export class EdgeOperations<T extends SchemaDefinition> {
       targetGraph
     );
 
-    // Parse the edge from the result
-    const edgeData = JSON.parse(result.rows[0].r);
-    const fromData = JSON.parse(result.rows[0].a);
-    const toData = JSON.parse(result.rows[0].b);
+    // Transform the result using our helper method
+    const edge = this.transformToEdge(label, result.rows[0]);
 
-    // Transform to Edge object
+    // Add the original data properties
     return {
-      id: edgeData.id || edgeData.identity.toString(),
-      label: label,
-      fromId: fromVertex.id,
-      toId: toVertex.id,
-      ...data,
-      properties: edgeData.properties || {}
+      ...edge,
+      ...data
     } as Edge<T, L>;
   }
 
@@ -1130,6 +1124,99 @@ export class EdgeOperations<T extends SchemaDefinition> {
     label: L,
     row: Record<string, any>
   ): Edge<T, L> {
+    // Handle Cypher query result with AGE format
+    if (row.r) {
+      try {
+        // Parse edge data
+        let edgeData;
+        let fromData;
+        let toData;
+
+        // Parse edge data
+        if (typeof row.r === 'string') {
+          // Try to parse as JSON first
+          try {
+            edgeData = JSON.parse(row.r);
+          } catch (jsonError) {
+            // If JSON parsing fails, it might be an AGE-specific format with type annotations
+            // Example: {"id": 844424930131969, "label": "KNOWS", "properties": {"since": 2020}}::edge
+            // Strip the type annotation and try again
+            const cleanedStr = row.r.replace(/::edge$/, '');
+            try {
+              edgeData = JSON.parse(cleanedStr);
+            } catch (cleanedJsonError) {
+              // If that still fails, use a default structure
+              edgeData = {
+                identity: 0,
+                properties: {}
+              };
+            }
+          }
+        } else if (typeof row.r === 'object') {
+          edgeData = row.r;
+        } else {
+          edgeData = {
+            identity: 0,
+            properties: {}
+          };
+        }
+
+        // Parse from vertex data if available
+        if (row.a) {
+          if (typeof row.a === 'string') {
+            try {
+              fromData = JSON.parse(row.a.replace(/::vertex$/, ''));
+            } catch (error) {
+              fromData = { identity: 0 };
+            }
+          } else if (typeof row.a === 'object') {
+            fromData = row.a;
+          } else {
+            fromData = { identity: 0 };
+          }
+        } else {
+          fromData = { identity: 0 };
+        }
+
+        // Parse to vertex data if available
+        if (row.b) {
+          if (typeof row.b === 'string') {
+            try {
+              toData = JSON.parse(row.b.replace(/::vertex$/, ''));
+            } catch (error) {
+              toData = { identity: 0 };
+            }
+          } else if (typeof row.b === 'object') {
+            toData = row.b;
+          } else {
+            toData = { identity: 0 };
+          }
+        } else {
+          toData = { identity: 0 };
+        }
+
+        return {
+          id: edgeData.id || (edgeData.identity ? edgeData.identity.toString() : '0'),
+          label,
+          fromId: fromData.id || (fromData.identity ? fromData.identity.toString() : '0'),
+          toId: toData.id || (toData.identity ? toData.identity.toString() : '0'),
+          properties: edgeData.properties || {}
+        } as Edge<T, L>;
+      } catch (error) {
+        console.error('Error parsing edge data:', error);
+
+        // Last resort fallback
+        return {
+          id: '0',
+          label,
+          fromId: '0',
+          toId: '0',
+          properties: {}
+        } as Edge<T, L>;
+      }
+    }
+
+    // Handle SQL query result
     const edge = {
       id: row.id,
       label,

@@ -67,7 +67,30 @@ class PgConnection implements Connection {
       this.lastQuery = text;
       this.lastQueryTime = Date.now();
 
-      const result = await this.client.query(text, params);
+      // Add extra try-catch to catch any direct errors from client.query
+      let result: any;
+      try {
+        result = await this.client.query(text, params);
+      } catch (directError) {
+        // Log the direct error with full context
+        console.error('Direct error from pg client.query:', directError);
+        console.error('Query text:', text);
+        console.error('Query params:', params);
+
+        // Rethrow with more context
+        const contextError = new Error(
+          `Direct query execution error: ${directError?.message || 'null or undefined'}\n` +
+          `SQL: ${text}\n` +
+          `Params: ${JSON.stringify(params)}`
+        );
+
+        // Preserve the original error's stack if possible
+        if (directError && directError.stack) {
+          contextError.stack = directError.stack;
+        }
+
+        throw contextError;
+      }
 
       this.state = ConnectionState.IDLE;
       return result;
@@ -84,6 +107,15 @@ class PgConnection implements Connection {
       };
 
       await this.manager.triggerHook('onError', this, event);
+
+      // Handle null or undefined errors
+      if (error === null || error === undefined) {
+        throw new ConnectionError(
+          `Query execution failed: Unknown error (null or undefined)`,
+          new Error('Unknown error (null or undefined)'),
+          { query: text, params }
+        );
+      }
 
       throw new ConnectionError(
         `Query execution failed: ${(error as Error).message}`,
@@ -163,23 +195,32 @@ export class PgConnectionManager implements ConnectionManager {
     });
 
     this.pool.on('connect', async (client: PoolClient) => {
-      const searchPath = this.config.pgOptions?.searchPath || 'ag_catalog, "$user", public';
-      await client.query(`LOAD \'age\';SET search_path TO ${searchPath}`);
+      try {
+        const searchPath = this.config.pgOptions?.searchPath || 'ag_catalog, "$user", public';
 
-      //Create a temp table for parameters
-      await client.query(`CREATE TEMP TABLE IF NOT EXISTS age_params(key text, value jsonb);`);
+        // Use a single query to initialize the connection
+        // This ensures all setup is done atomically
+        await client.query(`
+          -- Load AGE extension
+          LOAD 'age';
 
-      // Mark this connection as initialized
-      // @ts-ignore - Adding custom property to track initialization
-      client._ageInitialized = true;
+          -- Set search path
+          SET search_path TO ${searchPath};
 
-    });
+          -- Create temp table for parameters
+          CREATE TEMP TABLE IF NOT EXISTS age_params(key text, value jsonb);
+          ALTER TABLE age_params ADD PRIMARY KEY (key);
+        `);
 
-    // Set up cleanup when connection is released back to the pool
-    this.pool.on('release', async (_err: Error, client: PoolClient) => {
-      // Truncate the age_params table when a client is released back to the pool
-      // No try-catch - let errors throw naturally to make them more visible
-      await client.query('TRUNCATE TABLE age_params');
+        // Verify search path was set correctly
+        await client.query('SHOW search_path');
+
+        // Mark this connection as initialized
+        // @ts-ignore - Adding custom property to track initialization
+        client._ageInitialized = true;
+      } catch (error) {
+        console.error('Error initializing connection:', error);
+      }
     });
   }
 

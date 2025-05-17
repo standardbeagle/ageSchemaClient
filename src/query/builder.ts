@@ -220,37 +220,65 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
    */
   async execute<R = any>(options: QueryExecutionOptions = {}): QueryBuilderResult<R> {
     try {
-
       const params = this.getParameters();
       const graphName = options.graphName || this.graphName;
+
+      if (!graphName) {
+        throw new Error('Graph name is required for executing Cypher queries');
+      }
 
       // If there are no parameters, use the standard Cypher query
       if (Object.keys(params).length === 0) {
         const cypher = this.toCypher();
         console.log('Executing Cypher query without parameters:', cypher);
 
-        return await this.queryExecutor.executeCypher<R>(
-          cypher,
-          {},
-          graphName,
-          {
-            timeout: options.timeout,
-            maxRetries: options.maxRetries,
+        try {
+          // Try to execute the Cypher query
+          const result = await this.queryExecutor.executeCypher<R>(
+            cypher,
+            {},
+            graphName,
+            {
+              timeout: options.timeout,
+              maxRetries: options.maxRetries,
+            }
+          );
+
+          // Check if the result is null or undefined
+          if (!result) {
+            console.error('Cypher query returned null or undefined result');
+            throw new Error('Cypher query returned null or undefined result');
           }
-        );
+
+          return result;
+        } catch (error) {
+          console.error('Error executing Cypher query:', error);
+
+          // Add more context to the error
+          const contextError = new Error(
+            `Error executing Cypher query: ${error?.message || 'Unknown error'}\n` +
+            `Cypher: ${cypher}\n` +
+            `Graph: ${graphName}`
+          );
+
+          // Preserve the original error's stack if possible
+          if (error && error.stack) {
+            contextError.stack = error.stack;
+          }
+
+          throw contextError;
+        }
       }
 
       // For queries with parameters, use the WITH clause approach
       // This is more compatible with Apache AGE
       console.log('Executing Cypher query with parameters using WITH clause');
 
-      this.queryExecutor.executeSQL("")
-
       // Add a WITH clause at the beginning of the query with all parameters
       const withClauseParams = Object.entries(params)
         .map(([key, value]) => {
           // Convert the value to a string representation for the WITH clause
-          let valueStr;
+          let valueStr: string;
           if (typeof value === 'string') {
             valueStr = `'${value.replace(/'/g, "''")}'`;
           } else if (value === null) {
@@ -273,15 +301,47 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
       const cypher = `WITH ${withClauseParams}\n${this.toCypher()}`;
       console.log('Modified Cypher query:', cypher);
 
-      return await this.queryExecutor.executeCypher<R>(
-        cypher,
-        {},
-        graphName,
-        {
-          timeout: options.timeout,
-          maxRetries: options.maxRetries,
+      try {
+        // Try to execute the Cypher query with parameters
+        const result = await this.queryExecutor.executeCypher<R>(
+          cypher,
+          {},
+          graphName,
+          {
+            timeout: options.timeout,
+            maxRetries: options.maxRetries,
+          }
+        );
+
+        // Check if the result is null or undefined
+        if (!result) {
+          console.error('Cypher query returned null or undefined result');
+          throw new Error('Cypher query returned null or undefined result');
         }
-      );
+
+        return result;
+      } catch (error) {
+        console.error('Error executing Cypher query with parameters:', error);
+
+        // Add more context to the error
+        const contextError = new Error(
+          `Error executing Cypher query with parameters: ${error?.message || 'Unknown error'}\n` +
+          `Cypher: ${cypher}\n` +
+          `Parameters: ${JSON.stringify(params)}\n` +
+          `Graph: ${graphName}`
+        );
+
+        // Preserve the original error's stack if possible
+        if (error && error.stack) {
+          contextError.stack = error.stack;
+        }
+
+        throw contextError;
+      }
+    } catch (error) {
+      // Catch any other errors that might occur
+      console.error('Unhandled error in QueryBuilder.execute:', error);
+      throw error;
     } finally {
       // Reset query parts and parameters after execution
       this.reset();
