@@ -39,6 +39,9 @@ export type {
 // Query exports
 export * from './query';
 
+// Data storage exports
+export * from './data';
+
 // Loader exports
 export {
   SchemaLoader,
