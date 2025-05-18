@@ -31,5 +31,8 @@ export * from './batch';
 // Export utility functions
 export * from './utils';
 
+// Export AGE verification utilities
+export * from './age-verification';
+
 // Version information
 export const dbVersion = '0.1.0';

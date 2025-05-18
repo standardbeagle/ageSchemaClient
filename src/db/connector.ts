@@ -198,31 +198,88 @@ export class PgConnectionManager implements ConnectionManager {
       try {
         const searchPath = this.config.pgOptions?.searchPath || 'ag_catalog, "$user", public';
 
-        // Use a single query to initialize the connection
-        // This ensures all setup is done atomically
-        await client.query(`
-          -- Load AGE extension
-          LOAD 'age';
+        // Step 1: Load AGE extension
+        try {
+          await client.query("LOAD 'age'");
+        } catch (ageError) {
+          console.error('Error loading AGE extension:', ageError.message);
+          console.error('Apache AGE may not be properly installed or configured.');
+          console.error('Make sure the AGE extension is installed in the database.');
+          throw new Error(`Failed to load AGE extension: ${ageError.message}`);
+        }
 
-          -- Set search path
-          SET search_path TO ${searchPath};
+        // Step 2: Set search path
+        try {
+          await client.query(`SET search_path TO ${searchPath}`);
+        } catch (searchPathError) {
+          console.error('Error setting search path:', searchPathError.message);
+          throw new Error(`Failed to set search path: ${searchPathError.message}`);
+        }
 
-          -- Create temp table for parameters
-          CREATE TEMP TABLE IF NOT EXISTS age_params(key text, value jsonb);
-          ALTER TABLE age_params ADD PRIMARY KEY (key);
-        `);
+        // Step 3: Verify search path was set correctly
+        try {
+          const searchPathResult = await client.query('SHOW search_path');
+          const currentSearchPath = searchPathResult.rows[0].search_path;
 
-        // Verify search path was set correctly
-        await client.query('SHOW search_path');
+          if (!currentSearchPath.includes('ag_catalog')) {
+            console.warn(`Warning: search_path does not include ag_catalog: ${currentSearchPath}`);
+            console.warn('Attempting to set search path again with ag_catalog explicitly included');
 
-        // Initialize the age_schema_client schema if it doesn't exist
-        await this.initializeAgeParamsFunctions(client);
+            // Try to set search path again with ag_catalog explicitly included
+            await client.query(`SET search_path TO ag_catalog, ${searchPath}`);
+
+            // Verify again
+            const verifyResult = await client.query('SHOW search_path');
+            const verifiedSearchPath = verifyResult.rows[0].search_path;
+
+            if (!verifiedSearchPath.includes('ag_catalog')) {
+              console.error(`Failed to include ag_catalog in search path: ${verifiedSearchPath}`);
+              throw new Error('Failed to include ag_catalog in search path');
+            }
+          }
+        } catch (verifyError) {
+          console.error('Error verifying search path:', verifyError.message);
+          throw new Error(`Failed to verify search path: ${verifyError.message}`);
+        }
+
+        // Step 4: Create temp table for parameters
+        try {
+          // Drop the table if it exists and recreate it
+          // This ensures we have a clean table for each connection
+          await client.query(`
+            DROP TABLE IF EXISTS age_params;
+
+            CREATE TEMP TABLE age_params(
+              key text PRIMARY KEY,
+              value jsonb
+            );
+          `);
+        } catch (tempTableError) {
+          console.error('Error creating temp table:', tempTableError.message);
+          throw new Error(`Failed to create temp table: ${tempTableError.message}`);
+        }
+
+        // Step 5: Initialize the age_schema_client schema and functions
+        try {
+          await this.initializeAgeParamsFunctions(client);
+        } catch (initError) {
+          console.error('Error initializing age_params functions:', initError.message);
+          throw new Error(`Failed to initialize age_params functions: ${initError.message}`);
+        }
 
         // Mark this connection as initialized
         // @ts-ignore - Adding custom property to track initialization
         client._ageInitialized = true;
+        // @ts-ignore - Adding timestamp for tracking
+        client._ageInitializedAt = Date.now();
       } catch (error) {
         console.error('Error initializing connection:', error);
+        // We don't throw here to avoid crashing the pool
+        // The connection will be released back to the pool and a new one will be created
+        // @ts-ignore - Adding property to track failed initialization
+        client._ageInitializationFailed = true;
+        // @ts-ignore - Adding error message for debugging
+        client._ageInitializationError = error.message;
       }
     });
   }
@@ -454,8 +511,74 @@ export class PgConnectionManager implements ConnectionManager {
 
         await this.triggerHook('beforeConnect', null as any, beforeConnectEvent);
 
-        // Get client from pool - setup already done via 'connect' event
+        // Get client from pool - setup should be done via 'connect' event
         const client = await this.pool.connect();
+
+        // Verify that the connection was properly initialized
+        // @ts-ignore - Accessing custom property
+        if (!client._ageInitialized) {
+          // Check if initialization failed
+          // @ts-ignore - Accessing custom property
+          if (client._ageInitializationFailed) {
+            // @ts-ignore - Accessing custom property
+            const errorMessage = client._ageInitializationError || 'Unknown error';
+            console.error(`Connection initialization failed: ${errorMessage}`);
+
+            // Release the client back to the pool
+            client.release();
+
+            // Throw an error to trigger retry
+            throw new ConnectionError(
+              `Connection initialization failed: ${errorMessage}`,
+              new Error(errorMessage)
+            );
+          }
+
+          // If initialization didn't fail but isn't marked as initialized,
+          // try to initialize it manually
+          console.warn('Connection not initialized by pool connect event, initializing manually');
+
+          try {
+            const searchPath = this.config.pgOptions?.searchPath || 'ag_catalog, "$user", public';
+
+            // Load AGE extension
+            await client.query("LOAD 'age'");
+
+            // Set search path
+            await client.query(`SET search_path TO ${searchPath}`);
+
+            // Drop the table if it exists and recreate it
+            // This ensures we have a clean table for each connection
+            await client.query(`
+              DROP TABLE IF EXISTS age_params;
+
+              CREATE TEMP TABLE age_params(
+                key text PRIMARY KEY,
+                value jsonb
+              );
+            `);
+
+            // Initialize the age_schema_client schema and functions
+            await this.initializeAgeParamsFunctions(client);
+
+            // Mark this connection as initialized
+            // @ts-ignore - Adding custom property to track initialization
+            client._ageInitialized = true;
+            // @ts-ignore - Adding timestamp for tracking
+            client._ageInitializedAt = Date.now();
+          } catch (initError) {
+            console.error('Manual connection initialization failed:', initError.message);
+
+            // Release the client back to the pool
+            client.release();
+
+            // Throw an error to trigger retry
+            throw new ConnectionError(
+              `Manual connection initialization failed: ${initError.message}`,
+              initError as Error
+            );
+          }
+        }
 
         // Create connection wrapper
         const connection = new PgConnection(client, this);
@@ -622,6 +745,78 @@ export class PgConnectionManager implements ConnectionManager {
         `Failed to close connection pool: ${(error as Error).message}`,
         error as Error
       );
+    }
+  }
+
+  /**
+   * Verify that Apache AGE is properly installed and configured
+   *
+   * This method performs a comprehensive check of the Apache AGE installation
+   * and configuration, including:
+   * 1. Checking if the AGE extension is installed
+   * 2. Checking if the ag_catalog schema exists
+   * 3. Checking if the current user has the necessary privileges
+   * 4. Checking if ag_catalog is in the search path
+   * 5. Checking if a test graph can be created
+   *
+   * @returns Verification result
+   */
+  async verifyAgeInstallation(): Promise<any> {
+    try {
+      // Get a connection from the pool
+      const connection = await this.getConnection();
+
+      try {
+        // Create a query executor
+        const queryExecutor = new QueryExecutor(connection);
+
+        // First, ensure AGE is loaded and search path is set correctly
+        try {
+          // Load AGE extension
+          await queryExecutor.executeSQL("LOAD 'age'");
+
+          // Check current search path
+          const searchPathResult = await queryExecutor.executeSQL(`
+            SELECT current_setting('search_path') AS search_path
+          `);
+
+          const searchPath = searchPathResult.rows[0].search_path;
+
+          // If ag_catalog is not in the search path, add it
+          if (!searchPath.includes('ag_catalog')) {
+            await queryExecutor.executeSQL(`
+              SET search_path TO ag_catalog, ${searchPath}
+            `);
+          }
+        } catch (setupError) {
+          console.error('Error setting up AGE for verification:', setupError);
+        }
+
+        // Import the verification function dynamically to avoid circular dependencies
+        const { verifyAgeInstallation } = await import('./age-verification');
+
+        // Verify AGE installation
+        const result = await verifyAgeInstallation(queryExecutor);
+
+        return result;
+      } finally {
+        // Release the connection back to the pool
+        await this.releaseConnection(connection);
+      }
+    } catch (error) {
+      console.error('Error verifying AGE installation:', error);
+      return {
+        available: false,
+        error: `Error verifying AGE installation: ${error.message}`,
+        diagnostics: {
+          extensionInstalled: false,
+          schemaExists: false,
+          hasUsagePrivilege: false,
+          hasCypherExecutePrivilege: false,
+          inSearchPath: false,
+          canCreateGraph: false
+        }
+      };
     }
   }
 
