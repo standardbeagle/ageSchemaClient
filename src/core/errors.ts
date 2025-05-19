@@ -102,3 +102,54 @@ export class TransactionError extends BaseError {
     this.name = 'TransactionError';
   }
 }
+
+/**
+ * Context information for batch loader errors
+ */
+export interface BatchLoaderErrorContext {
+  /**
+   * Phase of the batch loading process where the error occurred
+   */
+  phase?: 'validation' | 'vertices' | 'edges' | 'transaction' | 'cleanup';
+
+  /**
+   * Entity type (vertex or edge type) being processed when the error occurred
+   */
+  type?: string;
+
+  /**
+   * Index of the entity in the array being processed
+   */
+  index?: number;
+
+  /**
+   * SQL or Cypher query being executed when the error occurred
+   */
+  sql?: string;
+
+  /**
+   * Data being processed when the error occurred
+   */
+  data?: any;
+}
+
+/**
+ * Error thrown when batch loading fails
+ */
+export class BatchLoaderError extends BaseError {
+  /**
+   * Create a new BatchLoaderError
+   *
+   * @param message - Error message
+   * @param context - Error context
+   * @param cause - Error cause
+   */
+  constructor(
+    message: string,
+    public readonly context?: BatchLoaderErrorContext,
+    cause?: unknown
+  ) {
+    super(message, ErrorCode.BATCH_LOADER_ERROR, cause);
+    this.name = 'BatchLoaderError';
+  }
+}

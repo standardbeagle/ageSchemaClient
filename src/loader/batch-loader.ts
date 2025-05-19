@@ -21,6 +21,11 @@ import { QueryBuilder } from '../query/builder';
  * @example
  * ```typescript
  * const onProgress = (progress: LoadProgress) => {
+ *   if (progress.error) {
+ *     console.error(`Error in ${progress.phase} phase: ${progress.error.message}`);
+ *     return;
+ *   }
+ *
  *   console.log(
  *     `Loading ${progress.phase} ${progress.type}: ` +
  *     `${progress.processed}/${progress.total} (${progress.percentage}%)`
@@ -32,16 +37,20 @@ export interface LoadProgress {
   /**
    * Current phase of the loading process
    *
+   * - 'validation': Validating data against the schema
    * - 'vertices': Loading vertex data
    * - 'edges': Loading edge data
+   * - 'cleanup': Cleaning up resources
    */
-  phase: 'vertices' | 'edges';
+  phase: 'validation' | 'vertices' | 'edges' | 'cleanup';
 
   /**
    * Current vertex or edge type being processed
    *
    * This is the label of the vertex or edge type as defined in the schema.
    * For example, 'Person', 'Company', 'WORKS_AT', etc.
+   * For the validation phase, this may be 'schema' or the specific entity type being validated.
+   * For the cleanup phase, this may be 'transaction' or 'resources'.
    */
   type: string;
 
@@ -69,13 +78,38 @@ export interface LoadProgress {
   percentage: number;
 
   /**
-   * Error message if an error occurred during processing
+   * Error information if an error occurred during processing
    *
    * This is only present if an error occurred during the processing of the
    * current batch. It can be used to display error information in the UI
    * without interrupting the loading process.
    */
-  error?: string;
+  error?: {
+    /**
+     * Error message
+     */
+    message: string;
+
+    /**
+     * Error type
+     */
+    type?: string;
+
+    /**
+     * Entity index where the error occurred
+     */
+    index?: number;
+
+    /**
+     * SQL or Cypher query that caused the error
+     */
+    sql?: string;
+
+    /**
+     * Whether the error is recoverable
+     */
+    recoverable?: boolean;
+  };
 }
 
 /**
@@ -221,26 +255,71 @@ export interface LoadOptions {
    * ```
    */
   warnings?: string[];
+
+  /**
+   * Whether to continue loading on error
+   *
+   * If true, the loader will attempt to continue loading data even if errors occur.
+   * Errors will be logged and added to the warnings array, but the loading process
+   * will continue with the next batch or edge type.
+   *
+   * This is useful for loading large datasets where some errors are expected and
+   * can be handled later.
+   *
+   * @default false
+   *
+   * @example
+   * ```typescript
+   * const options = {
+   *   continueOnError: true
+   * };
+   * ```
+   */
+  continueOnError?: boolean;
 }
 
 /**
  * Result of the loading process
  *
  * This interface provides information about the results of a batch loading operation,
- * including counts of loaded vertices and edges, and any warnings that occurred during
+ * including counts of loaded vertices and edges, and any warnings or errors that occurred during
  * the process.
  *
  * @example
  * ```typescript
  * const result = await batchLoader.loadGraphData(graphData);
- * console.log(`Loaded ${result.vertexCount} vertices and ${result.edgeCount} edges`);
  *
- * if (result.warnings && result.warnings.length > 0) {
- *   console.warn('Warnings during loading:', result.warnings);
+ * if (result.success) {
+ *   console.log(`Loaded ${result.vertexCount} vertices and ${result.edgeCount} edges`);
+ *
+ *   if (result.warnings && result.warnings.length > 0) {
+ *     console.warn('Warnings during loading:', result.warnings);
+ *   }
+ * } else {
+ *   console.error('Loading failed:', result.errors);
  * }
  * ```
  */
 export interface LoadResult {
+  /**
+   * Whether the loading process was successful
+   *
+   * This indicates whether the loading process completed successfully.
+   * If false, the errors array will contain information about what went wrong.
+   *
+   * @example
+   * ```typescript
+   * const result = await batchLoader.loadGraphData(graphData);
+   *
+   * if (result.success) {
+   *   console.log('Loading completed successfully');
+   * } else {
+   *   console.error('Loading failed');
+   * }
+   * ```
+   */
+  success: boolean;
+
   /**
    * Number of vertices loaded
    *
@@ -291,6 +370,44 @@ export interface LoadResult {
    * ```
    */
   warnings?: string[];
+
+  /**
+   * Errors encountered during the loading process
+   *
+   * This is an array of errors that occurred during the loading process.
+   * If the loading process failed (success = false), this array will contain
+   * at least one error that caused the failure.
+   *
+   * @example
+   * ```typescript
+   * const result = await batchLoader.loadGraphData(graphData);
+   *
+   * if (!result.success && result.errors) {
+   *   console.error('Loading errors:', result.errors);
+   *
+   *   // Check for specific error types
+   *   const validationErrors = result.errors.filter(e => e instanceof ValidationError);
+   *   if (validationErrors.length > 0) {
+   *     console.error('Validation errors:', validationErrors);
+   *   }
+   * }
+   * ```
+   */
+  errors?: Error[];
+
+  /**
+   * Duration of the loading process in milliseconds
+   *
+   * This is the total time taken to complete the loading process,
+   * from start to finish.
+   *
+   * @example
+   * ```typescript
+   * const result = await batchLoader.loadGraphData(graphData);
+   * console.log(`Loading took ${result.duration}ms`);
+   * ```
+   */
+  duration?: number;
 }
 
 /**

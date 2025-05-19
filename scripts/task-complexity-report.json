@@ -1,0 +1,131 @@
+{
+  "meta": {
+    "generatedAt": "2025-05-19T03:40:38.956Z",
+    "tasksAnalyzed": 15,
+    "thresholdScore": 5,
+    "projectName": "Taskmaster",
+    "usedResearch": true
+  },
+  "complexityAnalysis": [
+    {
+      "taskId": 1,
+      "taskTitle": "Design PostgreSQL Functions for Data Retrieval",
+      "complexityScore": 5,
+      "recommendedSubtasks": 3,
+      "expansionPrompt": "Break down the PostgreSQL function implementation task into subtasks covering function creation, error handling, and testing for both get_vertices and get_edges functions.",
+      "reasoning": "This task involves creating two PostgreSQL functions with moderate complexity. The implementation requires understanding of PostgreSQL function syntax, ag_catalog.agtype handling, and text manipulation. The example code provides a good starting point, but error handling and edge cases need consideration."
+    },
+    {
+      "taskId": 2,
+      "taskTitle": "Implement Cypher Query Templates for Batch Operations",
+      "complexityScore": 6,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Divide the Cypher query template implementation into subtasks covering vertex creation templates, edge creation templates, template parameterization, and performance optimization.",
+      "reasoning": "This task requires creating Cypher query templates that integrate with the PostgreSQL functions. It involves understanding Cypher syntax, UNWIND operations, and property mapping. The complexity increases due to the need to handle different vertex and edge types dynamically and ensure proper performance."
+    },
+    {
+      "taskId": 3,
+      "taskTitle": "Create BatchLoader Class Interface",
+      "complexityScore": 4,
+      "recommendedSubtasks": 2,
+      "expansionPrompt": "Break down the BatchLoader interface creation into subtasks covering the core interface definition and documentation of method signatures with proper TypeScript typing.",
+      "reasoning": "This task involves defining a TypeScript interface with appropriate method signatures and types. The complexity is moderate as it requires understanding the existing API for backward compatibility while supporting new functionality. The provided code example gives a clear structure to follow."
+    },
+    {
+      "taskId": 4,
+      "taskTitle": "Implement Data Validation Logic",
+      "complexityScore": 7,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Divide the data validation implementation into subtasks covering schema validation setup, vertex validation, edge validation, reference validation, and error reporting.",
+      "reasoning": "This task involves implementing complex validation logic using ajv for schema validation. It requires validating both vertices and edges against schemas, checking references between them, and providing detailed error reporting. The complexity is high due to the need to handle various validation scenarios and edge cases."
+    },
+    {
+      "taskId": 5,
+      "taskTitle": "Implement Transaction Management",
+      "complexityScore": 8,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break down the transaction management implementation into subtasks covering transaction initialization, commit/rollback logic, error handling, resource cleanup, and integration with the existing connection pool.",
+      "reasoning": "This task involves implementing robust transaction management with proper error handling and resource cleanup. The complexity is high due to the need to ensure data consistency across multiple operations, handle various error scenarios, and properly manage database connections and resources."
+    },
+    {
+      "taskId": 6,
+      "taskTitle": "Implement Vertex Loading Logic",
+      "complexityScore": 7,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Divide the vertex loading implementation into subtasks covering temporary table storage, PostgreSQL function integration, Cypher query execution, and progress reporting.",
+      "reasoning": "This task requires implementing the core vertex loading logic using the temporary table approach and PostgreSQL functions. It involves storing data in the age_params table, using the get_vertices function, executing Cypher queries, and reporting progress. The complexity is high due to the integration of multiple components."
+    },
+    {
+      "taskId": 7,
+      "taskTitle": "Implement Edge Loading Logic",
+      "complexityScore": 8,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break down the edge loading implementation into subtasks covering temporary table storage, PostgreSQL function integration, vertex reference validation, Cypher query execution, and progress reporting.",
+      "reasoning": "This task involves implementing edge loading logic similar to vertex loading but with additional complexity. It requires validating vertex references, handling potential missing references, and ensuring proper edge creation. The dependencies on multiple previous tasks also increase its complexity."
+    },
+    {
+      "taskId": 8,
+      "taskTitle": "Implement Connection Pool Integration",
+      "complexityScore": 5,
+      "recommendedSubtasks": 3,
+      "expansionPrompt": "Divide the connection pool integration into subtasks covering AGE extension verification, search_path configuration, and connection acquisition/release management.",
+      "reasoning": "This task requires integrating with the existing connection pool for database operations. It involves verifying the AGE extension is loaded, ensuring ag_catalog is in the search_path, and properly managing connection acquisition and release. The complexity is moderate as it involves working with PostgreSQL-specific configurations."
+    },
+    {
+      "taskId": 9,
+      "taskTitle": "Implement Error Handling and Reporting",
+      "complexityScore": 6,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the error handling implementation into subtasks covering error class definition, context collection, transaction rollback integration, and resource cleanup.",
+      "reasoning": "This task involves implementing comprehensive error handling and reporting for all failure scenarios. It requires creating a custom error class, collecting context information, integrating with transaction rollback, and ensuring proper resource cleanup. The complexity is significant due to the need to handle various error scenarios across different components."
+    },
+    {
+      "taskId": 10,
+      "taskTitle": "Implement Progress Reporting",
+      "complexityScore": 4,
+      "recommendedSubtasks": 3,
+      "expansionPrompt": "Divide the progress reporting implementation into subtasks covering progress interface definition, vertex loading progress, and edge loading progress.",
+      "reasoning": "This task involves implementing progress reporting during the loading process. It requires defining a progress interface, integrating progress reporting into vertex and edge loading, and providing statistics on the loading process. The complexity is moderate as it primarily involves adding reporting functionality to existing components."
+    },
+    {
+      "taskId": 11,
+      "taskTitle": "Implement BatchLoader Class",
+      "complexityScore": 9,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Break down the BatchLoader class implementation into subtasks covering constructor and initialization, loadGraphData method, validation integration, transaction management integration, vertex/edge loading integration, and final testing.",
+      "reasoning": "This task involves implementing the complete BatchLoader class that integrates all previous components. It requires coordinating multiple complex operations, ensuring proper error handling and resource management, and maintaining backward compatibility. The complexity is very high due to the integration of multiple complex components and dependencies on numerous previous tasks."
+    },
+    {
+      "taskId": 12,
+      "taskTitle": "Create Unit Tests",
+      "complexityScore": 7,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Divide the unit testing task into subtasks covering test setup, validation testing, transaction management testing, vertex/edge loading testing, and error handling testing.",
+      "reasoning": "This task involves creating comprehensive unit tests for the BatchLoader implementation. It requires setting up test fixtures, mocking database interactions, and testing various success and failure scenarios. The complexity is high due to the need to test multiple components and their interactions, as well as various edge cases."
+    },
+    {
+      "taskId": 13,
+      "taskTitle": "Create Integration Tests",
+      "complexityScore": 8,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break down the integration testing task into subtasks covering test database setup, test data generation, vertex loading testing, edge loading testing, and error scenario testing.",
+      "reasoning": "This task involves creating integration tests that verify the BatchLoader works correctly with a real database. It requires setting up a test database with Apache AGE, creating test data, and verifying the complete loading process. The complexity is high due to the need to test with a real database and verify the interaction of all components."
+    },
+    {
+      "taskId": 14,
+      "taskTitle": "Performance Testing and Optimization",
+      "complexityScore": 9,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Divide the performance testing task into subtasks covering test data generation, baseline performance measurement, bottleneck identification, SQL/Cypher query optimization, transaction optimization, and memory usage optimization.",
+      "reasoning": "This task involves conducting performance testing and optimizing the BatchLoader implementation for large datasets. It requires generating test data of various sizes, measuring performance metrics, identifying bottlenecks, and implementing optimizations. The complexity is very high due to the need to understand performance characteristics of multiple components and implement targeted optimizations."
+    },
+    {
+      "taskId": 15,
+      "taskTitle": "Documentation and Examples",
+      "complexityScore": 6,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the documentation task into subtasks covering API documentation, usage examples, performance recommendations, and known limitations documentation.",
+      "reasoning": "This task involves creating comprehensive documentation and examples for the BatchLoader implementation. It requires documenting the API, providing usage examples, documenting performance recommendations, and known limitations. The complexity is moderate as it requires a thorough understanding of the implementation and the ability to communicate it clearly."
+    }
+  ]
+}

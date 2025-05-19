@@ -25,6 +25,9 @@ export * from './parser';
 // Export schema validator
 export * from './validator';
 
+// Export schema interface
+export * from './schema';
+
 // Export schema migration utilities
 export * from './migration';
 

@@ -12,6 +12,7 @@ import { QueryExecutor } from '../db/query';
 import { TransactionManager } from '../db/transaction';
 import { DataValidator } from './data-validator';
 import { CypherQueryGenerator } from './cypher-query-generator';
+import { BatchLoaderError, BatchLoaderErrorContext, ValidationError } from '../core/errors';
 import {
   BatchLoader,
   BatchLoaderOptions,
@@ -77,43 +78,165 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     graphData: GraphData,
     options: LoadOptions = {}
   ): Promise<LoadResult> {
+    const startTime = Date.now();
     const graphName = options.graphName || this.defaultGraphName;
     const validateBeforeLoad = options.validateBeforeLoad ?? this.validateBeforeLoad;
     const batchSize = options.batchSize || this.defaultBatchSize;
     const queryGenerator = new CypherQueryGenerator(this.schema);
 
-    // Validate data if required
-    if (validateBeforeLoad) {
-      const validationResult = await this.validateGraphData(graphData);
-      if (!validationResult.isValid) {
-        throw new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
-      }
-    }
+    // Initialize result
+    const result: LoadResult = {
+      success: false,
+      vertexCount: 0,
+      edgeCount: 0,
+      warnings: [],
+      errors: [],
+      duration: 0
+    };
 
-    // Get a connection from the pool
-    const connection = await this.queryExecutor.getConnection();
+    let connection;
 
     try {
-      // Create a transaction
-      await this.queryExecutor.executeSQL('BEGIN');
+      // Validate data if required
+      if (validateBeforeLoad) {
+        try {
+          // Report validation progress
+          if (options.onProgress) {
+            options.onProgress({
+              phase: 'validation',
+              type: 'schema',
+              processed: 0,
+              total: 1,
+              percentage: 0
+            });
+          }
 
-      // Ensure AGE is loaded and in search path
-      await this.queryExecutor.executeSQL(`
-        -- Check if AGE is loaded
-        DO $$
-        BEGIN
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_extension WHERE extname = 'age'
-          ) THEN
-            EXECUTE 'LOAD ''age''';
-          END IF;
-        END $$;
+          const validationResult = await this.validateGraphData(graphData);
 
-        -- Set search path
-        SET search_path TO ag_catalog, "$user", public;
-      `);
+          // Report validation completion
+          if (options.onProgress) {
+            options.onProgress({
+              phase: 'validation',
+              type: 'schema',
+              processed: 1,
+              total: 1,
+              percentage: 100
+            });
+          }
 
-      // Process data
+          if (!validationResult.isValid) {
+            throw new ValidationError(`Validation failed: ${validationResult.errors.join(', ')}`);
+          }
+
+          // Add any validation warnings to the result
+          if (validationResult.warnings.length > 0) {
+            result.warnings!.push(...validationResult.warnings);
+          }
+        } catch (error) {
+          // Create a BatchLoaderError with validation context
+          const context: BatchLoaderErrorContext = {
+            phase: 'validation',
+            type: 'schema'
+          };
+
+          // Report validation error
+          if (options.onProgress) {
+            options.onProgress({
+              phase: 'validation',
+              type: 'schema',
+              processed: 0,
+              total: 1,
+              percentage: 0,
+              error: {
+                message: error instanceof Error ? error.message : String(error),
+                type: error instanceof Error ? error.constructor.name : 'Unknown',
+                recoverable: false
+              }
+            });
+          }
+
+          // Add error to result
+          if (error instanceof Error) {
+            result.errors!.push(error);
+          } else {
+            result.errors!.push(new BatchLoaderError('Validation failed', context, error));
+          }
+
+          // Set duration and return result
+          result.duration = Date.now() - startTime;
+          return result;
+        }
+      }
+
+      // Get a connection from the pool
+      try {
+        connection = await this.queryExecutor.getConnection();
+      } catch (error) {
+        const context: BatchLoaderErrorContext = {
+          phase: 'transaction',
+          type: 'connection'
+        };
+
+        const connectionError = new BatchLoaderError(
+          `Failed to get database connection: ${error instanceof Error ? error.message : String(error)}`,
+          context,
+          error
+        );
+
+        result.errors!.push(connectionError);
+        result.duration = Date.now() - startTime;
+        return result;
+      }
+
+      try {
+        // Create a transaction
+        try {
+          await this.queryExecutor.executeSQL('BEGIN');
+        } catch (error) {
+          const context: BatchLoaderErrorContext = {
+            phase: 'transaction',
+            type: 'begin',
+            sql: 'BEGIN'
+          };
+
+          throw new BatchLoaderError(
+            `Failed to begin transaction: ${error instanceof Error ? error.message : String(error)}`,
+            context,
+            error
+          );
+        }
+
+        // Ensure AGE is loaded and in search path
+        try {
+          await this.queryExecutor.executeSQL(`
+            -- Check if AGE is loaded
+            DO $$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_extension WHERE extname = 'age'
+              ) THEN
+                EXECUTE 'LOAD ''age''';
+              END IF;
+            END $$;
+
+            -- Set search path
+            SET search_path TO ag_catalog, "$user", public;
+          `);
+        } catch (error) {
+          const context: BatchLoaderErrorContext = {
+            phase: 'transaction',
+            type: 'setup',
+            sql: 'LOAD AGE and set search_path'
+          };
+
+          throw new BatchLoaderError(
+            `Failed to load AGE extension or set search path: ${error instanceof Error ? error.message : String(error)}`,
+            context,
+            error
+          );
+        }
+
+        // Process data
         let vertexCount = 0;
         let edgeCount = 0;
 
@@ -128,35 +251,198 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
         }
 
         // Load vertices
-        vertexCount = await this.loadVertices(
-          graphData.vertices,
-          queryGenerator,
-          graphName,
-          batchSize,
-          options
-        );
+        try {
+          vertexCount = await this.loadVertices(
+            graphData.vertices,
+            queryGenerator,
+            graphName,
+            batchSize,
+            options
+          );
+
+          result.vertexCount = vertexCount;
+        } catch (error) {
+          // Create a context for the error
+          const context: BatchLoaderErrorContext = {
+            phase: 'vertices',
+            data: graphData.vertices
+          };
+
+          // Wrap the error in a BatchLoaderError
+          throw new BatchLoaderError(
+            `Failed to load vertices: ${error instanceof Error ? error.message : String(error)}`,
+            context,
+            error
+          );
+        }
 
         // Load edges
-        edgeCount = await this.loadEdges(
-          graphData.edges,
-          queryGenerator,
-          graphName,
-          batchSize,
-          options
-        );
+        try {
+          edgeCount = await this.loadEdges(
+            graphData.edges,
+            queryGenerator,
+            graphName,
+            batchSize,
+            options
+          );
+
+          result.edgeCount = edgeCount;
+        } catch (error) {
+          // Create a context for the error
+          const context: BatchLoaderErrorContext = {
+            phase: 'edges',
+            data: graphData.edges
+          };
+
+          // Wrap the error in a BatchLoaderError
+          throw new BatchLoaderError(
+            `Failed to load edges: ${error instanceof Error ? error.message : String(error)}`,
+            context,
+            error
+          );
+        }
 
         // Commit the transaction
-        await this.queryExecutor.executeSQL('COMMIT');
+        try {
+          await this.queryExecutor.executeSQL('COMMIT');
+        } catch (error) {
+          const context: BatchLoaderErrorContext = {
+            phase: 'transaction',
+            type: 'commit',
+            sql: 'COMMIT'
+          };
 
-        return { vertexCount, edgeCount, warnings };
+          throw new BatchLoaderError(
+            `Failed to commit transaction: ${error instanceof Error ? error.message : String(error)}`,
+            context,
+            error
+          );
+        }
+
+        // Set success and add warnings to result
+        result.success = true;
+        if (warnings.length > 0) {
+          result.warnings!.push(...warnings);
+        }
+
+        // Add warnings from options if they exist
+        if (options.collectWarnings && Array.isArray(options.warnings) && options.warnings.length > 0) {
+          result.warnings!.push(...options.warnings);
+        }
+
+        // Set duration
+        result.duration = Date.now() - startTime;
+
+        return result;
       } catch (error) {
         // Rollback the transaction
-        await this.queryExecutor.executeSQL('ROLLBACK');
-        throw error;
+        try {
+          await this.queryExecutor.executeSQL('ROLLBACK');
+        } catch (rollbackError) {
+          // Log rollback error but don't throw it
+          console.error('Error rolling back transaction:', rollbackError);
+
+          // Add rollback error to result
+          const rollbackContext: BatchLoaderErrorContext = {
+            phase: 'transaction',
+            type: 'rollback',
+            sql: 'ROLLBACK'
+          };
+
+          result.errors!.push(new BatchLoaderError(
+            `Failed to rollback transaction: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`,
+            rollbackContext,
+            rollbackError
+          ));
+        }
+
+        // Add the original error to result
+        if (error instanceof Error) {
+          result.errors!.push(error);
+        } else {
+          result.errors!.push(new BatchLoaderError('Unknown error during batch loading', undefined, error));
+        }
+
+        // Set duration
+        result.duration = Date.now() - startTime;
+
+        return result;
       } finally {
         // Release connection back to pool
-        await this.queryExecutor.releaseConnection(connection);
+        if (connection) {
+          try {
+            // Report cleanup progress
+            if (options.onProgress) {
+              options.onProgress({
+                phase: 'cleanup',
+                type: 'connection',
+                processed: 0,
+                total: 1,
+                percentage: 0
+              });
+            }
+
+            await this.queryExecutor.releaseConnection(connection);
+
+            // Report cleanup completion
+            if (options.onProgress) {
+              options.onProgress({
+                phase: 'cleanup',
+                type: 'connection',
+                processed: 1,
+                total: 1,
+                percentage: 100
+              });
+            }
+          } catch (error) {
+            console.error('Error releasing connection:', error);
+
+            // Report cleanup error
+            if (options.onProgress) {
+              options.onProgress({
+                phase: 'cleanup',
+                type: 'connection',
+                processed: 0,
+                total: 1,
+                percentage: 0,
+                error: {
+                  message: error instanceof Error ? error.message : String(error),
+                  type: 'ConnectionError',
+                  recoverable: true
+                }
+              });
+            }
+
+            // Add error to result
+            const context: BatchLoaderErrorContext = {
+              phase: 'cleanup',
+              type: 'connection'
+            };
+
+            result.errors!.push(new BatchLoaderError(
+              `Failed to release connection: ${error instanceof Error ? error.message : String(error)}`,
+              context,
+              error
+            ));
+          }
+        }
       }
+    } catch (error) {
+      // Catch any unexpected errors
+      console.error('Unexpected error in loadGraphData:', error);
+
+      // Add error to result
+      if (error instanceof Error) {
+        result.errors!.push(error);
+      } else {
+        result.errors!.push(new BatchLoaderError('Unexpected error during batch loading', undefined, error));
+      }
+
+      // Set duration
+      result.duration = Date.now() - startTime;
+
+      return result;
+    }
   }
 
   /**
@@ -177,6 +463,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     options: LoadOptions
   ): Promise<number> {
     let vertexCount = 0;
+    const warnings: string[] = [];
 
     // Process each vertex type
     for (const [vertexType, vertexArray] of Object.entries(vertices)) {
@@ -186,34 +473,106 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
       // Process vertices in batches
       for (let i = 0; i < vertexArray.length; i += batchSize) {
-        const batch = vertexArray.slice(i, i + batchSize);
+        try {
+          const batch = vertexArray.slice(i, i + batchSize);
+          const batchNumber = Math.floor(i / batchSize) + 1;
+          const totalBatches = Math.ceil(vertexArray.length / batchSize);
 
-        // Set vertex data in the age_params table
-        await this.queryExecutor.executeSQL(`
-          INSERT INTO age_schema_client.age_params (key, value)
-          VALUES ('vertex_${vertexType}', $1::jsonb)
-          ON CONFLICT (key) DO UPDATE SET value = $1::jsonb;
-        `, [JSON.stringify(batch)]);
+          // Set vertex data in the age_params table
+          try {
+            const insertSql = `
+              INSERT INTO age_schema_client.age_params (key, value)
+              VALUES ('vertex_${vertexType}', $1::jsonb)
+              ON CONFLICT (key) DO UPDATE SET value = $1::jsonb;
+            `;
 
-        // Generate and execute the query for creating vertices
-        const query = queryGenerator.generateCreateVerticesQuery(vertexType, graphName);
-        const result = await this.queryExecutor.executeSQL(query);
+            await this.queryExecutor.executeSQL(insertSql, [JSON.stringify(batch)]);
+          } catch (error) {
+            // Create context for the error
+            const context: BatchLoaderErrorContext = {
+              phase: 'vertices',
+              type: vertexType,
+              index: i,
+              sql: `INSERT INTO age_schema_client.age_params (key, value) VALUES ('vertex_${vertexType}', $1::jsonb)`,
+              data: { batchSize, batchNumber, totalBatches }
+            };
 
-        // Update vertex count
-        const createdVertices = parseInt(result.rows[0].created_vertices, 10) || 0;
-        vertexCount += createdVertices;
+            throw new BatchLoaderError(
+              `Failed to store vertex data for type ${vertexType} (batch ${batchNumber}/${totalBatches}): ${error instanceof Error ? error.message : String(error)}`,
+              context,
+              error
+            );
+          }
 
-        // Report progress if callback is provided
-        if (options.onProgress) {
-          options.onProgress({
-            phase: 'vertices',
-            type: vertexType,
-            processed: i + batch.length,
-            total: vertexArray.length,
-            percentage: Math.round(((i + batch.length) / vertexArray.length) * 100)
-          });
+          // Generate and execute the query for creating vertices
+          try {
+            const query = queryGenerator.generateCreateVerticesQuery(vertexType, graphName);
+            const result = await this.queryExecutor.executeSQL(query);
+
+            // Update vertex count
+            const createdVertices = parseInt(result.rows[0].created_vertices, 10) || 0;
+            vertexCount += createdVertices;
+
+            // Check if all vertices were created
+            if (createdVertices < batch.length) {
+              const warning = `Warning: Only ${createdVertices} of ${batch.length} vertices of type ${vertexType} were created in batch ${batchNumber}/${totalBatches}`;
+              console.warn(warning);
+              warnings.push(warning);
+            }
+          } catch (error) {
+            // Create context for the error
+            const context: BatchLoaderErrorContext = {
+              phase: 'vertices',
+              type: vertexType,
+              index: i,
+              sql: queryGenerator.generateCreateVerticesQuery(vertexType, graphName),
+              data: { batchSize, batchNumber, totalBatches }
+            };
+
+            throw new BatchLoaderError(
+              `Failed to create vertices of type ${vertexType} (batch ${batchNumber}/${totalBatches}): ${error instanceof Error ? error.message : String(error)}`,
+              context,
+              error
+            );
+          }
+
+          // Report progress if callback is provided
+          if (options.onProgress) {
+            options.onProgress({
+              phase: 'vertices',
+              type: vertexType,
+              processed: i + batch.length,
+              total: vertexArray.length,
+              percentage: Math.round(((i + batch.length) / vertexArray.length) * 100)
+            });
+          }
+        } catch (error) {
+          // Report error in progress if callback is provided
+          if (options.onProgress) {
+            options.onProgress({
+              phase: 'vertices',
+              type: vertexType,
+              processed: i,
+              total: vertexArray.length,
+              percentage: Math.round((i / vertexArray.length) * 100),
+              error: {
+                message: error instanceof Error ? error.message : String(error),
+                type: error instanceof Error ? error.constructor.name : 'Unknown',
+                index: i,
+                recoverable: false
+              }
+            });
+          }
+
+          // Re-throw the error to be handled by the caller
+          throw error;
         }
       }
+    }
+
+    // Add warnings to the options if provided
+    if (options.collectWarnings && Array.isArray(options.warnings)) {
+      options.warnings.push(...warnings);
     }
 
     return vertexCount;
@@ -257,8 +616,23 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
         // Validate vertex references if validateBeforeLoad is enabled
         if (options.validateBeforeLoad !== false) {
-          const validationWarnings = await this.validateEdgeReferences(edgeType, edgeDef, edgeArray, graphName);
-          warnings.push(...validationWarnings);
+          try {
+            const validationWarnings = await this.validateEdgeReferences(edgeType, edgeDef, edgeArray, graphName);
+            warnings.push(...validationWarnings);
+          } catch (error) {
+            // Create context for the error
+            const context: BatchLoaderErrorContext = {
+              phase: 'edges',
+              type: edgeType,
+              data: { edgeDef }
+            };
+
+            throw new BatchLoaderError(
+              `Failed to validate edge references for type ${edgeType}: ${error instanceof Error ? error.message : String(error)}`,
+              context,
+              error
+            );
+          }
         }
 
         // Skip if no edges left after validation
@@ -277,24 +651,69 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
         for (let i = 0; i < edgeArray.length; i += batchSize) {
           try {
             const batch = edgeArray.slice(i, i + batchSize);
+            const batchNumber = Math.floor(i / batchSize) + 1;
+            const totalBatches = Math.ceil(edgeArray.length / batchSize);
 
             // Set edge data in the age_params table
-            await this.queryExecutor.executeSQL(`
-              INSERT INTO age_schema_client.age_params (key, value)
-              VALUES ('edge_${edgeType}', $1::jsonb)
-              ON CONFLICT (key) DO UPDATE SET value = $1::jsonb;
-            `, [JSON.stringify(batch)]);
+            try {
+              const insertSql = `
+                INSERT INTO age_schema_client.age_params (key, value)
+                VALUES ('edge_${edgeType}', $1::jsonb)
+                ON CONFLICT (key) DO UPDATE SET value = $1::jsonb;
+              `;
+
+              await this.queryExecutor.executeSQL(insertSql, [JSON.stringify(batch)]);
+            } catch (error) {
+              // Create context for the error
+              const context: BatchLoaderErrorContext = {
+                phase: 'edges',
+                type: edgeType,
+                index: i,
+                sql: `INSERT INTO age_schema_client.age_params (key, value) VALUES ('edge_${edgeType}', $1::jsonb)`,
+                data: { batchSize, batchNumber, totalBatches }
+              };
+
+              throw new BatchLoaderError(
+                `Failed to store edge data for type ${edgeType} (batch ${batchNumber}/${totalBatches}): ${error instanceof Error ? error.message : String(error)}`,
+                context,
+                error
+              );
+            }
 
             // Generate and execute the query for creating edges
-            const query = queryGenerator.generateCreateEdgesQuery(edgeType, graphName);
-            const result = await this.queryExecutor.executeSQL(query);
+            try {
+              const query = queryGenerator.generateCreateEdgesQuery(edgeType, graphName);
+              const result = await this.queryExecutor.executeSQL(query);
 
-            // Update edge count
-            const createdEdges = parseInt(result.rows[0].created_edges, 10) || 0;
-            edgeCount += createdEdges;
+              // Update edge count
+              const createdEdges = parseInt(result.rows[0].created_edges, 10) || 0;
+              edgeCount += createdEdges;
 
-            // Update processed count
-            processedCount += batch.length;
+              // Update processed count
+              processedCount += batch.length;
+
+              // Log warning if not all edges were created
+              if (createdEdges < batch.length) {
+                const warning = `Warning: Only ${createdEdges} of ${batch.length} edges of type ${edgeType} were created in batch ${batchNumber}/${totalBatches}`;
+                console.warn(warning);
+                warnings.push(warning);
+              }
+            } catch (error) {
+              // Create context for the error
+              const context: BatchLoaderErrorContext = {
+                phase: 'edges',
+                type: edgeType,
+                index: i,
+                sql: queryGenerator.generateCreateEdgesQuery(edgeType, graphName),
+                data: { batchSize, batchNumber, totalBatches }
+              };
+
+              throw new BatchLoaderError(
+                `Failed to create edges of type ${edgeType} (batch ${batchNumber}/${totalBatches}): ${error instanceof Error ? error.message : String(error)}`,
+                context,
+                error
+              );
+            }
 
             // Report progress if callback is provided
             if (options.onProgress) {
@@ -306,19 +725,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
                 percentage: Math.round((processedCount / totalCount) * 100)
               });
             }
-
-            // Log warning if not all edges were created
-            if (createdEdges < batch.length) {
-              const warning = `Warning: Only ${createdEdges} of ${batch.length} edges of type ${edgeType} were created in batch ${i / batchSize + 1}`;
-              console.warn(warning);
-              warnings.push(warning);
-            }
           } catch (error) {
-            // Log error and continue with next batch
-            const errorMessage = `Error loading batch ${i / batchSize + 1} of edge type ${edgeType}: ${error.message}`;
-            console.error(errorMessage);
-            warnings.push(errorMessage);
-
             // Report error in progress if callback is provided
             if (options.onProgress) {
               options.onProgress({
@@ -327,16 +734,49 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
                 processed: processedCount,
                 total: totalCount,
                 percentage: Math.round((processedCount / totalCount) * 100),
-                error: error.message
+                error: {
+                  message: error instanceof Error ? error.message : String(error),
+                  type: error instanceof Error ? error.constructor.name : 'Unknown',
+                  index: i,
+                  recoverable: options.continueOnError === true
+                }
               });
+            }
+
+            // If continueOnError is true, log the error and continue
+            if (options.continueOnError === true) {
+              const batchNumber = Math.floor(i / batchSize) + 1;
+              const totalBatches = Math.ceil(edgeArray.length / batchSize);
+              const errorMessage = `Error loading batch ${batchNumber}/${totalBatches} of edge type ${edgeType}: ${error instanceof Error ? error.message : String(error)}`;
+              console.error(errorMessage);
+              warnings.push(errorMessage);
+            } else {
+              // Otherwise, re-throw the error to be handled by the caller
+              throw error;
             }
           }
         }
       } catch (error) {
-        // Log error and continue with next edge type
-        const errorMessage = `Error loading edge type ${edgeType}: ${error.message}`;
-        console.error(errorMessage);
-        warnings.push(errorMessage);
+        // Create context for the error
+        const context: BatchLoaderErrorContext = {
+          phase: 'edges',
+          type: edgeType,
+          data: { edgeCount, processedTypes: Object.keys(edges).indexOf(edgeType) }
+        };
+
+        // If continueOnError is true, log the error and continue
+        if (options.continueOnError === true) {
+          const errorMessage = `Error loading edge type ${edgeType}: ${error instanceof Error ? error.message : String(error)}`;
+          console.error(errorMessage);
+          warnings.push(errorMessage);
+        } else {
+          // Otherwise, throw a BatchLoaderError
+          throw new BatchLoaderError(
+            `Failed to load edges of type ${edgeType}: ${error instanceof Error ? error.message : String(error)}`,
+            context,
+            error
+          );
+        }
       }
     }
 
@@ -356,7 +796,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
    * @param edgeArray - Array of edges to validate
    * @param graphName - Graph name
    * @returns Promise that resolves to an array of warning messages
-   * @throws Error if validation fails and validateBeforeLoad is true
+   * @throws BatchLoaderError if validation fails
    */
   private async validateEdgeReferences(
     edgeType: string,
@@ -371,7 +811,16 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     const toType = edgeDef.to;
 
     if (!fromType || !toType) {
-      throw new Error(`Edge type ${edgeType} is missing from or to vertex type in schema`);
+      const context: BatchLoaderErrorContext = {
+        phase: 'validation',
+        type: edgeType,
+        data: { edgeDef }
+      };
+
+      throw new BatchLoaderError(
+        `Edge type ${edgeType} is missing from or to vertex type in schema`,
+        context
+      );
     }
 
     // Extract all from and to IDs from the edge array
@@ -379,82 +828,98 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     const toIds = edgeArray.map(edge => edge.to);
 
     // Check if the from vertices exist
-    const fromVerticesQuery = `
-      SELECT * FROM cypher('${graphName}', $$
-        MATCH (v:${fromType})
-        WHERE v.id IN $ids
-        RETURN v.id AS id
-      $$, '{"ids": ${JSON.stringify(fromIds)}}') AS (id agtype);
-    `;
+    try {
+      const fromVerticesQuery = `
+        SELECT * FROM cypher('${graphName}', $$
+          MATCH (v:${fromType})
+          WHERE v.id IN $ids
+          RETURN v.id AS id
+        $$, '{"ids": ${JSON.stringify(fromIds)}}') AS (id agtype);
+      `;
 
-    const fromResult = await this.queryExecutor.executeSQL(fromVerticesQuery);
-    const existingFromIds = fromResult.rows.map(row => row.id.toString().replace(/^"|"$/g, ''));
+      const fromResult = await this.queryExecutor.executeSQL(fromVerticesQuery);
+      const existingFromIds = fromResult.rows.map(row => row.id.toString().replace(/^"|"$/g, ''));
 
-    // Check if the to vertices exist
-    const toVerticesQuery = `
-      SELECT * FROM cypher('${graphName}', $$
-        MATCH (v:${toType})
-        WHERE v.id IN $ids
-        RETURN v.id AS id
-      $$, '{"ids": ${JSON.stringify(toIds)}}') AS (id agtype);
-    `;
+      // Check if the to vertices exist
+      const toVerticesQuery = `
+        SELECT * FROM cypher('${graphName}', $$
+          MATCH (v:${toType})
+          WHERE v.id IN $ids
+          RETURN v.id AS id
+        $$, '{"ids": ${JSON.stringify(toIds)}}') AS (id agtype);
+      `;
 
-    const toResult = await this.queryExecutor.executeSQL(toVerticesQuery);
-    const existingToIds = toResult.rows.map(row => row.id.toString().replace(/^"|"$/g, ''));
+      const toResult = await this.queryExecutor.executeSQL(toVerticesQuery);
+      const existingToIds = toResult.rows.map(row => row.id.toString().replace(/^"|"$/g, ''));
 
-    // Find missing from and to IDs
-    const missingFromIds = fromIds.filter(id => !existingFromIds.includes(id));
-    const missingToIds = toIds.filter(id => !existingToIds.includes(id));
+      // Find missing from and to IDs
+      const missingFromIds = fromIds.filter(id => !existingFromIds.includes(id));
+      const missingToIds = toIds.filter(id => !existingToIds.includes(id));
 
-    // Log warnings for missing vertices
-    if (missingFromIds.length > 0) {
-      const warning = `Warning: ${missingFromIds.length} source vertices of type ${fromType} not found for edge type ${edgeType}`;
-      console.warn(warning);
-      warnings.push(warning);
+      // Log warnings for missing vertices
+      if (missingFromIds.length > 0) {
+        const warning = `Warning: ${missingFromIds.length} source vertices of type ${fromType} not found for edge type ${edgeType}`;
+        console.warn(warning);
+        warnings.push(warning);
 
-      // Add detailed warnings for each missing ID (limit to first 10)
-      const detailedIds = missingFromIds.slice(0, 10);
-      if (detailedIds.length > 0) {
-        const detailedWarning = `Missing source vertex IDs: ${detailedIds.join(', ')}${missingFromIds.length > 10 ? ' and more...' : ''}`;
-        console.warn(detailedWarning);
-        warnings.push(detailedWarning);
+        // Add detailed warnings for each missing ID (limit to first 10)
+        const detailedIds = missingFromIds.slice(0, 10);
+        if (detailedIds.length > 0) {
+          const detailedWarning = `Missing source vertex IDs: ${detailedIds.join(', ')}${missingFromIds.length > 10 ? ' and more...' : ''}`;
+          console.warn(detailedWarning);
+          warnings.push(detailedWarning);
+        }
       }
-    }
 
-    if (missingToIds.length > 0) {
-      const warning = `Warning: ${missingToIds.length} target vertices of type ${toType} not found for edge type ${edgeType}`;
-      console.warn(warning);
-      warnings.push(warning);
+      if (missingToIds.length > 0) {
+        const warning = `Warning: ${missingToIds.length} target vertices of type ${toType} not found for edge type ${edgeType}`;
+        console.warn(warning);
+        warnings.push(warning);
 
-      // Add detailed warnings for each missing ID (limit to first 10)
-      const detailedIds = missingToIds.slice(0, 10);
-      if (detailedIds.length > 0) {
-        const detailedWarning = `Missing target vertex IDs: ${detailedIds.join(', ')}${missingToIds.length > 10 ? ' and more...' : ''}`;
-        console.warn(detailedWarning);
-        warnings.push(detailedWarning);
+        // Add detailed warnings for each missing ID (limit to first 10)
+        const detailedIds = missingToIds.slice(0, 10);
+        if (detailedIds.length > 0) {
+          const detailedWarning = `Missing target vertex IDs: ${detailedIds.join(', ')}${missingToIds.length > 10 ? ' and more...' : ''}`;
+          console.warn(detailedWarning);
+          warnings.push(detailedWarning);
+        }
       }
+
+      // Count edges before filtering
+      const originalCount = edgeArray.length;
+
+      // Filter out edges with missing vertices
+      const validEdges = edgeArray.filter(edge =>
+        existingFromIds.includes(edge.from) && existingToIds.includes(edge.to)
+      );
+
+      // Replace the edge array with the filtered array
+      edgeArray.length = 0;
+      edgeArray.push(...validEdges);
+
+      // Log warning if edges were filtered out
+      if (validEdges.length < originalCount) {
+        const warning = `Warning: Filtered out ${originalCount - validEdges.length} invalid edges of type ${edgeType}`;
+        console.warn(warning);
+        warnings.push(warning);
+      }
+
+      return warnings;
+    } catch (error) {
+      // Create context for the error
+      const context: BatchLoaderErrorContext = {
+        phase: 'validation',
+        type: edgeType,
+        sql: `Cypher query to validate edge references for ${edgeType}`,
+        data: { fromType, toType, fromIds, toIds }
+      };
+
+      throw new BatchLoaderError(
+        `Failed to validate edge references for type ${edgeType}: ${error instanceof Error ? error.message : String(error)}`,
+        context,
+        error
+      );
     }
-
-    // Count edges before filtering
-    const originalCount = edgeArray.length;
-
-    // Filter out edges with missing vertices
-    const validEdges = edgeArray.filter(edge =>
-      existingFromIds.includes(edge.from) && existingToIds.includes(edge.to)
-    );
-
-    // Replace the edge array with the filtered array
-    edgeArray.length = 0;
-    edgeArray.push(...validEdges);
-
-    // Log warning if edges were filtered out
-    if (validEdges.length < originalCount) {
-      const warning = `Warning: Filtered out ${originalCount - validEdges.length} invalid edges of type ${edgeType}`;
-      console.warn(warning);
-      warnings.push(warning);
-    }
-
-    return warnings;
   }
 
   /**
@@ -462,21 +927,40 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
    *
    * @param graphData - Graph data to validate
    * @returns Promise resolving to a validation result with errors and warnings
+   * @throws BatchLoaderError if validation fails
    */
   async validateGraphData(graphData: GraphData): Promise<{
     isValid: boolean;
     errors: string[];
     warnings: string[];
   }> {
-    const validationResult = this.validator.validateData(graphData);
+    try {
+      const validationResult = this.validator.validateData(graphData);
 
-    return {
-      isValid: validationResult.valid,
-      errors: validationResult.errors?.map(error =>
-        `${error.type} ${error.entityType} at index ${error.index}: ${error.message}`
-      ) || [],
-      warnings: validationResult.warnings || []
-    };
+      return {
+        isValid: validationResult.valid,
+        errors: validationResult.errors?.map(error =>
+          `${error.type} ${error.entityType} at index ${error.index}: ${error.message}`
+        ) || [],
+        warnings: validationResult.warnings || []
+      };
+    } catch (error) {
+      // Create context for the error
+      const context: BatchLoaderErrorContext = {
+        phase: 'validation',
+        type: 'schema',
+        data: {
+          vertexTypes: Object.keys(graphData.vertices),
+          edgeTypes: Object.keys(graphData.edges)
+        }
+      };
+
+      throw new BatchLoaderError(
+        `Failed to validate graph data: ${error instanceof Error ? error.message : String(error)}`,
+        context,
+        error
+      );
+    }
   }
 }
 

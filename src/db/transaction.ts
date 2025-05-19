@@ -14,17 +14,17 @@ export enum IsolationLevel {
    * Read uncommitted isolation level
    */
   READ_UNCOMMITTED = 'READ UNCOMMITTED',
-  
+
   /**
    * Read committed isolation level
    */
   READ_COMMITTED = 'READ COMMITTED',
-  
+
   /**
    * Repeatable read isolation level
    */
   REPEATABLE_READ = 'REPEATABLE READ',
-  
+
   /**
    * Serializable isolation level
    */
@@ -39,17 +39,17 @@ export enum TransactionStatus {
    * Transaction is active
    */
   ACTIVE = 'active',
-  
+
   /**
    * Transaction is committed
    */
   COMMITTED = 'committed',
-  
+
   /**
    * Transaction is rolled back
    */
   ROLLED_BACK = 'rolled_back',
-  
+
   /**
    * Transaction is in error state
    */
@@ -65,19 +65,19 @@ export interface TransactionOptions {
    * @default IsolationLevel.READ_COMMITTED
    */
   isolationLevel?: IsolationLevel;
-  
+
   /**
    * Transaction timeout in milliseconds
    * @default 0 (no timeout)
    */
   timeout?: number;
-  
+
   /**
    * Read-only transaction
    * @default false
    */
   readOnly?: boolean;
-  
+
   /**
    * Deferrable transaction (only applies to SERIALIZABLE isolation level)
    * @default false
@@ -103,37 +103,37 @@ export interface TransactionInfo {
    * Transaction ID
    */
   id: string;
-  
+
   /**
    * Transaction status
    */
   status: TransactionStatus;
-  
+
   /**
    * Transaction start time
    */
   startTime: number;
-  
+
   /**
    * Transaction end time (if completed)
    */
   endTime?: number;
-  
+
   /**
    * Transaction isolation level
    */
   isolationLevel: IsolationLevel;
-  
+
   /**
    * Transaction nesting level
    */
   nestingLevel: number;
-  
+
   /**
    * Transaction is read-only
    */
   readOnly: boolean;
-  
+
   /**
    * Transaction is deferrable
    */
@@ -156,7 +156,7 @@ export class Transaction {
 
   /**
    * Create a new transaction
-   * 
+   *
    * @param connection - Database connection
    * @param options - Transaction options
    * @param nestingLevel - Transaction nesting level
@@ -183,17 +183,17 @@ export class Transaction {
       if (this.nestingLevel === 0) {
         // Start a new transaction
         let beginCommand = 'BEGIN';
-        
+
         // Add isolation level if specified
         if (this.options.isolationLevel) {
           beginCommand += ` ISOLATION LEVEL ${this.options.isolationLevel}`;
         }
-        
+
         // Add read-only if specified
         if (this.options.readOnly) {
           beginCommand += ' READ ONLY';
         }
-        
+
         // Add deferrable if specified (only applies to SERIALIZABLE)
         if (
           this.options.deferrable &&
@@ -201,9 +201,9 @@ export class Transaction {
         ) {
           beginCommand += ' DEFERRABLE';
         }
-        
+
         await this.connection.query(beginCommand);
-        
+
         // Set up timeout if specified
         if (this.options.timeout && this.options.timeout > 0) {
           this.setupTimeout();
@@ -232,11 +232,11 @@ export class Transaction {
           `Cannot commit transaction in ${this.status} state`
         );
       }
-      
+
       if (this.nestingLevel === 0) {
         // Commit the transaction
         await this.connection.query('COMMIT');
-        
+
         // Clear timeout if set
         this.clearTimeout();
       } else {
@@ -244,7 +244,7 @@ export class Transaction {
         const savepointName = this.getSavepointName();
         await this.connection.query(`RELEASE SAVEPOINT ${savepointName}`);
       }
-      
+
       this.status = TransactionStatus.COMMITTED;
       this.endTime = Date.now();
     } catch (error) {
@@ -269,11 +269,11 @@ export class Transaction {
           `Cannot rollback transaction in ${this.status} state`
         );
       }
-      
+
       if (this.nestingLevel === 0) {
         // Rollback the transaction
         await this.connection.query('ROLLBACK');
-        
+
         // Clear timeout if set
         this.clearTimeout();
       } else {
@@ -281,7 +281,7 @@ export class Transaction {
         const savepointName = this.getSavepointName();
         await this.connection.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
       }
-      
+
       this.status = TransactionStatus.ROLLED_BACK;
       this.endTime = Date.now();
     } catch (error) {
@@ -295,14 +295,14 @@ export class Transaction {
 
   /**
    * Create a nested transaction
-   * 
+   *
    * @param options - Transaction options
    * @returns Nested transaction
    */
   createNestedTransaction(options: TransactionOptions = {}): Transaction {
     // Merge options with parent options
     const mergedOptions = { ...this.options, ...options };
-    
+
     // Create nested transaction with incremented nesting level
     return new Transaction(
       this.connection,
@@ -313,7 +313,7 @@ export class Transaction {
 
   /**
    * Get transaction information
-   * 
+   *
    * @returns Transaction information
    */
   getInfo(): TransactionInfo {
@@ -331,7 +331,7 @@ export class Transaction {
 
   /**
    * Check if the transaction is active
-   * 
+   *
    * @returns True if the transaction is active
    */
   isActive(): boolean {
@@ -340,7 +340,7 @@ export class Transaction {
 
   /**
    * Check if the transaction is committed
-   * 
+   *
    * @returns True if the transaction is committed
    */
   isCommitted(): boolean {
@@ -349,7 +349,7 @@ export class Transaction {
 
   /**
    * Check if the transaction is rolled back
-   * 
+   *
    * @returns True if the transaction is rolled back
    */
   isRolledBack(): boolean {
@@ -358,7 +358,7 @@ export class Transaction {
 
   /**
    * Create a savepoint name
-   * 
+   *
    * @returns Savepoint name
    */
   private createSavepointName(): string {
@@ -368,7 +368,7 @@ export class Transaction {
 
   /**
    * Get the current savepoint name
-   * 
+   *
    * @returns Savepoint name
    */
   private getSavepointName(): string {
@@ -384,10 +384,10 @@ export class Transaction {
         if (this.status === TransactionStatus.ACTIVE) {
           // Rollback the transaction on timeout
           await this.rollback();
-          
+
           // Set status to error
           this.status = TransactionStatus.ERROR;
-          
+
           console.error(
             `Transaction ${this.id} timed out after ${this.options.timeout}ms and was rolled back`
           );
@@ -417,7 +417,7 @@ export class TransactionManager {
 
   /**
    * Create a new transaction manager
-   * 
+   *
    * @param connection - Database connection
    */
   constructor(connection: Connection) {
@@ -426,7 +426,7 @@ export class TransactionManager {
 
   /**
    * Begin a new transaction
-   * 
+   *
    * @param options - Transaction options
    * @returns Transaction
    */
@@ -438,7 +438,7 @@ export class TransactionManager {
 
   /**
    * Execute a function within a transaction
-   * 
+   *
    * @param callback - Function to execute
    * @param options - Transaction options
    * @returns Result of the callback function
@@ -448,15 +448,15 @@ export class TransactionManager {
     options: TransactionOptions = {}
   ): Promise<T> {
     const transaction = await this.beginTransaction(options);
-    
+
     try {
       const result = await callback(transaction);
-      
+
       // Only commit if transaction is still active
       if (transaction.isActive()) {
         await transaction.commit();
       }
-      
+
       return result;
     } catch (error) {
       // Only rollback if transaction is still active
@@ -467,14 +467,92 @@ export class TransactionManager {
           console.error('Error rolling back transaction:', rollbackError);
         }
       }
-      
+
       throw error;
     }
   }
 
   /**
+   * Execute a function within a transaction with Apache AGE support
+   *
+   * This method ensures that Apache AGE is loaded and in the search path
+   * before executing the callback function.
+   *
+   * @param callback - Function to execute
+   * @param options - Transaction options
+   * @returns Result of the callback function
+   */
+  async withAgeTransaction<T>(
+    callback: (transaction: Transaction) => Promise<T>,
+    options: TransactionOptions = {}
+  ): Promise<T> {
+    const transaction = await this.beginTransaction(options);
+
+    try {
+      // Ensure AGE is loaded and in search path
+      await this.ensureAgeSetup();
+
+      const result = await callback(transaction);
+
+      // Only commit if transaction is still active
+      if (transaction.isActive()) {
+        await transaction.commit();
+      }
+
+      return result;
+    } catch (error) {
+      // Only rollback if transaction is still active
+      if (transaction.isActive()) {
+        try {
+          await transaction.rollback();
+        } catch (rollbackError) {
+          console.error('Error rolling back transaction:', rollbackError);
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure Apache AGE is loaded and in the search path
+   *
+   * @returns Promise that resolves when AGE is loaded and in the search path
+   * @throws Error if AGE cannot be loaded or added to the search path
+   */
+  async ensureAgeSetup(): Promise<void> {
+    try {
+      // Check if AGE is loaded
+      const ageResult = await this.connection.query(`
+        SELECT COUNT(*) > 0 as age_loaded
+        FROM pg_extension
+        WHERE extname = 'age'
+      `);
+
+      if (!ageResult.rows[0].age_loaded) {
+        // Load AGE if not loaded
+        await this.connection.query('LOAD \'age\';');
+      }
+
+      // Check if ag_catalog is in search_path
+      const searchPathResult = await this.connection.query('SHOW search_path');
+      const searchPath = searchPathResult.rows[0].search_path;
+
+      if (!searchPath.includes('ag_catalog')) {
+        // Add ag_catalog to search_path if not included
+        await this.connection.query('SET search_path TO ag_catalog, "$user", public');
+      }
+    } catch (error) {
+      throw new TransactionError(
+        `Failed to ensure AGE setup: ${(error as Error).message}`,
+        error as Error
+      );
+    }
+  }
+
+  /**
    * Get the current isolation level
-   * 
+   *
    * @returns Current isolation level
    */
   async getCurrentIsolationLevel(): Promise<IsolationLevel> {
@@ -482,9 +560,9 @@ export class TransactionManager {
       const result = await this.connection.query(
         'SHOW TRANSACTION ISOLATION LEVEL'
       );
-      
+
       const level = result.rows[0].transaction_isolation;
-      
+
       // Map PostgreSQL isolation level to our enum
       switch (level.toUpperCase()) {
         case 'READ UNCOMMITTED':

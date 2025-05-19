@@ -8,18 +8,23 @@ Apache AGE is a PostgreSQL extension that provides graph database functionality.
 
 ## Goals
 - Create a new batch loader implementation that uses the temporary table approach for efficient data loading
-- Reduce the number of transactions to improve performance and reliability
+- Reduce the number of transactions to improve performance and reliability, use sql transaction statements
 - Improve performance by minimizing network traffic and round trips between client and database
 - Ensure compatibility with the existing connection pool and parameter handling mechanisms
 - Provide comprehensive error handling and reporting
 - Maintain the same API interface for backward compatibility
 - Secure parameter passing using sql parameters
+- Use the connection pool and parameter handling mechanisms
+- When you commit your changes do not checkout main create a chain of branches until the feature is complete and tested.
+- follow the SECURITY_GUIDLINES, TEMP_TABLE_IMPLEMENTATION, VERTEX_EDGE_CREATOR_GUIDE, APACHE_AGE_LIMITATIONS, and CODE_REVIEW_CHECKLIST documents.
 
 ## Non-Goals
 - Supporting databases other than PostgreSQL with Apache AGE
 - Supporting graph databases other than Apache AGE
 - Changing the schema validation logic
 - Any solution involving string interpolation for parameter passing
+- Use distributed transactions 
+- create extra objects like batch connection pool, or transaction manager
 
 ## Requirements
 
@@ -47,10 +52,10 @@ Apache AGE is a PostgreSQL extension that provides graph database functionality.
 - Support loading edges of multiple types
 - Support properties on vertices and edges
 - Support batch loading to handle large datasets efficiently
-- Validate data against the schema before loading
+- Validate data against the schema before loading, use ajv for validation
 
 #### 5. Error Handling
-- Provide detailed error messages for all failure scenarios
+- Provide detailed error messages for all failure scenarios, include context like the current sql statement or data context
 - Roll back transactions on error
 - Clean up temporary resources on success or failure
 - Report validation errors before attempting to load data
@@ -85,11 +90,23 @@ Apache AGE is a PostgreSQL extension that provides graph database functionality.
 
 ## Success Criteria
 - The new batch loader successfully loads all test data
-- The new batch loader performs at least 2x faster than the existing implementation
 - All integration tests pass with the new implementation
 - The new implementation properly handles errors and cleans up resources
 
 ## Implementation Plan
+
+### General
+- Follow the existing codebase structure and conventions
+- Use the existing connection pool and parameter handling mechanisms
+- Ensure compatibility with the existing schema validation logic
+- Use ajv for schema validation
+- Use the existing QueryBuilder for executing SQL queries
+- Use the existing transaction handling logic
+- Use the existing progress reporting mechanism
+- Use the existing error handling mechanism
+- Use the existing documentation and testing framework
+- chain task branches off of each other don't merge back into main or rebase it.
+- getting the query functions right can be tricky if you run into issues ask the team for help.
 
 ### Phase 1: Design and Prototyping
 - Design the PostgreSQL functions for retrieving vertex and edge data
