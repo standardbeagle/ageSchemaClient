@@ -1,9 +1,9 @@
 /**
  * Data storage module for ageSchemaClient
- * 
+ *
  * This module provides functionality to store vertex and edge data in the age_params
  * temporary table for use with Apache AGE Cypher queries.
- * 
+ *
  * @packageDocumentation
  */
 
@@ -76,6 +76,11 @@ export interface DataStorageResult {
    * Keys used to store the data
    */
   keys: string[];
+
+  /**
+   * Number of retry attempts made
+   */
+  retryAttempts?: number;
 }
 
 /**
@@ -94,7 +99,7 @@ export class DataStorage {
 
   /**
    * Create a new DataStorage instance
-   * 
+   *
    * @param queryBuilder - Query builder instance
    * @param options - Data storage options
    */
@@ -105,7 +110,7 @@ export class DataStorage {
 
   /**
    * Store vertex data in the age_params temporary table
-   * 
+   *
    * @param vertexType - Vertex type
    * @param vertices - Array of vertex data
    * @returns Result of the storage operation
@@ -121,7 +126,7 @@ export class DataStorage {
 
   /**
    * Store edge data in the age_params temporary table
-   * 
+   *
    * @param edgeType - Edge type
    * @param edges - Array of edge data
    * @returns Result of the storage operation
@@ -137,7 +142,7 @@ export class DataStorage {
 
   /**
    * Store data in the age_params temporary table
-   * 
+   *
    * @param key - Key to store the data under
    * @param data - Array of data to store
    * @returns Result of the storage operation
@@ -147,85 +152,149 @@ export class DataStorage {
     const result: DataStorageResult = {
       success: false,
       count: 0,
-      keys: []
+      keys: [],
+      retryAttempts: 0
     };
 
-    try {
-      // Handle empty array case
-      if (!data || data.length === 0) {
-        if (this.options.debug) {
-          console.log(`No data to store for key: ${key}`);
+    const { retryAttempts = 3, retryDelay = 1000 } = this.options;
+    let attempts = 0;
+    let lastError: Error | null = null;
+
+    while (attempts <= retryAttempts) {
+      try {
+        // Handle empty array case
+        if (!data || data.length === 0) {
+          if (this.options.debug) {
+            console.log(`No data to store for key: ${key}`);
+          }
+
+          // Store an empty array to ensure the key exists
+          await this.queryBuilder.setParam(key, []);
+
+          result.success = true;
+          result.keys.push(key);
+          return result;
         }
-        
-        // Store an empty array to ensure the key exists
-        await this.queryBuilder.setParam(key, []);
-        
+
+        const { batchSize = 1000 } = this.options;
+
+        // If data fits in a single batch, store it directly
+        if (data.length <= batchSize) {
+          await this.queryBuilder.setParam(key, data);
+
+          result.success = true;
+          result.count = data.length;
+          result.keys.push(key);
+
+          if (this.options.debug) {
+            console.log(`Stored ${data.length} items with key: ${key}`);
+          }
+
+          return result;
+        }
+
+        // Handle large datasets by chunking
+        const chunks = Math.ceil(data.length / batchSize);
+        result.chunks = chunks;
+
+        if (this.options.debug) {
+          console.log(`Chunking ${data.length} items into ${chunks} chunks of size ${batchSize}`);
+        }
+
+        // Track failed chunks for potential recovery
+        const failedChunks: number[] = [];
+
+        for (let i = 0; i < data.length; i += batchSize) {
+          const chunkIndex = Math.floor(i / batchSize);
+          const chunkKey = `${key}_chunk_${chunkIndex}`;
+          const chunk = data.slice(i, i + batchSize);
+
+          try {
+            // Set a timeout for the operation
+            const timeout = 30000; // 30 seconds timeout
+            const timeoutPromise = new Promise<never>((_, reject) => {
+              const id = setTimeout(() => {
+                clearTimeout(id);
+                reject(new Error(`Timeout storing chunk ${chunkIndex + 1}/${chunks}`));
+              }, timeout);
+            });
+
+            // Store the chunk with timeout
+            await Promise.race([
+              this.queryBuilder.setParam(chunkKey, chunk),
+              timeoutPromise
+            ]);
+
+            result.keys.push(chunkKey);
+            result.count += chunk.length;
+
+            if (this.options.debug) {
+              console.log(`Stored chunk ${chunkIndex + 1}/${chunks} with key: ${chunkKey}`);
+            }
+          } catch (chunkError) {
+            // Track failed chunk for retry
+            failedChunks.push(chunkIndex);
+
+            if (this.options.debug) {
+              console.error(`Failed to store chunk ${chunkIndex + 1}/${chunks}:`, chunkError);
+            }
+
+            // Throw the error to trigger retry logic
+            throw chunkError;
+          }
+        }
+
+        // If we got here, all chunks were stored successfully
+        // Store metadata about the chunks
+        await this.queryBuilder.setParam(`${key}_metadata`, {
+          totalCount: data.length,
+          chunks: chunks,
+          chunkSize: batchSize,
+          keys: result.keys,
+          timestamp: new Date().toISOString()
+        });
+
+        result.keys.push(`${key}_metadata`);
         result.success = true;
-        result.keys.push(key);
-        return result;
-      }
+        result.retryAttempts = attempts > 0 ? attempts - 1 : 0;
 
-      const { batchSize = 1000 } = this.options;
-
-      // If data fits in a single batch, store it directly
-      if (data.length <= batchSize) {
-        await this.queryBuilder.setParam(key, data);
-        
-        result.success = true;
-        result.count = data.length;
-        result.keys.push(key);
-        
         if (this.options.debug) {
-          console.log(`Stored ${data.length} items with key: ${key}`);
+          console.log(`Successfully stored ${data.length} items in ${chunks} chunks`);
         }
-        
+
         return result;
-      }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        attempts++;
+        result.retryAttempts = attempts - 1;
 
-      // Handle large datasets by chunking
-      const chunks = Math.ceil(data.length / batchSize);
-      result.chunks = chunks;
-      
-      if (this.options.debug) {
-        console.log(`Chunking ${data.length} items into ${chunks} chunks of size ${batchSize}`);
-      }
-
-      for (let i = 0; i < data.length; i += batchSize) {
-        const chunk = data.slice(i, i + batchSize);
-        const chunkKey = `${key}_chunk_${Math.floor(i / batchSize)}`;
-        
-        await this.queryBuilder.setParam(chunkKey, chunk);
-        
-        result.keys.push(chunkKey);
-        result.count += chunk.length;
-        
         if (this.options.debug) {
-          console.log(`Stored chunk ${Math.floor(i / batchSize) + 1}/${chunks} with key: ${chunkKey}`);
+          console.error(`Error storing data with key ${key} (attempt ${attempts}/${retryAttempts + 1}):`, error);
+        }
+
+        // Check if we should retry
+        if (attempts <= retryAttempts) {
+          // Calculate delay with exponential backoff
+          const delay = retryDelay * Math.pow(2, attempts - 1);
+
+          if (this.options.debug) {
+            console.log(`Retrying in ${delay}ms...`);
+          }
+
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          // No more retries
+          result.success = false;
+          result.error = lastError.message;
+
+          console.error(`Failed to store data with key ${key} after ${retryAttempts + 1} attempts:`, lastError);
+          throw lastError;
         }
       }
-
-      // Store metadata about the chunks
-      await this.queryBuilder.setParam(`${key}_metadata`, {
-        totalCount: data.length,
-        chunks: chunks,
-        chunkSize: batchSize,
-        keys: result.keys
-      });
-      
-      result.keys.push(`${key}_metadata`);
-      result.success = true;
-      
-      if (this.options.debug) {
-        console.log(`Successfully stored ${data.length} items in ${chunks} chunks`);
-      }
-      
-      return result;
-    } catch (error) {
-      result.success = false;
-      result.error = error instanceof Error ? error.message : String(error);
-      
-      console.error(`Error storing data with key ${key}:`, error);
-      throw error;
     }
+
+    // This should never be reached due to the throw in the catch block
+    return result;
   }
 }
