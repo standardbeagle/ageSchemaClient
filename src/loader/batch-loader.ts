@@ -626,7 +626,7 @@ export function createBatchLoader<T extends SchemaDefinition>(
   queryExecutor: QueryExecutor,
   options?: BatchLoaderOptions
 ): BatchLoader<T> {
-  // This is just a placeholder for the factory function
-  // The actual implementation will be provided in a separate file
-  throw new Error('Not implemented');
+  // Import the implementation from batch-loader-impl.ts
+  const { createBatchLoader: createBatchLoaderImpl } = require('./batch-loader-impl');
+  return createBatchLoaderImpl(schema, queryExecutor, options);
 }
