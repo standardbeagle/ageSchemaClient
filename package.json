@@ -30,6 +30,10 @@
     "test:integration:watch": "vitest -c vitest.integration.config.ts",
     "test:all": "pnpm test:unit && pnpm test:integration",
     "test:connection": "vitest run -c vitest.connection.config.ts",
+    "test:performance": "ts-node --esm tests/performance/run-performance-tests.ts",
+    "test:performance:analyze": "ts-node --esm tests/performance/analyze-performance-results.ts",
+    "test:performance:compare": "ts-node --esm tests/performance/run-performance-comparison.ts",
+    "test:performance:compare:analyze": "ts-node --esm tests/performance/analyze-performance-comparison.ts",
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.ts\"",
     "prepublishOnly": "pnpm run build:publish"
