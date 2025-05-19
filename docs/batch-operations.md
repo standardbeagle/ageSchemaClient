@@ -12,18 +12,37 @@ When working with large datasets, using individual operations can be inefficient
 - Chunking large operations into smaller batches
 - Collecting performance metrics
 
+## BatchLoader
+
+For very large datasets, the ageSchemaClient library provides a specialized BatchLoader component designed to efficiently load large volumes of graph data into Apache AGE graph databases. It uses a temporary table approach to minimize transactions and improve performance.
+
+Key features of the BatchLoader include:
+
+- **Efficient Loading**: Uses a temporary table approach to minimize transactions and improve performance
+- **Schema Validation**: Validates data against a schema before loading
+- **Batch Processing**: Processes data in configurable batches to optimize memory usage and performance
+- **Transaction Management**: Manages transactions to ensure data consistency
+- **Error Handling**: Provides comprehensive error handling and reporting
+- **Progress Reporting**: Reports progress during loading operations
+- **Configurable**: Offers various configuration options to customize the loading process
+
+For detailed documentation on the BatchLoader, see:
+- [BatchLoader Documentation](./batch-loader.md)
+- [Optimized BatchLoader Documentation](./optimized-batch-loader.md)
+- [Performance Testing and Optimization](./performance-testing.md)
+
 ## Setup
 
 To use batch operations, you need to create a `BatchOperations` instance:
 
 ```typescript
-import { 
-  PgConnectionManager, 
-  QueryExecutor, 
-  VertexOperations, 
+import {
+  PgConnectionManager,
+  QueryExecutor,
+  VertexOperations,
   EdgeOperations,
   BatchOperations,
-  SQLGenerator 
+  SQLGenerator
 } from 'age-schema-client';
 
 // Create a connection
@@ -279,6 +298,9 @@ console.log(`Created ${createdEmploymentEdges.length} employment relationships`)
 
 ## Next Steps
 
+- [BatchLoader Documentation](./batch-loader.md)
+- [Optimized BatchLoader Documentation](./optimized-batch-loader.md)
+- [Performance Testing and Optimization](./performance-testing.md)
 - [Transactions](./transactions.md)
 - [Schema Evolution](./schema-evolution.md)
 - [Error Handling](./error-handling.md)

@@ -31,10 +31,10 @@ pnpm add age-schema-client
 ## Quick Start
 
 ```typescript
-import { 
-  PgConnectionManager, 
-  QueryExecutor, 
-  VertexOperations, 
+import {
+  PgConnectionManager,
+  QueryExecutor,
+  VertexOperations,
   EdgeOperations,
   SQLGenerator
 } from 'age-schema-client';
@@ -157,7 +157,22 @@ See [Transactions](./transactions.md) for detailed documentation.
 
 ## Batch Operations
 
-See [Batch Operations](./batch-operations.md) for detailed documentation.
+The BatchLoader is a specialized component designed to efficiently load large volumes of graph data into Apache AGE graph databases. It uses a temporary table approach to minimize transactions and improve performance, making it ideal for loading large datasets.
+
+Key features of the BatchLoader include:
+
+- **Efficient Loading**: Uses a temporary table approach to minimize transactions and improve performance
+- **Schema Validation**: Validates data against a schema before loading
+- **Batch Processing**: Processes data in configurable batches to optimize memory usage and performance
+- **Transaction Management**: Manages transactions to ensure data consistency
+- **Error Handling**: Provides comprehensive error handling and reporting
+- **Progress Reporting**: Reports progress during loading operations
+- **Configurable**: Offers various configuration options to customize the loading process
+
+For detailed documentation, see:
+- [BatchLoader Documentation](./batch-loader.md)
+- [Optimized BatchLoader Documentation](./optimized-batch-loader.md)
+- [Performance Testing and Optimization](./performance-testing.md)
 
 ## Schema Evolution
 
