@@ -8,84 +8,173 @@
  * @packageDocumentation
  */
 
-import { SchemaDefinition } from '../schema/types';
+import { SchemaDefinition, VertexDefinition, EdgeDefinition } from '../schema/types';
+import {
+  createParameterizedVertexTemplate,
+  createParameterizedEdgeTemplate
+} from './cypher-templates';
+
+/**
+ * Options for generating Cypher queries
+ */
+export interface CypherQueryGeneratorOptions {
+  /**
+   * Schema name for the PostgreSQL functions
+   * @default 'age_schema_client'
+   */
+  schemaName?: string;
+
+  /**
+   * Whether to include comments in the generated queries
+   * @default true
+   */
+  includeComments?: boolean;
+}
 
 /**
  * CypherQueryGenerator class
  */
 export class CypherQueryGenerator<T extends SchemaDefinition> {
   /**
+   * Schema name for the PostgreSQL functions
+   */
+  private schemaName: string;
+
+  /**
+   * Whether to include comments in the generated queries
+   */
+  private includeComments: boolean;
+
+  /**
    * Create a new CypherQueryGenerator
    *
    * @param schema - Schema definition
+   * @param options - Options for generating queries
    */
-  constructor(private schema: T) {}
+  constructor(
+    private schema: T,
+    options: CypherQueryGeneratorOptions = {}
+  ) {
+    this.schemaName = options.schemaName || 'age_schema_client';
+    this.includeComments = options.includeComments !== false;
+  }
 
   /**
-   * Generate a Cypher query for creating vertices
+   * Generate a Cypher query for creating vertices of a specific type
    *
-   * @param functionName - Name of the PostgreSQL function that returns vertex data
-   * @param agtypeConverterFn - Name of the function that converts data to ag_catalog.agtype
+   * @param vertexType - The type of vertex to create
    * @param graphName - Name of the graph
    * @returns Cypher query string
    */
-  generateCreateVerticesQuery(functionName: string, graphName: string): string {
+  generateCreateVerticesQuery(vertexType: string, graphName: string): string {
+    // Get the vertex definition from the schema
+    const vertexDef = this.schema.vertices[vertexType];
+
+    if (!vertexDef) {
+      throw new Error(`Vertex type "${vertexType}" not found in schema`);
+    }
+
+    // Get the property names from the vertex definition
+    const propertyNames = Object.keys(vertexDef.properties);
+
+    // Make sure 'id' is included
+    if (!propertyNames.includes('id')) {
+      propertyNames.unshift('id');
+    }
+
+    // Generate the template
+    const template = createParameterizedVertexTemplate(vertexType, propertyNames, this.schemaName);
+
+    // Add comments if requested
+    const query = this.includeComments
+      ? this.addCommentsToQuery(template, vertexDef, 'vertex')
+      : template;
+
+    // Wrap the query in the PostgreSQL function call
     return `
       LOAD 'age';
       SET search_path = ag_catalog, "$user", public;
 
       SELECT * FROM cypher('${graphName}', $$
-        UNWIND (SELECT ${functionName}()) AS batch
-        WITH batch.label AS vertex_label,
-             batch.properties AS properties
-        CREATE (v:$$||vertex_label||$$ ${this.generatePropertiesClause()})
-        RETURN vertex_label, id(v) AS vertex_id
-      $$) AS (vertex_label TEXT, vertex_id agtype);
+        ${query.trim()}
+      $$, '{"vertex_type": "${vertexType}"}') AS (created_vertices agtype);
     `;
   }
 
   /**
-   * Generate a Cypher query for creating edges
+   * Generate a Cypher query for creating edges of a specific type
    *
-   * @param functionName - Name of the PostgreSQL function that returns edge data
+   * @param edgeType - The type of edge to create
    * @param graphName - Name of the graph
    * @returns Cypher query string
    */
-  generateCreateEdgesQuery(functionName: string, graphName: string): string {
+  generateCreateEdgesQuery(edgeType: string, graphName: string): string {
+    // Get the edge definition from the schema
+    const edgeDef = this.schema.edges[edgeType];
+
+    if (!edgeDef) {
+      throw new Error(`Edge type "${edgeType}" not found in schema`);
+    }
+
+    // Get the property names from the edge definition
+    const propertyNames = Object.keys(edgeDef.properties);
+
+    // Make sure 'from' and 'to' are included
+    if (!propertyNames.includes('from')) {
+      propertyNames.unshift('from');
+    }
+    if (!propertyNames.includes('to')) {
+      propertyNames.push('to');
+    }
+
+    // Generate the template
+    const template = createParameterizedEdgeTemplate(edgeType, propertyNames, this.schemaName);
+
+    // Add comments if requested
+    const query = this.includeComments
+      ? this.addCommentsToQuery(template, edgeDef, 'edge')
+      : template;
+
+    // Wrap the query in the PostgreSQL function call
     return `
       LOAD 'age';
       SET search_path = ag_catalog, "$user", public;
 
       SELECT * FROM cypher('${graphName}', $$
-        UNWIND (SELECT ${functionName}()) AS batch
-        WITH batch.type AS edge_type,
-             batch.from AS from_id,
-             batch.to AS to_id,
-             batch.properties AS properties
-        MATCH (source), (target)
-        WHERE id(source) = toInteger(from_id) AND id(target) = toInteger(to_id)
-        CREATE (source)-[r:$$||edge_type||$$ ${this.generateEdgePropertiesClause()}]->(target)
-        RETURN edge_type, id(r) AS edge_id
-      $$) AS (edge_type TEXT, edge_id agtype);
+        ${query.trim()}
+      $$, '{"edge_type": "${edgeType}"}') AS (created_edges agtype);
     `;
   }
 
   /**
-   * Generate a properties clause for vertex creation
+   * Add comments to a Cypher query
    *
-   * @returns Properties clause string
+   * @param query - The Cypher query to add comments to
+   * @param def - The vertex or edge definition
+   * @param type - The type of definition ('vertex' or 'edge')
+   * @returns Cypher query with comments
    */
-  private generatePropertiesClause(): string {
-    return `{ CASE WHEN properties IS NOT NULL THEN properties ELSE {} END }`;
-  }
+  private addCommentsToQuery(
+    query: string,
+    def: VertexDefinition | EdgeDefinition,
+    type: 'vertex' | 'edge'
+  ): string {
+    const comments = [
+      `/* Cypher query for creating ${type}s of type "${def.label}" */`,
+      `/* Generated from schema definition */`,
+    ];
 
-  /**
-   * Generate a properties clause for edge creation
-   *
-   * @returns Properties clause string
-   */
-  private generateEdgePropertiesClause(): string {
-    return `{ CASE WHEN properties IS NOT NULL THEN properties ELSE {} END }`;
+    if (type === 'vertex') {
+      const vertexDef = def as VertexDefinition;
+      comments.push(`/* Vertex properties: ${Object.keys(vertexDef.properties).join(', ')} */`);
+    } else {
+      const edgeDef = def as EdgeDefinition;
+      comments.push(`/* Edge properties: ${Object.keys(edgeDef.properties).join(', ')} */`);
+      comments.push(`/* From vertex type: ${edgeDef.from} */`);
+      comments.push(`/* To vertex type: ${edgeDef.to} */`);
+    }
+
+    return `${comments.join('\n')}\n${query}`;
   }
 
   /**
