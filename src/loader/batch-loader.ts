@@ -30,6 +30,14 @@ import { QueryBuilder } from '../query/builder';
  *     `Loading ${progress.phase} ${progress.type}: ` +
  *     `${progress.processed}/${progress.total} (${progress.percentage}%)`
  *   );
+ *
+ *   if (progress.elapsedTime) {
+ *     console.log(`Elapsed time: ${Math.round(progress.elapsedTime / 1000)}s`);
+ *   }
+ *
+ *   if (progress.estimatedTimeRemaining) {
+ *     console.log(`Estimated time remaining: ${Math.round(progress.estimatedTimeRemaining / 1000)}s`);
+ *   }
  * };
  * ```
  */
@@ -76,6 +84,48 @@ export interface LoadProgress {
    * This is calculated as (processed / total) * 100, rounded to the nearest integer.
    */
   percentage: number;
+
+  /**
+   * Current batch number being processed
+   *
+   * This is only present for phases that process data in batches,
+   * such as 'vertices' and 'edges'.
+   */
+  batchNumber?: number;
+
+  /**
+   * Total number of batches to process
+   *
+   * This is only present for phases that process data in batches,
+   * such as 'vertices' and 'edges'.
+   */
+  totalBatches?: number;
+
+  /**
+   * Elapsed time in milliseconds since the start of the loading process
+   *
+   * This can be used to display the time spent on the loading process
+   * and to calculate the estimated time remaining.
+   */
+  elapsedTime?: number;
+
+  /**
+   * Estimated time remaining in milliseconds
+   *
+   * This is calculated based on the elapsed time and the percentage of completion.
+   * It can be used to display an estimate of how much longer the loading process
+   * will take to complete.
+   */
+  estimatedTimeRemaining?: number;
+
+  /**
+   * Warnings encountered during the current phase
+   *
+   * This is an array of warning messages that occurred during the current phase.
+   * Warnings do not prevent the loading process from completing, but they may
+   * indicate potential issues or suboptimal conditions.
+   */
+  warnings?: string[];
 
   /**
    * Error information if an error occurred during processing

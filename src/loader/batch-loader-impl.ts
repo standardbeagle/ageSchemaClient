@@ -84,6 +84,19 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     const batchSize = options.batchSize || this.defaultBatchSize;
     const queryGenerator = new CypherQueryGenerator(this.schema);
 
+    // Function to calculate elapsed time and estimated time remaining
+    const calculateTiming = (processed: number, total: number) => {
+      const elapsedTime = Date.now() - startTime;
+      let estimatedTimeRemaining: number | undefined = undefined;
+
+      if (processed > 0 && processed < total) {
+        // Calculate estimated time remaining based on elapsed time and progress
+        estimatedTimeRemaining = Math.round((elapsedTime / processed) * (total - processed));
+      }
+
+      return { elapsedTime, estimatedTimeRemaining };
+    };
+
     // Initialize result
     const result: LoadResult = {
       success: false,
@@ -102,12 +115,15 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
         try {
           // Report validation progress
           if (options.onProgress) {
+            const timing = calculateTiming(0, 1);
             options.onProgress({
               phase: 'validation',
               type: 'schema',
               processed: 0,
               total: 1,
-              percentage: 0
+              percentage: 0,
+              elapsedTime: timing.elapsedTime,
+              estimatedTimeRemaining: timing.estimatedTimeRemaining
             });
           }
 
@@ -115,12 +131,16 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
           // Report validation completion
           if (options.onProgress) {
+            const timing = calculateTiming(1, 1);
             options.onProgress({
               phase: 'validation',
               type: 'schema',
               processed: 1,
               total: 1,
-              percentage: 100
+              percentage: 100,
+              elapsedTime: timing.elapsedTime,
+              estimatedTimeRemaining: 0,
+              warnings: validationResult.warnings
             });
           }
 
@@ -141,12 +161,15 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
           // Report validation error
           if (options.onProgress) {
+            const timing = calculateTiming(0, 1);
             options.onProgress({
               phase: 'validation',
               type: 'schema',
               processed: 0,
               total: 1,
               percentage: 0,
+              elapsedTime: timing.elapsedTime,
+              estimatedTimeRemaining: undefined,
               error: {
                 message: error instanceof Error ? error.message : String(error),
                 type: error instanceof Error ? error.constructor.name : 'Unknown',
@@ -373,12 +396,15 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
           try {
             // Report cleanup progress
             if (options.onProgress) {
+              const timing = calculateTiming(0, 1);
               options.onProgress({
                 phase: 'cleanup',
                 type: 'connection',
                 processed: 0,
                 total: 1,
-                percentage: 0
+                percentage: 0,
+                elapsedTime: timing.elapsedTime,
+                estimatedTimeRemaining: timing.estimatedTimeRemaining
               });
             }
 
@@ -386,12 +412,15 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
             // Report cleanup completion
             if (options.onProgress) {
+              const timing = calculateTiming(1, 1);
               options.onProgress({
                 phase: 'cleanup',
                 type: 'connection',
                 processed: 1,
                 total: 1,
-                percentage: 100
+                percentage: 100,
+                elapsedTime: timing.elapsedTime,
+                estimatedTimeRemaining: 0
               });
             }
           } catch (error) {
@@ -399,12 +428,15 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
             // Report cleanup error
             if (options.onProgress) {
+              const timing = calculateTiming(0, 1);
               options.onProgress({
                 phase: 'cleanup',
                 type: 'connection',
                 processed: 0,
                 total: 1,
                 percentage: 0,
+                elapsedTime: timing.elapsedTime,
+                estimatedTimeRemaining: undefined,
                 error: {
                   message: error instanceof Error ? error.message : String(error),
                   type: 'ConnectionError',
@@ -538,23 +570,43 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
           // Report progress if callback is provided
           if (options.onProgress) {
+            const timing = calculateTiming(i + batch.length, vertexArray.length);
+            const percentage = Math.round(((i + batch.length) / vertexArray.length) * 100);
+
+            // Collect any warnings for this batch
+            const batchWarnings = warnings.length > 0 ?
+              warnings.slice(Math.max(0, warnings.length - batch.length)) :
+              undefined;
+
             options.onProgress({
               phase: 'vertices',
               type: vertexType,
               processed: i + batch.length,
               total: vertexArray.length,
-              percentage: Math.round(((i + batch.length) / vertexArray.length) * 100)
+              percentage,
+              batchNumber,
+              totalBatches,
+              elapsedTime: timing.elapsedTime,
+              estimatedTimeRemaining: timing.estimatedTimeRemaining,
+              warnings: batchWarnings
             });
           }
         } catch (error) {
           // Report error in progress if callback is provided
           if (options.onProgress) {
+            const timing = calculateTiming(i, vertexArray.length);
+            const percentage = Math.round((i / vertexArray.length) * 100);
+
             options.onProgress({
               phase: 'vertices',
               type: vertexType,
               processed: i,
               total: vertexArray.length,
-              percentage: Math.round((i / vertexArray.length) * 100),
+              percentage,
+              batchNumber,
+              totalBatches,
+              elapsedTime: timing.elapsedTime,
+              estimatedTimeRemaining: undefined,
               error: {
                 message: error instanceof Error ? error.message : String(error),
                 type: error instanceof Error ? error.constructor.name : 'Unknown',
@@ -717,23 +769,43 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
             // Report progress if callback is provided
             if (options.onProgress) {
+              const timing = calculateTiming(processedCount, totalCount);
+              const percentage = Math.round((processedCount / totalCount) * 100);
+
+              // Collect any warnings for this batch
+              const batchWarnings = warnings.length > 0 ?
+                warnings.slice(Math.max(0, warnings.length - batch.length)) :
+                undefined;
+
               options.onProgress({
                 phase: 'edges',
                 type: edgeType,
                 processed: processedCount,
                 total: totalCount,
-                percentage: Math.round((processedCount / totalCount) * 100)
+                percentage,
+                batchNumber,
+                totalBatches,
+                elapsedTime: timing.elapsedTime,
+                estimatedTimeRemaining: timing.estimatedTimeRemaining,
+                warnings: batchWarnings
               });
             }
           } catch (error) {
             // Report error in progress if callback is provided
             if (options.onProgress) {
+              const timing = calculateTiming(processedCount, totalCount);
+              const percentage = Math.round((processedCount / totalCount) * 100);
+
               options.onProgress({
                 phase: 'edges',
                 type: edgeType,
                 processed: processedCount,
                 total: totalCount,
-                percentage: Math.round((processedCount / totalCount) * 100),
+                percentage,
+                batchNumber,
+                totalBatches,
+                elapsedTime: timing.elapsedTime,
+                estimatedTimeRemaining: undefined,
                 error: {
                   message: error instanceof Error ? error.message : String(error),
                   type: error instanceof Error ? error.constructor.name : 'Unknown',
