@@ -15,6 +15,7 @@ export * from './connector';
 
 // Export transaction manager
 export * from './transaction';
+export * from './transaction-manager';
 
 // Export query executor
 export * from './query';
