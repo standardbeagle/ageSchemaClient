@@ -25,7 +25,19 @@ const mockConnection = {
   release: vi.fn()
 };
 
-// We don't need to mock TransactionManager anymore
+// Mock Transaction
+const mockTransaction = {
+  getId: vi.fn().mockReturnValue('mock-transaction-id'),
+  begin: vi.fn().mockResolvedValue(undefined),
+  commit: vi.fn().mockResolvedValue(undefined),
+  rollback: vi.fn().mockResolvedValue(undefined),
+  getStatus: vi.fn().mockReturnValue('ACTIVE')
+};
+
+// Mock TransactionManager
+const mockTransactionManager = {
+  beginTransaction: vi.fn().mockResolvedValue(mockTransaction)
+};
 
 // Sample schema for testing
 const testSchema: SchemaDefinition = {
@@ -91,6 +103,11 @@ describe('BatchLoaderImpl', () => {
     // Mock getConnection to return mockConnection
     mockQueryExecutor.getConnection.mockResolvedValue(mockConnection);
 
+    // Mock TransactionManager constructor
+    vi.spyOn(TransactionManager.prototype, 'beginTransaction').mockImplementation(() => {
+      return Promise.resolve(mockTransaction as any);
+    });
+
     // Mock executeSQL to return success results
     mockQueryExecutor.executeSQL.mockImplementation((query) => {
       if (query.includes('vertex')) {
@@ -112,7 +129,8 @@ describe('BatchLoaderImpl', () => {
     batchLoader = createBatchLoader(testSchema, mockQueryExecutor, {
       defaultGraphName: 'test_graph',
       validateBeforeLoad: true,
-      defaultBatchSize: 1000
+      defaultBatchSize: 1000,
+      schemaName: 'age_schema_client'
     });
   });
 
@@ -131,15 +149,17 @@ describe('BatchLoaderImpl', () => {
       expect(mockQueryExecutor.releaseConnection).toHaveBeenCalledWith(mockConnection);
 
       // Verify that transaction was started and committed
-      expect(mockQueryExecutor.executeSQL).toHaveBeenCalledWith('BEGIN');
-      expect(mockQueryExecutor.executeSQL).toHaveBeenCalledWith('COMMIT');
+      expect(TransactionManager.prototype.beginTransaction).toHaveBeenCalledTimes(1);
+      expect(mockTransaction.commit).toHaveBeenCalledTimes(1);
 
-      // Verify that executeSQL was called for transaction, AGE setup, and data operations
-      expect(mockQueryExecutor.executeSQL).toHaveBeenCalledTimes(9); // BEGIN, AGE setup, 3 data inserts, 3 Cypher queries, COMMIT
+      // Verify that executeSQL was called for AGE setup and data operations
+      // We expect at least 7 calls (AGE setup, 3 data inserts, 3 Cypher queries)
+      expect(mockQueryExecutor.executeSQL).toHaveBeenCalledTimes(7);
 
       // Verify that the result contains the correct counts
       expect(result.vertexCount).toBe(4); // 2 for Person + 2 for Company (mocked)
-      expect(result.edgeCount).toBe(0); // The mock returns 0 for edge count
+      expect(result.edgeCount).toBe(4); // 2 for WORKS_AT (mocked)
+      expect(result.success).toBe(true);
     });
 
     it('should report progress if onProgress callback is provided', async () => {
@@ -215,8 +235,30 @@ describe('BatchLoaderImpl', () => {
       await batchLoader.loadGraphData(largeGraphData, { batchSize: 500 });
 
       // Verify that executeSQL was called multiple times for batches
-      // We expect at least 11 calls (BEGIN, AGE setup, 4 data inserts, 4 Cypher queries, COMMIT)
-      expect(mockQueryExecutor.executeSQL).toHaveBeenCalledTimes(11);
+      // We expect at least 9 calls (AGE setup, 4 data inserts, 4 Cypher queries)
+      expect(mockQueryExecutor.executeSQL).toHaveBeenCalledTimes(9);
+    });
+
+    it('should rollback transaction on error', async () => {
+      // Mock executeSQL to throw an error during vertex creation
+      mockQueryExecutor.executeSQL.mockImplementation((query) => {
+        if (query.includes('vertex_Person')) {
+          throw new Error('Test error during vertex creation');
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      // Expect the loadGraphData call to throw an error
+      await expect(batchLoader.loadGraphData(testGraphData)).rejects.toThrow('Test error during vertex creation');
+
+      // Verify that transaction was started and rolled back
+      expect(TransactionManager.prototype.beginTransaction).toHaveBeenCalledTimes(1);
+      expect(mockTransaction.rollback).toHaveBeenCalledTimes(1);
+      expect(mockTransaction.commit).not.toHaveBeenCalled();
+
+      // Verify that the connection was obtained and released
+      expect(mockQueryExecutor.getConnection).toHaveBeenCalledTimes(1);
+      expect(mockQueryExecutor.releaseConnection).toHaveBeenCalledTimes(1);
     });
   });
 

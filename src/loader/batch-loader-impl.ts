@@ -2,7 +2,9 @@
  * Implementation of the BatchLoader interface
  *
  * This module provides an implementation of the BatchLoader interface
- * for loading graph data into Apache AGE.
+ * for loading graph data into Apache AGE using the temporary table approach.
+ * It uses the age_params temporary table to store data and PostgreSQL
+ * functions to retrieve the data for use with UNWIND in Cypher queries.
  *
  * @packageDocumentation
  */
@@ -12,6 +14,7 @@ import { QueryExecutor } from '../db/query';
 import { TransactionManager } from '../db/transaction';
 import { DataValidator } from './data-validator';
 import { CypherQueryGenerator } from './cypher-query-generator';
+import { QueryBuilder } from '../query/builder';
 import { BatchLoaderError, BatchLoaderErrorContext, ValidationError } from '../core/errors';
 import {
   BatchLoader,
@@ -26,7 +29,12 @@ import {
  * Implementation of the BatchLoader interface
  *
  * This class provides an implementation of the BatchLoader interface
- * for loading graph data into Apache AGE.
+ * for loading graph data into Apache AGE using the temporary table approach.
+ *
+ * The implementation uses the age_params temporary table to store data and
+ * PostgreSQL functions to retrieve the data for use with UNWIND in Cypher queries.
+ * This approach minimizes the number of transactions and improves performance
+ * for large datasets.
  */
 class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
   /**
@@ -50,6 +58,11 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
   private validateBeforeLoad: boolean;
 
   /**
+   * Schema name for PostgreSQL functions
+   */
+  private schemaName: string;
+
+  /**
    * Create a new BatchLoaderImpl
    *
    * @param schema - Schema definition
@@ -65,10 +78,23 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     this.defaultGraphName = options.defaultGraphName || 'default';
     this.defaultBatchSize = options.defaultBatchSize || 1000;
     this.validateBeforeLoad = options.validateBeforeLoad !== false;
+    this.schemaName = options.schemaName || 'age_schema_client';
   }
 
   /**
    * Load graph data into the database
+   *
+   * This method loads vertices and edges into the graph database using the temporary table approach.
+   * It stores data in the age_params temporary table and uses PostgreSQL functions to retrieve
+   * the data for use with UNWIND in Cypher queries.
+   *
+   * The loading process follows these steps:
+   * 1. Validate the data against the schema (if validateBeforeLoad is true)
+   * 2. Begin a transaction
+   * 3. Load vertices in batches
+   * 4. Load edges in batches
+   * 5. Commit the transaction
+   * 6. Return the result with counts of loaded vertices and edges
    *
    * @param graphData - Graph data to load
    * @param options - Load options
@@ -82,7 +108,9 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     const graphName = options.graphName || this.defaultGraphName;
     const validateBeforeLoad = options.validateBeforeLoad ?? this.validateBeforeLoad;
     const batchSize = options.batchSize || this.defaultBatchSize;
-    const queryGenerator = new CypherQueryGenerator(this.schema);
+    const queryGenerator = new CypherQueryGenerator(this.schema, {
+      schemaName: this.schemaName
+    });
 
     // Function to calculate elapsed time and estimated time remaining
     const calculateTiming = (processed: number, total: number) => {
@@ -212,14 +240,24 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
       }
 
       try {
-        // Create a transaction
+        // Create a transaction manager
+        const transactionManager = new TransactionManager(connection);
+        let transaction;
+
         try {
-          await this.queryExecutor.executeSQL('BEGIN');
+          // Begin a transaction
+          transaction = await transactionManager.beginTransaction({
+            timeout: options.transactionTimeout || 60000, // Default to 60 seconds
+            isolationLevel: 'READ COMMITTED'
+          });
+
+          // Log transaction start
+          console.log(`Transaction started with ID: ${transaction.getId()}`);
         } catch (error) {
           const context: BatchLoaderErrorContext = {
             phase: 'transaction',
             type: 'begin',
-            sql: 'BEGIN'
+            sql: 'BEGIN TRANSACTION'
           };
 
           throw new BatchLoaderError(
@@ -246,6 +284,16 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             SET search_path TO ag_catalog, "$user", public;
           `);
         } catch (error) {
+          // Rollback the transaction if AGE setup fails
+          if (transaction) {
+            try {
+              await transaction.rollback();
+              console.log('Transaction rolled back due to AGE setup failure');
+            } catch (rollbackError) {
+              console.error('Error rolling back transaction:', rollbackError);
+            }
+          }
+
           const context: BatchLoaderErrorContext = {
             phase: 'transaction',
             type: 'setup',
@@ -327,7 +375,14 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
         // Commit the transaction
         try {
-          await this.queryExecutor.executeSQL('COMMIT');
+          if (transaction) {
+            await transaction.commit();
+            console.log('Transaction committed successfully');
+          } else {
+            // Fallback to direct SQL if transaction object is not available
+            await this.queryExecutor.executeSQL('COMMIT');
+            console.log('Transaction committed via direct SQL');
+          }
         } catch (error) {
           const context: BatchLoaderErrorContext = {
             phase: 'transaction',
@@ -360,7 +415,14 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
       } catch (error) {
         // Rollback the transaction
         try {
-          await this.queryExecutor.executeSQL('ROLLBACK');
+          if (transaction) {
+            await transaction.rollback();
+            console.log('Transaction rolled back due to error');
+          } else {
+            // Fallback to direct SQL if transaction object is not available
+            await this.queryExecutor.executeSQL('ROLLBACK');
+            console.log('Transaction rolled back via direct SQL');
+          }
         } catch (rollbackError) {
           // Log rollback error but don't throw it
           console.error('Error rolling back transaction:', rollbackError);
@@ -497,6 +559,9 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     let vertexCount = 0;
     const warnings: string[] = [];
 
+    // Create a QueryBuilder for setting parameters
+    const queryBuilder = new QueryBuilder(this.schema, this.queryExecutor, graphName);
+
     // Process each vertex type
     for (const [vertexType, vertexArray] of Object.entries(vertices)) {
       if (!vertexArray || !Array.isArray(vertexArray) || vertexArray.length === 0) {
@@ -510,22 +575,17 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
           const batchNumber = Math.floor(i / batchSize) + 1;
           const totalBatches = Math.ceil(vertexArray.length / batchSize);
 
-          // Set vertex data in the age_params table
+          // Set vertex data in the age_params table using QueryBuilder's setParam method
           try {
-            const insertSql = `
-              INSERT INTO age_schema_client.age_params (key, value)
-              VALUES ('vertex_${vertexType}', $1::jsonb)
-              ON CONFLICT (key) DO UPDATE SET value = $1::jsonb;
-            `;
-
-            await this.queryExecutor.executeSQL(insertSql, [JSON.stringify(batch)]);
+            const paramKey = `vertex_${vertexType}`;
+            await queryBuilder.setParam(paramKey, batch);
           } catch (error) {
             // Create context for the error
             const context: BatchLoaderErrorContext = {
               phase: 'vertices',
               type: vertexType,
               index: i,
-              sql: `INSERT INTO age_schema_client.age_params (key, value) VALUES ('vertex_${vertexType}', $1::jsonb)`,
+              sql: `Setting parameter 'vertex_${vertexType}' in age_params table`,
               data: { batchSize, batchNumber, totalBatches }
             };
 
@@ -538,7 +598,15 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
           // Generate and execute the query for creating vertices
           try {
+            // Generate the Cypher query for creating vertices
             const query = queryGenerator.generateCreateVerticesQuery(vertexType, graphName);
+
+            // Log the query for debugging
+            if (options.debug) {
+              console.log(`Executing vertex creation query for ${vertexType}:`, query);
+            }
+
+            // Execute the query
             const result = await this.queryExecutor.executeSQL(query);
 
             // Update vertex count
@@ -550,6 +618,9 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
               const warning = `Warning: Only ${createdVertices} of ${batch.length} vertices of type ${vertexType} were created in batch ${batchNumber}/${totalBatches}`;
               console.warn(warning);
               warnings.push(warning);
+            } else {
+              // Log success
+              console.log(`Successfully created ${createdVertices} vertices of type ${vertexType} in batch ${batchNumber}/${totalBatches}`);
             }
           } catch (error) {
             // Create context for the error
@@ -650,6 +721,9 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     let edgeCount = 0;
     const warnings: string[] = [];
 
+    // Create a QueryBuilder for setting parameters
+    const queryBuilder = new QueryBuilder(this.schema, this.queryExecutor, graphName);
+
     // Process each edge type
     for (const [edgeType, edgeArray] of Object.entries(edges)) {
       try {
@@ -706,22 +780,17 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             const batchNumber = Math.floor(i / batchSize) + 1;
             const totalBatches = Math.ceil(edgeArray.length / batchSize);
 
-            // Set edge data in the age_params table
+            // Set edge data in the age_params table using QueryBuilder's setParam method
             try {
-              const insertSql = `
-                INSERT INTO age_schema_client.age_params (key, value)
-                VALUES ('edge_${edgeType}', $1::jsonb)
-                ON CONFLICT (key) DO UPDATE SET value = $1::jsonb;
-              `;
-
-              await this.queryExecutor.executeSQL(insertSql, [JSON.stringify(batch)]);
+              const paramKey = `edge_${edgeType}`;
+              await queryBuilder.setParam(paramKey, batch);
             } catch (error) {
               // Create context for the error
               const context: BatchLoaderErrorContext = {
                 phase: 'edges',
                 type: edgeType,
                 index: i,
-                sql: `INSERT INTO age_schema_client.age_params (key, value) VALUES ('edge_${edgeType}', $1::jsonb)`,
+                sql: `Setting parameter 'edge_${edgeType}' in age_params table`,
                 data: { batchSize, batchNumber, totalBatches }
               };
 
@@ -734,7 +803,15 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
             // Generate and execute the query for creating edges
             try {
+              // Generate the Cypher query for creating edges
               const query = queryGenerator.generateCreateEdgesQuery(edgeType, graphName);
+
+              // Log the query for debugging
+              if (options.debug) {
+                console.log(`Executing edge creation query for ${edgeType}:`, query);
+              }
+
+              // Execute the query
               const result = await this.queryExecutor.executeSQL(query);
 
               // Update edge count
@@ -749,6 +826,9 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
                 const warning = `Warning: Only ${createdEdges} of ${batch.length} edges of type ${edgeType} were created in batch ${batchNumber}/${totalBatches}`;
                 console.warn(warning);
                 warnings.push(warning);
+              } else {
+                // Log success
+                console.log(`Successfully created ${createdEdges} edges of type ${edgeType} in batch ${batchNumber}/${totalBatches}`);
               }
             } catch (error) {
               // Create context for the error
@@ -899,30 +979,42 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     const fromIds = edgeArray.map(edge => edge.from);
     const toIds = edgeArray.map(edge => edge.to);
 
+    // Create a QueryBuilder for setting and retrieving parameters
+    const queryBuilder = new QueryBuilder(this.schema, this.queryExecutor, graphName);
+
     // Check if the from vertices exist
     try {
-      const fromVerticesQuery = `
-        SELECT * FROM cypher('${graphName}', $$
-          MATCH (v:${fromType})
-          WHERE v.id IN $ids
-          RETURN v.id AS id
-        $$, '{"ids": ${JSON.stringify(fromIds)}}') AS (id agtype);
-      `;
+      // Store the from IDs in the age_params table
+      await queryBuilder.setParam('from_ids', fromIds);
 
-      const fromResult = await this.queryExecutor.executeSQL(fromVerticesQuery);
-      const existingFromIds = fromResult.rows.map(row => row.id.toString().replace(/^"|"$/g, ''));
+      // Build a query to find the from vertices
+      const fromResult = await queryBuilder
+        .withAgeParam('from_ids', 'ids')
+        .match(fromType, 'v')
+        .done()
+        .where('v.id IN ids')
+        .return('v.id AS id')
+        .execute();
 
-      // Check if the to vertices exist
-      const toVerticesQuery = `
-        SELECT * FROM cypher('${graphName}', $$
-          MATCH (v:${toType})
-          WHERE v.id IN $ids
-          RETURN v.id AS id
-        $$, '{"ids": ${JSON.stringify(toIds)}}') AS (id agtype);
-      `;
+      const existingFromIds = fromResult.rows.map(row =>
+        typeof row.id === 'string' ? JSON.parse(row.id) : row.id
+      );
 
-      const toResult = await this.queryExecutor.executeSQL(toVerticesQuery);
-      const existingToIds = toResult.rows.map(row => row.id.toString().replace(/^"|"$/g, ''));
+      // Store the to IDs in the age_params table
+      await queryBuilder.setParam('to_ids', toIds);
+
+      // Build a query to find the to vertices
+      const toResult = await queryBuilder
+        .withAgeParam('to_ids', 'ids')
+        .match(toType, 'v')
+        .done()
+        .where('v.id IN ids')
+        .return('v.id AS id')
+        .execute();
+
+      const existingToIds = toResult.rows.map(row =>
+        typeof row.id === 'string' ? JSON.parse(row.id) : row.id
+      );
 
       // Find missing from and to IDs
       const missingFromIds = fromIds.filter(id => !existingFromIds.includes(id));
@@ -997,6 +1089,13 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
   /**
    * Validate graph data against the schema
    *
+   * This method validates the graph data against the schema definition.
+   * It checks that all vertices and edges have the required properties
+   * and that the property types match the schema definition.
+   *
+   * For edges, it also validates that the from and to vertex types
+   * match the schema definition.
+   *
    * @param graphData - Graph data to validate
    * @returns Promise resolving to a validation result with errors and warnings
    * @throws BatchLoaderError if validation fails
@@ -1007,13 +1106,54 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     warnings: string[];
   }> {
     try {
+      // Validate the data structure first
+      if (!graphData) {
+        return {
+          isValid: false,
+          errors: ['Graph data is required'],
+          warnings: []
+        };
+      }
+
+      if (!graphData.vertices || typeof graphData.vertices !== 'object') {
+        return {
+          isValid: false,
+          errors: ['Graph data must contain a vertices object'],
+          warnings: []
+        };
+      }
+
+      if (!graphData.edges || typeof graphData.edges !== 'object') {
+        return {
+          isValid: false,
+          errors: ['Graph data must contain an edges object'],
+          warnings: []
+        };
+      }
+
+      // Use the data validator to validate the data against the schema
       const validationResult = this.validator.validateData(graphData);
+
+      // Format the errors for better readability
+      const formattedErrors = validationResult.errors?.map(error => {
+        let message = `${error.type} ${error.entityType}`;
+
+        if (error.index !== undefined) {
+          message += ` at index ${error.index}`;
+        }
+
+        message += `: ${error.message}`;
+
+        if (error.property) {
+          message += ` (property: ${error.property})`;
+        }
+
+        return message;
+      }) || [];
 
       return {
         isValid: validationResult.valid,
-        errors: validationResult.errors?.map(error =>
-          `${error.type} ${error.entityType} at index ${error.index}: ${error.message}`
-        ) || [],
+        errors: formattedErrors,
         warnings: validationResult.warnings || []
       };
     } catch (error) {

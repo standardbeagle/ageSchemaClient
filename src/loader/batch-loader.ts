@@ -326,6 +326,41 @@ export interface LoadOptions {
    * ```
    */
   continueOnError?: boolean;
+
+  /**
+   * Transaction timeout in milliseconds
+   *
+   * This is the maximum time a transaction can run before it is automatically
+   * rolled back. This is useful for preventing long-running transactions from
+   * blocking other operations.
+   *
+   * @default 60000 (60 seconds)
+   *
+   * @example
+   * ```typescript
+   * const options = {
+   *   transactionTimeout: 120000 // 2 minutes
+   * };
+   * ```
+   */
+  transactionTimeout?: number;
+
+  /**
+   * Enable debug mode
+   *
+   * If true, additional debug information will be logged to the console,
+   * including the SQL and Cypher queries being executed.
+   *
+   * @default false
+   *
+   * @example
+   * ```typescript
+   * const options = {
+   *   debug: true
+   * };
+   * ```
+   */
+  debug?: boolean;
 }
 
 /**
@@ -781,6 +816,24 @@ export interface BatchLoaderOptions {
    * ```
    */
   defaultBatchSize?: number;
+
+  /**
+   * Schema name for PostgreSQL functions
+   *
+   * This is the schema name used for the PostgreSQL functions that retrieve
+   * data from the age_params temporary table. It should match the schema
+   * where the get_vertices and get_edges functions are defined.
+   *
+   * @default 'age_schema_client'
+   *
+   * @example
+   * ```typescript
+   * const options = {
+   *   schemaName: 'my_schema'
+   * };
+   * ```
+   */
+  schemaName?: string;
 }
 
 /**
