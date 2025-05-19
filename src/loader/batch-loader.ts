@@ -67,6 +67,15 @@ export interface LoadProgress {
    * This is calculated as (processed / total) * 100, rounded to the nearest integer.
    */
   percentage: number;
+
+  /**
+   * Error message if an error occurred during processing
+   *
+   * This is only present if an error occurred during the processing of the
+   * current batch. It can be used to display error information in the UI
+   * without interrupting the loading process.
+   */
+  error?: string;
 }
 
 /**
@@ -175,6 +184,43 @@ export interface LoadOptions {
    * ```
    */
   onProgress?: (progress: LoadProgress) => void;
+
+  /**
+   * Whether to collect warnings during the loading process
+   *
+   * If true, warnings will be collected during the loading process and
+   * returned in the LoadResult. This can be useful for debugging and
+   * understanding issues that occurred during loading.
+   *
+   * @default false
+   *
+   * @example
+   * ```typescript
+   * const options = {
+   *   collectWarnings: true
+   * };
+   * ```
+   */
+  collectWarnings?: boolean;
+
+  /**
+   * Array to collect warnings during the loading process
+   *
+   * If provided, warnings will be added to this array during the loading process.
+   * This can be useful for collecting warnings from multiple loading operations.
+   *
+   * This is only used if collectWarnings is true.
+   *
+   * @example
+   * ```typescript
+   * const warnings: string[] = [];
+   * const options = {
+   *   collectWarnings: true,
+   *   warnings: warnings
+   * };
+   * ```
+   */
+  warnings?: string[];
 }
 
 /**
