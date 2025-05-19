@@ -119,42 +119,13 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
         const warnings: string[] = [];
 
         // Load vertices
-        for (const [vertexType, vertexArray] of Object.entries(graphData.vertices)) {
-          if (!vertexArray || !Array.isArray(vertexArray) || vertexArray.length === 0) {
-            continue;
-          }
-
-          // Process vertices in batches
-          for (let i = 0; i < vertexArray.length; i += batchSize) {
-            const batch = vertexArray.slice(i, i + batchSize);
-
-            // Set vertex data in the age_params table
-            await this.queryExecutor.executeSQL(`
-              INSERT INTO age_schema_client.age_params (key, value)
-              VALUES ('vertex_${vertexType}', $1::jsonb)
-              ON CONFLICT (key) DO UPDATE SET value = $1::jsonb;
-            `, [JSON.stringify(batch)]);
-
-            // Generate and execute the query for creating vertices
-            const query = queryGenerator.generateCreateVerticesQuery(vertexType, graphName);
-            const result = await this.queryExecutor.executeSQL(query);
-
-            // Update vertex count
-            const createdVertices = parseInt(result.rows[0].created_vertices, 10) || 0;
-            vertexCount += createdVertices;
-
-            // Report progress if callback is provided
-            if (options.onProgress) {
-              options.onProgress({
-                phase: 'vertices',
-                type: vertexType,
-                processed: i + batch.length,
-                total: vertexArray.length,
-                percentage: Math.round(((i + batch.length) / vertexArray.length) * 100)
-              });
-            }
-          }
-        }
+        vertexCount = await this.loadVertices(
+          graphData.vertices,
+          queryGenerator,
+          graphName,
+          batchSize,
+          options
+        );
 
         // Load edges
         for (const [edgeType, edgeArray] of Object.entries(graphData.edges)) {
@@ -206,6 +177,66 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
         // Release connection back to pool
         await this.queryExecutor.releaseConnection(connection);
       }
+  }
+
+  /**
+   * Load vertices into the graph database
+   *
+   * @param vertices - Vertices to load, grouped by type
+   * @param queryGenerator - Cypher query generator
+   * @param graphName - Graph name
+   * @param batchSize - Batch size for loading
+   * @param options - Load options
+   * @returns Number of vertices loaded
+   */
+  private async loadVertices(
+    vertices: Record<string, any[]>,
+    queryGenerator: CypherQueryGenerator,
+    graphName: string,
+    batchSize: number,
+    options: LoadOptions
+  ): Promise<number> {
+    let vertexCount = 0;
+
+    // Process each vertex type
+    for (const [vertexType, vertexArray] of Object.entries(vertices)) {
+      if (!vertexArray || !Array.isArray(vertexArray) || vertexArray.length === 0) {
+        continue;
+      }
+
+      // Process vertices in batches
+      for (let i = 0; i < vertexArray.length; i += batchSize) {
+        const batch = vertexArray.slice(i, i + batchSize);
+
+        // Set vertex data in the age_params table
+        await this.queryExecutor.executeSQL(`
+          INSERT INTO age_schema_client.age_params (key, value)
+          VALUES ('vertex_${vertexType}', $1::jsonb)
+          ON CONFLICT (key) DO UPDATE SET value = $1::jsonb;
+        `, [JSON.stringify(batch)]);
+
+        // Generate and execute the query for creating vertices
+        const query = queryGenerator.generateCreateVerticesQuery(vertexType, graphName);
+        const result = await this.queryExecutor.executeSQL(query);
+
+        // Update vertex count
+        const createdVertices = parseInt(result.rows[0].created_vertices, 10) || 0;
+        vertexCount += createdVertices;
+
+        // Report progress if callback is provided
+        if (options.onProgress) {
+          options.onProgress({
+            phase: 'vertices',
+            type: vertexType,
+            processed: i + batch.length,
+            total: vertexArray.length,
+            percentage: Math.round(((i + batch.length) / vertexArray.length) * 100)
+          });
+        }
+      }
+    }
+
+    return vertexCount;
   }
 
   /**
