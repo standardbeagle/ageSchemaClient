@@ -62,8 +62,9 @@ beforeAll(async () => {
       // Register the schema for cleanup
       resourceRegistry.registerSchema(testSchema, queryExecutor);
 
-      // Set the search path to use our test schema first
-      await queryExecutor.executeSQL(`SET search_path TO ${testSchema}, public`);
+      // Note: We only set the test schema in search_path
+      // ag_catalog is already included by PgConnectionManager
+      await queryExecutor.executeSQL(`SET search_path TO ${testSchema}, public, ag_catalog`);
     } catch (error) {
       console.error(`Error creating test schema: ${error.message}`);
       throw error;

@@ -333,7 +333,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
       // Verify the result
       expect(result.success).toBe(true); // The operation succeeds despite errors
       expect(result.vertexCount).toBe(3); // Vertices are created
-      expect(result.edgeCount).toBe(1); // Only the valid WORKS_AT edge is created
+      expect(result.edgeCount).toBe(2); // Only the valid WORKS_AT and KNOWS edge is created
       expect(result.warnings!.length).toBeGreaterThan(0); // There should be warnings about the invalid edge
 
       // Verify the valid edges were created

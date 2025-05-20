@@ -92,7 +92,26 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
         properties: {},
         toCypher: () => {
           const labelStr = label ? `:${String(label)}` : '';
-          return `(${alias}${labelStr})`;
+
+          // Add property constraints if any
+          let propsStr = '';
+          if (vertexPattern.properties && Object.keys(vertexPattern.properties).length > 0) {
+            const props = Object.entries(vertexPattern.properties)
+              .map(([key, value]) => {
+                if (typeof value === 'string') {
+                  return `${key}: "${value}"`;
+                } else if (value === null) {
+                  return `${key}: null`;
+                } else {
+                  return `${key}: ${value}`;
+                }
+              })
+              .join(', ');
+
+            propsStr = ` {${props}}`;
+          }
+
+          return `(${alias}${labelStr}${propsStr})`;
         }
       };
 
@@ -139,7 +158,26 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
         const sourceStr = sourceVertex.toCypher();
         const targetStr = targetVertex.toCypher();
         const labelStr = edgeLabel ? `:${String(edgeLabel)}` : '';
-        return `${sourceStr}-[${edgeAliasToUse}${labelStr}]->${targetStr}`;
+
+        // Add property constraints if any
+        let propsStr = '';
+        if (edgePattern.properties && Object.keys(edgePattern.properties).length > 0) {
+          const props = Object.entries(edgePattern.properties)
+            .map(([key, value]) => {
+              if (typeof value === 'string') {
+                return `${key}: "${value}"`;
+              } else if (value === null) {
+                return `${key}: null`;
+              } else {
+                return `${key}: ${value}`;
+              }
+            })
+            .join(', ');
+
+          propsStr = ` {${props}}`;
+        }
+
+        return `${sourceStr}-[${edgeAliasToUse}${labelStr}${propsStr}]->${targetStr}`;
       }
     };
 

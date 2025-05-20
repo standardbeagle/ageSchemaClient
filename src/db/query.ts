@@ -515,12 +515,6 @@ export class QueryExecutor {
         }
 
         try {
-          // Load AGE extension - use direct query without prepared statement
-          await this.connection.query("LOAD 'age'");
-
-          // Set search path to include ag_catalog - use direct query without prepared statement
-          await this.connection.query("SET search_path TO ag_catalog, \"$user\", public");
-
           // Verify search path
           const searchPathResult = await this.connection.query('SHOW search_path');
           const currentSearchPath = searchPathResult.rows[0].search_path;

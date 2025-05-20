@@ -83,8 +83,9 @@ describe('Apache AGE Single Function Data Loading', () => {
       return;
     }
 
-    // 1. Set search path
-    await queryExecutor.executeSQL(`SET search_path = ag_catalog, public`);
+    // Note: ag_catalog is already in search_path thanks to PgConnectionManager
+    // We only need to ensure our test schema is included
+    await queryExecutor.executeSQL(`SET search_path TO ${TEST_SCHEMA}, public, ag_catalog`);
 
     // 2. Create a table to store graph data
     await queryExecutor.executeSQL(`

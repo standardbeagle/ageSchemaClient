@@ -92,9 +92,6 @@ export class CypherQueryGenerator<T extends SchemaDefinition> {
 
     // Wrap the query in the PostgreSQL function call
     return `
-      LOAD 'age';
-      SET search_path = ag_catalog, "$user", public;
-
       SELECT * FROM cypher('${graphName}', $$
         ${query.trim()}
       $$) AS (created_vertices agtype);
@@ -137,9 +134,6 @@ export class CypherQueryGenerator<T extends SchemaDefinition> {
 
     // Wrap the query in the PostgreSQL function call
     return `
-      LOAD 'age';
-      SET search_path = ag_catalog, "$user", public;
-
       SELECT * FROM cypher('${graphName}', $$
         ${query.trim()}
       $$) AS (created_edges agtype);
@@ -185,9 +179,6 @@ export class CypherQueryGenerator<T extends SchemaDefinition> {
    */
   generateVertexExistenceQuery(graphName: string): string {
     return `
-      LOAD 'age';
-      SET search_path = ag_catalog, "$user", public;
-
       SELECT * FROM cypher('${graphName}', $$
         MATCH (v)
         RETURN id(v) AS vertex_id
@@ -204,7 +195,6 @@ export class CypherQueryGenerator<T extends SchemaDefinition> {
    */
   generateValidateEdgeEndpointsQuery(edgeTable: string, graphName: string): string {
     return `
-      LOAD 'age';
       WITH vertex_ids AS (
         SELECT * FROM cypher('${graphName}', $$
           MATCH (v)

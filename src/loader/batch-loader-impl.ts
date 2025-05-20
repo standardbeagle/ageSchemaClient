@@ -503,7 +503,15 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             const result = await this.queryExecutor.executeSQL(query);
 
             // Update vertex count
-            const createdVertices = parseInt(result.rows[0].created_vertices, 10) || 0;
+            let createdVertices = 0;
+            if (result.rows && result.rows.length > 0 && result.rows[0].created_vertices !== undefined && result.rows[0].created_vertices !== null) {
+              const rawValue = result.rows[0].created_vertices;
+              if (typeof rawValue === 'object' && rawValue !== null && 'value' in rawValue) {
+                createdVertices = parseInt(String(rawValue.value), 10) || 0;
+              } else {
+                createdVertices = parseInt(String(rawValue), 10) || 0;
+              }
+            }
             vertexCount += createdVertices;
 
             // Check if all vertices were created
@@ -722,7 +730,15 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
               const result = await this.queryExecutor.executeSQL(query);
 
               // Update edge count
-              const createdEdges = parseInt(result.rows[0].created_edges, 10) || 0;
+              let createdEdges = 0;
+              if (result.rows && result.rows.length > 0 && result.rows[0].created_edges !== undefined && result.rows[0].created_edges !== null) {
+                const rawValue = result.rows[0].created_edges;
+                if (typeof rawValue === 'object' && rawValue !== null && 'value' in rawValue) {
+                  createdEdges = parseInt(String(rawValue.value), 10) || 0;
+                } else {
+                  createdEdges = parseInt(String(rawValue), 10) || 0;
+                }
+              }
               edgeCount += createdEdges;
 
               // Update processed count

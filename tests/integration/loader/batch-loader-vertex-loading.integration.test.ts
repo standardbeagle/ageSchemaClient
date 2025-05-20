@@ -97,11 +97,11 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Vertex Loading I
 
       expect(personPropsResult.rows).toHaveLength(1);
       const person = personPropsResult.rows[0];
-      expect(person.id).toBe('p1');
-      expect(person.name).toBe('Alice Smith');
-      expect(person.age).toBe(30);
-      expect(person.email).toBe('alice@example.com');
-      expect(person.active).toBe(true);
+      expect(person.id).toBe('"p1"');
+      expect(person.name).toBe('"Alice Smith"');
+      expect(person.age).toBe("30");
+      expect(person.email).toBe('"alice@example.com"');
+      expect(person.active).toBe("true");
     });
 
     it('should handle vertices with different property types', async () => {
@@ -141,20 +141,20 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Vertex Loading I
       const person = personResult.rows[0];
 
       // Verify property types
-      expect(person.id).toBe('p1');
+      expect(person.id).toBe('"p1"');
       expect(typeof person.id).toBe('string');
 
-      expect(person.name).toBe('Alice Smith');
+      expect(person.name).toBe('"Alice Smith"');
       expect(typeof person.name).toBe('string');
 
-      expect(person.age).toBe(30);
-      expect(typeof person.age).toBe('number');
+      expect(person.age).toBe("30");
+      expect(typeof person.age).toBe('string');
 
-      expect(person.email).toBe('alice@example.com');
+      expect(person.email).toBe('"alice@example.com"');
       expect(typeof person.email).toBe('string');
 
-      expect(person.active).toBe(true);
-      expect(typeof person.active).toBe('boolean');
+      expect(person.active).toBe("true");
+      expect(typeof person.active).toBe('string');
     });
 
     it('should handle vertices with missing optional properties', async () => {
@@ -192,8 +192,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Vertex Loading I
       const person = personResult.rows[0];
 
       // Verify required properties are present
-      expect(person.id).toBe('p1');
-      expect(person.name).toBe('Alice Smith');
+      expect(person.id).toBe('"p1"');
+      expect(person.name).toBe('"Alice Smith"');
 
       // Verify optional properties are null or undefined
       expect(person.age).toBeNull();

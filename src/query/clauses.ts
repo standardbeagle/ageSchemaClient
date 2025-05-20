@@ -40,14 +40,14 @@ export class MatchClause<
   ) {}
 
   /**
-   * Add property constraint
+   * Add property constraint to the vertex pattern
    *
    * @param property - Property name
    * @param operator - Operator
    * @param value - Value
    * @returns This match clause
    */
-  where(property: keyof T['vertices'][L]['properties'], operator: string, value: any): this {
+  constraint(property: keyof T['vertices'][L]['properties'], operator: string, value: any): this {
     // Add property to vertex pattern
     if (!this.vertexPattern.properties) {
       this.vertexPattern.properties = {};
@@ -55,6 +55,19 @@ export class MatchClause<
 
     this.vertexPattern.properties[property as string] = value;
 
+    return this;
+  }
+
+  /**
+   * Add WHERE clause
+   *
+   * @param condition - Condition expression
+   * @param params - Parameters
+   * @returns This match clause
+   */
+  where(condition: string, params?: Record<string, any>): this {
+    // Add WHERE clause to the query builder
+    this.queryBuilder.where(condition, params);
     return this;
   }
 
@@ -236,27 +249,34 @@ export class EdgeMatchClause<T extends SchemaDefinition> implements IEdgeMatchCl
   ) {}
 
   /**
-   * Add property constraint to the edge or a WHERE clause
+   * Add property constraint to the edge pattern
    *
-   * @param propertyOrCondition - Property name or condition expression
-   * @param operatorOrParams - Operator or parameters
-   * @param value - Value (optional)
+   * @param property - Property name
+   * @param operator - Operator
+   * @param value - Value
    * @returns This edge match clause
    */
-  where(propertyOrCondition: string, operatorOrParams?: string | Record<string, any>, value?: any): this {
-    if (typeof operatorOrParams === 'string' && value !== undefined) {
-      // This is a property constraint
-      // Add property to edge pattern
-      if (!this.edgePattern.properties) {
-        this.edgePattern.properties = {};
-      }
-
-      this.edgePattern.properties[propertyOrCondition] = value;
-    } else {
-      // This is a WHERE clause
-      this.queryBuilder.where(propertyOrCondition, operatorOrParams as Record<string, any>);
+  constraint(property: string, operator: string, value: any): this {
+    // Add property to edge pattern
+    if (!this.edgePattern.properties) {
+      this.edgePattern.properties = {};
     }
 
+    this.edgePattern.properties[property] = value;
+
+    return this;
+  }
+
+  /**
+   * Add WHERE clause
+   *
+   * @param condition - Condition expression
+   * @param params - Parameters
+   * @returns This edge match clause
+   */
+  where(condition: string, params?: Record<string, any>): this {
+    // Add WHERE clause to the query builder
+    this.queryBuilder.where(condition, params);
     return this;
   }
 

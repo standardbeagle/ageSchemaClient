@@ -100,16 +100,24 @@ describe('Vertex Loading Integration Tests', () => {
       return;
     }
 
-    // Create a connection manager
+    // Create a connection manager with proper configuration for AGE
     connectionManager = new PgConnectionManager({
       host: process.env.PGHOST || 'localhost',
       port: parseInt(process.env.PGPORT || '5432'),
       database: process.env.PGDATABASE || 'age-integration',
       user: process.env.PGUSER || 'age',
       password: process.env.PGPASSWORD || 'agepassword',
-      max: 1,
-      idleTimeoutMillis: 1000,
-      connectionTimeoutMillis: 1000
+      pool: {
+        max: 5,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+      },
+      // PostgreSQL-specific options
+      pgOptions: {
+        // Ensure ag_catalog is in the search path for Apache AGE
+        searchPath: 'ag_catalog, "$user", public',
+        applicationName: 'ageSchemaClient-vertex-loading-test',
+      },
     });
 
     // Create a query executor

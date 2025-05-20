@@ -91,8 +91,8 @@ describe('PgConnectionManager Integration', () => {
       expect(result.rows).toHaveLength(1);
       expect(result.rows[0].age_available).toBe(true);
 
-      // Try to load AGE extension
-      await queryExecutor.executeSQL('LOAD \'age\';');
+      // AGE extension is already loaded by PgConnectionManager
+      // No need to manually load it
 
       // Try to create a test graph
       const graphName = `test_graph_${Math.random().toString(36).substring(2, 8)}`;

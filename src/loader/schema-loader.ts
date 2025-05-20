@@ -854,10 +854,6 @@ export class SchemaLoader<T extends SchemaDefinition> {
         }
       }
 
-      // Ensure AGE extension is loaded
-      await this.queryExecutor.executeSQL(`LOAD 'age';`, [], { transaction });
-      await this.queryExecutor.executeSQL(`SET search_path = ag_catalog, "$user", public;`, [], { transaction });
-
       // Get vertex data from the temporary table
       const vertexDataResult = await this.queryExecutor.executeSQL(`
         SELECT jsonb_agg(jsonb_build_object(
@@ -1147,10 +1143,6 @@ export class SchemaLoader<T extends SchemaDefinition> {
           this.logger.debug(`Inserted ${processedCount} edges for ${edgeType} sequentially`);
         }
       }
-
-      // Ensure AGE extension is loaded
-      await this.queryExecutor.executeSQL(`LOAD 'age';`, [], { transaction });
-      await this.queryExecutor.executeSQL(`SET search_path = ag_catalog, "$user", public;`, [], { transaction });
 
       // Validate edge endpoints
       const validateQuery = this.cypherQueryGenerator.generateValidateEdgeEndpointsQuery(

@@ -304,18 +304,14 @@ describe('QueryBuilder Unit Tests', () => {
   it('should handle vertex property constraints in match clause', () => {
     const cypherQuery = queryBuilder
       .match('Movie', 'm')
-      .where('title', '=', 'The Godfather')
+      .constraint('title', '=', 'The Godfather')
       .done()
       .return('m.title AS title', 'm.year AS year')
       .toCypher();
 
     // The implementation should add property constraints to the vertex pattern
-    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    expect(cypherQuery).toContain('MATCH (m:Movie {title: "The Godfather"})');
     expect(cypherQuery).toContain('RETURN m.title AS title, m.year AS year');
-
-    // Check that the property constraint is added to the vertex pattern
-    // Note: This test might need adjustment based on how property constraints are implemented
-    // in the actual MatchClause.where method
   });
 
   // Test: Bidirectional relationship
@@ -424,18 +420,15 @@ describe('QueryBuilder Unit Tests', () => {
   it('should add property constraints to vertex pattern', () => {
     const cypherQuery = queryBuilder
       .match('Movie', 'm')
-      .where('genre', '=', 'Drama')
-      .where('rating', '>=', 8.5)
+      .constraint('genre', '=', 'Drama')
+      .constraint('rating', '>=', 8.5)
       .done()
       .return('m.title AS title')
       .toCypher();
 
     // The implementation should add property constraints to the vertex pattern
-    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    expect(cypherQuery).toContain('MATCH (m:Movie {genre: "Drama", rating: 8.5})');
     expect(cypherQuery).toContain('RETURN m.title AS title');
-
-    // Note: The actual implementation of property constraints in the vertex pattern
-    // might vary, so this test might need adjustment
   });
 
   // Test: Query with property constraints in edge pattern
@@ -502,5 +495,112 @@ describe('QueryBuilder Unit Tests', () => {
     expect(cypherQuery).toContain('MATCH (m:Movie)');
     expect(cypherQuery).toContain('MATCH (p)-[e:DIRECTED]->(m)');
     expect(cypherQuery).toContain('RETURN count(e) AS count');
+  });
+
+  // Test: Add a single property constraint to an edge
+  it('should add a single property constraint to an edge', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .done()
+      .match('Movie', 'm')
+      .done()
+      .match('p', 'DIRECTED', 'm', 'e')
+      .constraint('year', '=', 2020)
+      .done()
+      .return('p.name AS director', 'm.title AS movie')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person)');
+    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    // The property constraint should be added to the edge pattern
+    expect(cypherQuery).toContain('MATCH (p)-[e:DIRECTED {year: 2020}]->(m)');
+    expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie');
+  });
+
+  // Test: Add multiple property constraints to an edge
+  it('should add multiple property constraints to an edge', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .done()
+      .match('Movie', 'm')
+      .done()
+      .match('p', 'DIRECTED', 'm', 'e')
+      .constraint('year', '=', 2020)
+      .constraint('role', '=', 'Director')
+      .done()
+      .return('p.name AS director', 'm.title AS movie')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person)');
+    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    // Both property constraints should be added to the edge pattern
+    expect(cypherQuery).toContain('MATCH (p)-[e:DIRECTED {year: 2020, role: "Director"}]->(m)');
+    expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie');
+  });
+
+  // Test: Use where method with a condition string on EdgeMatchClause
+  it('should use where method with a condition string on EdgeMatchClause', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .done()
+      .match('Movie', 'm')
+      .done()
+      .match('p', 'DIRECTED', 'm', 'e')
+      .where('e.year > $year', { year: 2010 })
+      .done()
+      .return('p.name AS director', 'm.title AS movie')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person)');
+    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    expect(cypherQuery).toContain('MATCH (p)-[e:DIRECTED]->(m)');
+    // The condition should be added as a WHERE clause
+    expect(cypherQuery).toContain('WHERE e.year > $year');
+    expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie');
+    expect(queryBuilder.getParameters()).toEqual({ year: 2010 });
+  });
+
+  // Test: Combine property constraints with condition strings on EdgeMatchClause
+  it('should combine property constraints with condition strings on EdgeMatchClause', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .done()
+      .match('Movie', 'm')
+      .done()
+      .match('p', 'DIRECTED', 'm', 'e')
+      .constraint('role', '=', 'Director')
+      .where('e.year > $year', { year: 2010 })
+      .done()
+      .return('p.name AS director', 'm.title AS movie')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person)');
+    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    // The property constraint should be added to the edge pattern
+    expect(cypherQuery).toContain('MATCH (p)-[e:DIRECTED {role: "Director"}]->(m)');
+    // The condition should be added as a WHERE clause
+    expect(cypherQuery).toContain('WHERE e.year > $year');
+    expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie');
+    expect(queryBuilder.getParameters()).toEqual({ year: 2010 });
+  });
+
+  // Test: Handle null values in edge property constraints
+  it('should handle null values in edge property constraints', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .done()
+      .match('Movie', 'm')
+      .done()
+      .match('p', 'DIRECTED', 'm', 'e')
+      .constraint('year', '=', null)
+      .done()
+      .return('p.name AS director', 'm.title AS movie')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person)');
+    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    // The null property constraint should be added to the edge pattern
+    expect(cypherQuery).toContain('MATCH (p)-[e:DIRECTED {year: null}]->(m)');
+    expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie');
   });
 });

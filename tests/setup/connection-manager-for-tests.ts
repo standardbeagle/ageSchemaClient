@@ -157,17 +157,16 @@ export class ConnectionManagerForTests {
    */
   private async afterConnectHook(connection: Connection, _event: ConnectionEvent): Promise<void> {
     try {
-      // Load AGE extension
-      await connection.query('LOAD \'age\';');
+      // Note: AGE extension loading and search_path are now handled by PgConnectionManager
+      // We only need to verify that everything is set up correctly
 
-      // Verify search_path includes ag_catalog
+      // Verify search_path includes ag_catalog (for debugging purposes only)
       const result = await connection.query('SHOW search_path');
       const searchPath = result.rows[0].search_path;
 
       if (!searchPath.includes('ag_catalog')) {
         console.warn(`Warning: search_path does not include ag_catalog: ${searchPath}`);
-        // Set search_path to include ag_catalog
-        await connection.query('SET search_path TO ag_catalog, "$user", public');
+        console.warn('This should have been set automatically by the PgConnectionManager');
       }
     } catch (error) {
       console.error(`Error in afterConnect hook: ${(error as Error).message}`);

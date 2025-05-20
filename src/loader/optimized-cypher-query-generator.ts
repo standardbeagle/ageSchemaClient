@@ -44,12 +44,6 @@ export interface OptimizedCypherQueryGeneratorOptions {
    * @default true
    */
   useOptimizedBatchTemplates?: boolean;
-
-  /**
-   * Whether to include LOAD 'age' and SET search_path in the generated queries
-   * @default false
-   */
-  includeAgeSetup?: boolean;
 }
 
 /**
@@ -75,11 +69,6 @@ export class OptimizedCypherQueryGenerator<T extends SchemaDefinition> {
    * Whether to use optimized batch templates
    */
   private useOptimizedBatchTemplates: boolean;
-
-  /**
-   * Whether to include LOAD 'age' and SET search_path in the generated queries
-   */
-  private includeAgeSetup: boolean;
 
   /**
    * Create a new OptimizedCypherQueryGenerator
@@ -134,13 +123,8 @@ export class OptimizedCypherQueryGenerator<T extends SchemaDefinition> {
       ? this.addCommentsToQuery(template, vertexDef, 'vertex')
       : template;
 
-    // Wrap the query in the PostgreSQL function call
-    const ageSetup = this.includeAgeSetup
-      ? `LOAD 'age';\nSET search_path = ag_catalog, "$user", public;\n\n`
-      : '';
-
     return `
-      ${ageSetup}SELECT * FROM cypher('${graphName}', $$
+      SELECT * FROM cypher('${graphName}', $$
         ${query.trim()}
       $$) AS (created_vertices agtype);
     `;
@@ -199,13 +183,8 @@ export class OptimizedCypherQueryGenerator<T extends SchemaDefinition> {
       ? this.addCommentsToQuery(template, edgeDef, 'edge')
       : template;
 
-    // Wrap the query in the PostgreSQL function call
-    const ageSetup = this.includeAgeSetup
-      ? `LOAD 'age';\nSET search_path = ag_catalog, "$user", public;\n\n`
-      : '';
-
     return `
-      ${ageSetup}SELECT * FROM cypher('${graphName}', $$
+      SELECT * FROM cypher('${graphName}', $$
         ${query.trim()}
       $$) AS (created_edges agtype);
     `;

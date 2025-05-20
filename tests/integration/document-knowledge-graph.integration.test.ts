@@ -224,7 +224,7 @@ const testData = {
 
 describe('Document Knowledge Graph Integration', () => {
   let ageAvailable = false;
-  let schemaLoader: SchemaLoader;
+  let schemaLoader: SchemaLoader<typeof documentKnowledgeSchema>;
 
   // Before all tests, check if AGE is available and create the test graph
   beforeAll(async () => {
@@ -238,7 +238,7 @@ describe('Document Knowledge Graph Integration', () => {
 
     try {
       // Create the schema loader
-      schemaLoader = new SchemaLoader(documentKnowledgeSchema, queryExecutor, {
+      schemaLoader = new SchemaLoader<typeof documentKnowledgeSchema>(documentKnowledgeSchema, queryExecutor, {
         validateBeforeLoad: true,
         defaultGraphName: DOCUMENT_KNOWLEDGE_GRAPH,
         defaultBatchSize: 100
@@ -347,20 +347,17 @@ describe('Document Knowledge Graph Integration', () => {
 
     // Query sections in a document using edge connections
     const result = await queryBuilder
-      .withAgeParam('docTitle', 'params')
-      .match('Document', 'd')
-      .where('d.title = params')
-      .done()
-      .match('Document', 'd1')
-      .where('d1.title = params')
-      .outgoing('CONTAINS', 'c', 'Section', 's')
-      .done()
-      .return('d1.title AS document', 's.title AS section', 's.position AS section_order')
+      .withAgeParam('docTitle', 'params') // params will hold the document title
+      .match('Document', 'd') // Match a document 'd'
+      .outgoing('CONTAINS', 'c', 'Section', 's') // Find sections 's' it contains
+      .done() // Done with the MATCH clause, back to IQueryBuilder
+      .where('d.title = params') // Filter where the document d's title is the one we set in params
+      .return('d.title AS document', 's.title AS section', 's.position AS section_order')
       .orderBy('s.position', OrderDirection.ASC)
       .execute();
 
     // Verify results
-    expect(result.rows.length).toBe(10);
+    expect(result.rows.length).toBe(3); // Document 'doc1' has 3 sections
     expect(JSON.parse(result.rows[0].section)).toBe('What are Graph Databases?');
     // The order of sections may vary, so we don't check specific indices
   });
@@ -413,19 +410,16 @@ describe('Document Knowledge Graph Integration', () => {
     // Query to find summaries related to a specific concept
     const result = await queryBuilder
       .withAgeParam('conceptName', 'params')
-      .match('Concept', 'c')
-      .where('c.name = params')
-      .done()
-      .match('Summary', 's')
-      .outgoing('RELATES_TO', 'r1', 'Concept', 'c1')
-      .where('c1.name = params')
-      .done()
+      .match('Summary', 's') // Start match from Summary
+      .outgoing('RELATES_TO', 'r1', 'Concept', 'c1') // (s:Summary)-[r1:RELATES_TO]->(c1:Concept)
+      .done() // Done with the MATCH clause
+      .where('c1.name = params') // Filter where the concept c1's name is the one from params
       .return('c1.name AS concept', 's.content AS summary', 'r1.relevance AS relevance')
       .orderBy('r1.relevance', OrderDirection.DESC)
       .execute();
 
     // Verify results
-    expect(result.rows.length).toBe(4);
+    expect(result.rows.length).toBe(1); // Test data has one summary ('sum1') related to 'con1' ('Graph Database')
     expect(JSON.parse(result.rows[0].concept)).toBe('Graph Database');
     expect(JSON.parse(result.rows[0].summary)).toContain('Graph databases store data in nodes and edges');
   });
@@ -449,13 +443,13 @@ describe('Document Knowledge Graph Integration', () => {
       .match('Section', 's')
       .outgoing('RELATES_TO', 'r', 'Concept', 'c')
       .done()
-      .where('r.relevance >= params')
+      .where('r.relevance >= params') // params is relevanceThreshold (0.9)
       .return('s.title AS section', 'c.name AS concept', 'r.relevance AS relevance', 'r.context AS context')
       .orderBy('r.relevance', OrderDirection.DESC)
       .execute();
 
     // Verify results
-    expect(result.rows.length).toBe(1);
+    expect(result.rows.length).toBe(2);
 
     // Parse the results
     const parsedResults = result.rows.map(row => ({
