@@ -56,7 +56,7 @@ export function createOptimizedVertexTemplate(
   const propertyMapping = generateOptimizedPropertyMapping(propertyNames, 'vertex_data');
   
   return `
-    UNWIND ${schemaName}.get_vertices($vertex_type) AS vertex_data
+    UNWIND ${schemaName}.get_vertices('${vertexType}') AS vertex_data
     CREATE (v:${vertexType} {
       id: vertex_data.id,
       ${propertyMapping}
@@ -150,7 +150,7 @@ export function createOptimizedBatchVertexTemplate(
   
   // Use a more efficient approach for batch vertex creation
   return `
-    UNWIND ${schemaName}.get_vertices($vertex_type) AS vertex_data
+    UNWIND ${schemaName}.get_vertices('${vertexType}') AS vertex_data
     CREATE (v:${vertexType} {
       id: vertex_data.id,
       ${propertyMapping}

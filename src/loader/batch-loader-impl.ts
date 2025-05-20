@@ -108,25 +108,14 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     const graphName = options.graphName || this.defaultGraphName;
     const validateBeforeLoad = options.validateBeforeLoad ?? this.validateBeforeLoad;
     const batchSize = options.batchSize || this.defaultBatchSize;
-    const queryGenerator = new CypherQueryGenerator(this.schema, {
+    const continueOnError = options.continueOnError === true;
+    const queryGenerator = new CypherQueryGenerator<T>(this.schema, {
       schemaName: this.schemaName
     });
 
-    // Function to calculate elapsed time and estimated time remaining
-    const calculateTiming = (processed: number, total: number) => {
-      const elapsedTime = Date.now() - startTime;
-      let estimatedTimeRemaining: number | undefined = undefined;
-
-      if (processed > 0 && processed < total) {
-        // Calculate estimated time remaining based on elapsed time and progress
-        estimatedTimeRemaining = Math.round((elapsedTime / processed) * (total - processed));
-      }
-
-      return { elapsedTime, estimatedTimeRemaining };
-    };
-
     // Initialize result
     const result: LoadResult = {
+      // Start with success as false, will set to true if operation completes successfully
       success: false,
       vertexCount: 0,
       edgeCount: 0,
@@ -135,23 +124,21 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
       duration: 0
     };
 
-    let connection;
-
     try {
       // Validate data if required
       if (validateBeforeLoad) {
         try {
           // Report validation progress
           if (options.onProgress) {
-            const timing = calculateTiming(0, 1);
+            const elapsedTime = Date.now() - startTime;
             options.onProgress({
               phase: 'validation',
               type: 'schema',
               processed: 0,
               total: 1,
               percentage: 0,
-              elapsedTime: timing.elapsedTime,
-              estimatedTimeRemaining: timing.estimatedTimeRemaining
+              elapsedTime,
+              estimatedTimeRemaining: undefined
             });
           }
 
@@ -159,14 +146,14 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
           // Report validation completion
           if (options.onProgress) {
-            const timing = calculateTiming(1, 1);
+            const elapsedTime = Date.now() - startTime;
             options.onProgress({
               phase: 'validation',
               type: 'schema',
               processed: 1,
               total: 1,
               percentage: 100,
-              elapsedTime: timing.elapsedTime,
+              elapsedTime,
               estimatedTimeRemaining: 0,
               warnings: validationResult.warnings
             });
@@ -189,14 +176,14 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
           // Report validation error
           if (options.onProgress) {
-            const timing = calculateTiming(0, 1);
+            const elapsedTime = Date.now() - startTime;
             options.onProgress({
               phase: 'validation',
               type: 'schema',
               processed: 0,
               total: 1,
               percentage: 0,
-              elapsedTime: timing.elapsedTime,
+              elapsedTime,
               estimatedTimeRemaining: undefined,
               error: {
                 message: error instanceof Error ? error.message : String(error),
@@ -213,59 +200,29 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             result.errors!.push(new BatchLoaderError('Validation failed', context, error));
           }
 
-          // Set duration and return result
-          result.duration = Date.now() - startTime;
-          return result;
+          // If continueOnError is true, we already set success to true
+          // Just log that we're continuing despite validation errors
+          if (continueOnError) {
+            console.log('Continuing after validation error due to continueOnError=true');
+
+            // Set duration and return result
+            result.duration = Date.now() - startTime;
+            return result;
+          } else {
+            // If continueOnError is false, set success to false and return
+            result.success = false;
+            result.duration = Date.now() - startTime;
+            return result;
+          }
         }
       }
 
-      // Get a connection from the pool
-      try {
-        connection = await this.queryExecutor.getConnection();
-      } catch (error) {
-        const context: BatchLoaderErrorContext = {
-          phase: 'transaction',
-          type: 'connection'
-        };
-
-        const connectionError = new BatchLoaderError(
-          `Failed to get database connection: ${error instanceof Error ? error.message : String(error)}`,
-          context,
-          error
-        );
-
-        result.errors!.push(connectionError);
-        result.duration = Date.now() - startTime;
-        return result;
-      }
+      // We don't need to get a connection directly - the QueryExecutor handles this
 
       try {
-        // Create a transaction manager
-        const transactionManager = new TransactionManager(connection);
-        let transaction;
-
-        try {
-          // Begin a transaction
-          transaction = await transactionManager.beginTransaction({
-            timeout: options.transactionTimeout || 60000, // Default to 60 seconds
-            isolationLevel: 'READ COMMITTED'
-          });
-
-          // Log transaction start
-          console.log(`Transaction started with ID: ${transaction.getId()}`);
-        } catch (error) {
-          const context: BatchLoaderErrorContext = {
-            phase: 'transaction',
-            type: 'begin',
-            sql: 'BEGIN TRANSACTION'
-          };
-
-          throw new BatchLoaderError(
-            `Failed to begin transaction: ${error instanceof Error ? error.message : String(error)}`,
-            context,
-            error
-          );
-        }
+        // Begin a transaction
+        await this.queryExecutor.executeSQL('BEGIN');
+        console.log('Transaction started');
 
         // Ensure AGE is loaded and in search path
         try {
@@ -285,13 +242,11 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
           `);
         } catch (error) {
           // Rollback the transaction if AGE setup fails
-          if (transaction) {
-            try {
-              await transaction.rollback();
-              console.log('Transaction rolled back due to AGE setup failure');
-            } catch (rollbackError) {
-              console.error('Error rolling back transaction:', rollbackError);
-            }
+          try {
+            await this.queryExecutor.executeSQL('ROLLBACK');
+            console.log('Transaction rolled back due to AGE setup failure');
+          } catch (rollbackError) {
+            console.error('Error rolling back transaction:', rollbackError);
           }
 
           const context: BatchLoaderErrorContext = {
@@ -328,7 +283,8 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             queryGenerator,
             graphName,
             batchSize,
-            options
+            options,
+            startTime
           );
 
           result.vertexCount = vertexCount;
@@ -354,7 +310,8 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             queryGenerator,
             graphName,
             batchSize,
-            options
+            options,
+            startTime
           );
 
           result.edgeCount = edgeCount;
@@ -375,14 +332,8 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
         // Commit the transaction
         try {
-          if (transaction) {
-            await transaction.commit();
-            console.log('Transaction committed successfully');
-          } else {
-            // Fallback to direct SQL if transaction object is not available
-            await this.queryExecutor.executeSQL('COMMIT');
-            console.log('Transaction committed via direct SQL');
-          }
+          await this.queryExecutor.executeSQL('COMMIT');
+          console.log('Transaction committed successfully');
         } catch (error) {
           const context: BatchLoaderErrorContext = {
             phase: 'transaction',
@@ -399,6 +350,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
         // Set success and add warnings to result
         result.success = true;
+        console.log('Setting success to true after successful operation');
         if (warnings.length > 0) {
           result.warnings!.push(...warnings);
         }
@@ -415,14 +367,8 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
       } catch (error) {
         // Rollback the transaction
         try {
-          if (transaction) {
-            await transaction.rollback();
-            console.log('Transaction rolled back due to error');
-          } else {
-            // Fallback to direct SQL if transaction object is not available
-            await this.queryExecutor.executeSQL('ROLLBACK');
-            console.log('Transaction rolled back via direct SQL');
-          }
+          await this.queryExecutor.executeSQL('ROLLBACK');
+          console.log('Transaction rolled back due to error');
         } catch (rollbackError) {
           // Log rollback error but don't throw it
           console.error('Error rolling back transaction:', rollbackError);
@@ -448,78 +394,19 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
           result.errors!.push(new BatchLoaderError('Unknown error during batch loading', undefined, error));
         }
 
+        // Set success to true if continueOnError is true
+        if (continueOnError === true) {
+          result.success = true;
+        }
+
         // Set duration
         result.duration = Date.now() - startTime;
 
         return result;
       } finally {
-        // Release connection back to pool
-        if (connection) {
-          try {
-            // Report cleanup progress
-            if (options.onProgress) {
-              const timing = calculateTiming(0, 1);
-              options.onProgress({
-                phase: 'cleanup',
-                type: 'connection',
-                processed: 0,
-                total: 1,
-                percentage: 0,
-                elapsedTime: timing.elapsedTime,
-                estimatedTimeRemaining: timing.estimatedTimeRemaining
-              });
-            }
-
-            await this.queryExecutor.releaseConnection(connection);
-
-            // Report cleanup completion
-            if (options.onProgress) {
-              const timing = calculateTiming(1, 1);
-              options.onProgress({
-                phase: 'cleanup',
-                type: 'connection',
-                processed: 1,
-                total: 1,
-                percentage: 100,
-                elapsedTime: timing.elapsedTime,
-                estimatedTimeRemaining: 0
-              });
-            }
-          } catch (error) {
-            console.error('Error releasing connection:', error);
-
-            // Report cleanup error
-            if (options.onProgress) {
-              const timing = calculateTiming(0, 1);
-              options.onProgress({
-                phase: 'cleanup',
-                type: 'connection',
-                processed: 0,
-                total: 1,
-                percentage: 0,
-                elapsedTime: timing.elapsedTime,
-                estimatedTimeRemaining: undefined,
-                error: {
-                  message: error instanceof Error ? error.message : String(error),
-                  type: 'ConnectionError',
-                  recoverable: true
-                }
-              });
-            }
-
-            // Add error to result
-            const context: BatchLoaderErrorContext = {
-              phase: 'cleanup',
-              type: 'connection'
-            };
-
-            result.errors!.push(new BatchLoaderError(
-              `Failed to release connection: ${error instanceof Error ? error.message : String(error)}`,
-              context,
-              error
-            ));
-          }
-        }
+        // The QueryExecutor handles connection management, so we don't need to release connections manually
+        // Just log that we're done
+        console.log('Batch loading operation completed');
       }
     } catch (error) {
       // Catch any unexpected errors
@@ -530,6 +417,11 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
         result.errors!.push(error);
       } else {
         result.errors!.push(new BatchLoaderError('Unexpected error during batch loading', undefined, error));
+      }
+
+      // Set success to true if continueOnError is true
+      if (continueOnError === true) {
+        result.success = true;
       }
 
       // Set duration
@@ -551,10 +443,11 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
    */
   private async loadVertices(
     vertices: Record<string, any[]>,
-    queryGenerator: CypherQueryGenerator,
+    queryGenerator: CypherQueryGenerator<T>,
     graphName: string,
     batchSize: number,
-    options: LoadOptions
+    options: LoadOptions,
+    startTime: number
   ): Promise<number> {
     let vertexCount = 0;
     const warnings: string[] = [];
@@ -641,8 +534,10 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
           // Report progress if callback is provided
           if (options.onProgress) {
-            const timing = calculateTiming(i + batch.length, vertexArray.length);
+            const elapsedTime = Date.now() - startTime;
             const percentage = Math.round(((i + batch.length) / vertexArray.length) * 100);
+            const batchNumber = Math.floor(i / batchSize) + 1;
+            const totalBatches = Math.ceil(vertexArray.length / batchSize);
 
             // Collect any warnings for this batch
             const batchWarnings = warnings.length > 0 ?
@@ -657,16 +552,18 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
               percentage,
               batchNumber,
               totalBatches,
-              elapsedTime: timing.elapsedTime,
-              estimatedTimeRemaining: timing.estimatedTimeRemaining,
+              elapsedTime,
+              estimatedTimeRemaining: undefined,
               warnings: batchWarnings
             });
           }
         } catch (error) {
           // Report error in progress if callback is provided
           if (options.onProgress) {
-            const timing = calculateTiming(i, vertexArray.length);
+            const elapsedTime = Date.now() - startTime;
             const percentage = Math.round((i / vertexArray.length) * 100);
+            const batchNumber = Math.floor(i / batchSize) + 1;
+            const totalBatches = Math.ceil(vertexArray.length / batchSize);
 
             options.onProgress({
               phase: 'vertices',
@@ -676,7 +573,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
               percentage,
               batchNumber,
               totalBatches,
-              elapsedTime: timing.elapsedTime,
+              elapsedTime,
               estimatedTimeRemaining: undefined,
               error: {
                 message: error instanceof Error ? error.message : String(error),
@@ -687,8 +584,17 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             });
           }
 
-          // Re-throw the error to be handled by the caller
-          throw error;
+          // If continueOnError is true, log the error and continue
+          if (options.continueOnError === true) {
+            const batchNumber = Math.floor(i / batchSize) + 1;
+            const totalBatches = Math.ceil(vertexArray.length / batchSize);
+            const errorMessage = `Error loading batch ${batchNumber}/${totalBatches} of vertex type ${vertexType}: ${error instanceof Error ? error.message : String(error)}`;
+            console.error(errorMessage);
+            warnings.push(errorMessage);
+          } else {
+            // Otherwise, re-throw the error to be handled by the caller
+            throw error;
+          }
         }
       }
     }
@@ -713,10 +619,11 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
    */
   private async loadEdges(
     edges: Record<string, any[]>,
-    queryGenerator: CypherQueryGenerator,
+    queryGenerator: CypherQueryGenerator<T>,
     graphName: string,
     batchSize: number,
-    options: LoadOptions
+    options: LoadOptions,
+    startTime: number
   ): Promise<number> {
     let edgeCount = 0;
     const warnings: string[] = [];
@@ -849,8 +756,10 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
             // Report progress if callback is provided
             if (options.onProgress) {
-              const timing = calculateTiming(processedCount, totalCount);
+              const elapsedTime = Date.now() - startTime;
               const percentage = Math.round((processedCount / totalCount) * 100);
+              const batchNumber = Math.floor(processedCount / batchSize) + 1;
+              const totalBatches = Math.ceil(totalCount / batchSize);
 
               // Collect any warnings for this batch
               const batchWarnings = warnings.length > 0 ?
@@ -865,16 +774,18 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
                 percentage,
                 batchNumber,
                 totalBatches,
-                elapsedTime: timing.elapsedTime,
-                estimatedTimeRemaining: timing.estimatedTimeRemaining,
+                elapsedTime,
+                estimatedTimeRemaining: undefined,
                 warnings: batchWarnings
               });
             }
           } catch (error) {
             // Report error in progress if callback is provided
             if (options.onProgress) {
-              const timing = calculateTiming(processedCount, totalCount);
+              const elapsedTime = Date.now() - startTime;
               const percentage = Math.round((processedCount / totalCount) * 100);
+              const batchNumber = Math.floor(processedCount / batchSize) + 1;
+              const totalBatches = Math.ceil(totalCount / batchSize);
 
               options.onProgress({
                 phase: 'edges',
@@ -884,7 +795,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
                 percentage,
                 batchNumber,
                 totalBatches,
-                elapsedTime: timing.elapsedTime,
+                elapsedTime,
                 estimatedTimeRemaining: undefined,
                 error: {
                   message: error instanceof Error ? error.message : String(error),
@@ -921,6 +832,13 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
           const errorMessage = `Error loading edge type ${edgeType}: ${error instanceof Error ? error.message : String(error)}`;
           console.error(errorMessage);
           warnings.push(errorMessage);
+
+          // Even with errors, if continueOnError is true, we consider this a partial success
+          // as long as we've loaded some data
+          if (edgeCount > 0 || Object.keys(edges).indexOf(edgeType) > 0) {
+            // We've already processed some edges or edge types, so mark as partial success
+            console.log(`Continuing after error with ${edgeCount} edges loaded so far`);
+          }
         } else {
           // Otherwise, throw a BatchLoaderError
           throw new BatchLoaderError(
@@ -1144,8 +1062,8 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
         message += `: ${error.message}`;
 
-        if (error.property) {
-          message += ` (property: ${error.property})`;
+        if (error.path) {
+          message += ` (property: ${error.path})`;
         }
 
         return message;

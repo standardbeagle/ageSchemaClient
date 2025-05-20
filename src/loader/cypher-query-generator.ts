@@ -97,7 +97,7 @@ export class CypherQueryGenerator<T extends SchemaDefinition> {
 
       SELECT * FROM cypher('${graphName}', $$
         ${query.trim()}
-      $$, '{"vertex_type": "${vertexType}"}') AS (created_vertices agtype);
+      $$) AS (created_vertices agtype);
     `;
   }
 
@@ -142,7 +142,7 @@ export class CypherQueryGenerator<T extends SchemaDefinition> {
 
       SELECT * FROM cypher('${graphName}', $$
         ${query.trim()}
-      $$, '{"edge_type": "${edgeType}"}') AS (created_edges agtype);
+      $$) AS (created_edges agtype);
     `;
   }
 

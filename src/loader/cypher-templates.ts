@@ -148,7 +148,7 @@ export function createParameterizedVertexTemplate(
   const propertyMapping = generatePropertyMapping(propertyNames, 'vertex_data');
   
   return `
-    UNWIND ${schemaName}.get_vertices($vertex_type) AS vertex_data
+    UNWIND ${schemaName}.get_vertices('${vertexType}') AS vertex_data
     CREATE (v:${vertexType} {
       id: vertex_data.id,
       ${propertyMapping}
@@ -185,7 +185,7 @@ export function createParameterizedEdgeTemplate(
   const propertyMapping = generatePropertyMapping(propertyNames, 'edge_data');
   
   return `
-    UNWIND ${schemaName}.get_edges($edge_type) AS edge_data
+    UNWIND ${schemaName}.get_edges('${edgeType}') AS edge_data
     MATCH (from {id: edge_data.from})
     MATCH (to {id: edge_data.to})
     CREATE (from)-[:${edgeType} {

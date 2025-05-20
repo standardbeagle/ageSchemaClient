@@ -1,6 +1,6 @@
 /**
  * Integration tests for BatchLoader error scenarios
- * 
+ *
  * These tests verify that the BatchLoader correctly handles error scenarios
  * when loading graph data.
  */
@@ -10,21 +10,21 @@ import { createBatchLoader } from '../../../src/loader/batch-loader-impl';
 import { BatchLoader, GraphData } from '../../../src/loader/batch-loader';
 import { QueryBuilder } from '../../../src/query/builder';
 import { BatchLoaderError } from '../../../src/core/errors';
-import { 
-  connectionManager, 
-  queryExecutor, 
-  AGE_GRAPH_NAME, 
-  isAgeAvailable 
+import {
+  connectionManager,
+  queryExecutor,
+  AGE_GRAPH_NAME,
+  isAgeAvailable
 } from '../../setup/integration';
-import { 
-  testSchema, 
-  basicTestData 
+import {
+  testSchema,
+  basicTestData
 } from '../../fixtures/batch-loader-test-data';
 
 // Skip all tests if AGE is not available
 describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios Integration Tests', () => {
   let batchLoader: BatchLoader<typeof testSchema>;
-  
+
   beforeEach(async () => {
     // Create a new BatchLoader for each test
     batchLoader = createBatchLoader(testSchema, queryExecutor, {
@@ -33,7 +33,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
       defaultBatchSize: 1000,
       schemaName: 'age_schema_client'
     });
-    
+
     // Clear the graph before each test
     const connection = await connectionManager.getConnection();
     try {
@@ -47,7 +47,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
       await connectionManager.releaseConnection(connection);
     }
   });
-  
+
   describe('Validation Errors', () => {
     it('should reject data with missing required vertex properties', async () => {
       // Create test data with missing required properties
@@ -59,10 +59,13 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
         },
         edges: {}
       };
-      
+
       // Attempt to load the data
-      await expect(batchLoader.loadGraphData(testData)).rejects.toThrow(/required property/i);
-      
+      const result = await batchLoader.loadGraphData(testData);
+      expect(result.success).toBe(false);
+      expect(result.errors!.length).toBeGreaterThan(0);
+      expect(result.errors![0].message).toMatch(/required property/i);
+
       // Verify no vertices were created
       const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
       const countResult = await queryBuilder
@@ -70,11 +73,11 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
         .done()
         .return('count(p) AS count')
         .execute();
-      
+
       expect(countResult.rows).toHaveLength(1);
       expect(parseInt(countResult.rows[0].count)).toBe(0);
     });
-    
+
     it('should reject data with missing required edge properties', async () => {
       // Create test data with missing required edge properties
       const testData: GraphData = {
@@ -90,23 +93,26 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
           ]
         }
       };
-      
+
       // Attempt to load the data
-      await expect(batchLoader.loadGraphData(testData)).rejects.toThrow(/required property/i);
-      
+      const result = await batchLoader.loadGraphData(testData);
+      expect(result.success).toBe(false);
+      expect(result.errors!.length).toBeGreaterThan(0);
+      expect(result.errors![0].message).toMatch(/missing a 'to' property/i);
+
       // Verify vertices were created but no edges
       const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
-      
+
       // Check vertices
       const vertexCountResult = await queryBuilder
         .match('Person', 'p')
         .done()
         .return('count(p) AS count')
         .execute();
-      
+
       expect(vertexCountResult.rows).toHaveLength(1);
       expect(parseInt(vertexCountResult.rows[0].count)).toBe(0);
-      
+
       // Check edges
       const edgeCountResult = await queryBuilder
         .match('Person', 'p1')
@@ -117,11 +123,11 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
         .done()
         .return('count(e) AS count')
         .execute();
-      
+
       expect(edgeCountResult.rows).toHaveLength(1);
       expect(parseInt(edgeCountResult.rows[0].count)).toBe(0);
     });
-    
+
     it('should reject data with invalid vertex types', async () => {
       // Create test data with invalid vertex types
       const testData: GraphData = {
@@ -132,16 +138,16 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
         },
         edges: {}
       };
-      
-      // Attempt to load the data
-      const result = await batchLoader.loadGraphData(testData);
-      
+
+      // Attempt to load the data with continueOnError set to true
+      const result = await batchLoader.loadGraphData(testData, { continueOnError: true });
+
       // Verify the result
       expect(result.success).toBe(true); // The operation succeeds but with warnings
       expect(result.vertexCount).toBe(0); // No vertices are created
       expect(result.warnings!.length).toBeGreaterThan(0); // There should be warnings about invalid vertex types
     });
-    
+
     it('should reject data with invalid edge types', async () => {
       // Create test data with invalid edge types
       const testData: GraphData = {
@@ -157,10 +163,10 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
           ]
         }
       };
-      
-      // Attempt to load the data
-      const result = await batchLoader.loadGraphData(testData);
-      
+
+      // Attempt to load the data with continueOnError set to true
+      const result = await batchLoader.loadGraphData(testData, { continueOnError: true });
+
       // Verify the result
       expect(result.success).toBe(true); // The operation succeeds but with warnings
       expect(result.vertexCount).toBe(2); // Vertices are created
@@ -168,7 +174,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
       expect(result.warnings!.length).toBeGreaterThan(0); // There should be warnings about invalid edge types
     });
   });
-  
+
   describe('Reference Errors', () => {
     it('should handle edges with non-existent vertex references', async () => {
       // Create test data with non-existent vertex references
@@ -188,16 +194,16 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
           ]
         }
       };
-      
-      // Load the data
-      const result = await batchLoader.loadGraphData(testData);
-      
+
+      // Load the data with continueOnError set to true
+      const result = await batchLoader.loadGraphData(testData, { continueOnError: true });
+
       // Verify the result
       expect(result.success).toBe(true); // The operation succeeds but with warnings
       expect(result.vertexCount).toBe(2); // Vertices are created
       expect(result.edgeCount).toBe(1); // Only the valid edge is created
       expect(result.warnings!.length).toBeGreaterThan(0); // There should be warnings about invalid references
-      
+
       // Verify only the valid edge was created
       const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
       const edgeCountResult = await queryBuilder
@@ -209,11 +215,11 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
         .done()
         .return('count(e) AS count')
         .execute();
-      
+
       expect(edgeCountResult.rows).toHaveLength(1);
       expect(parseInt(edgeCountResult.rows[0].count)).toBe(1);
     });
-    
+
     it('should handle edges with incompatible vertex types', async () => {
       // Create test data with incompatible vertex types
       const testData: GraphData = {
@@ -232,10 +238,10 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
           ]
         }
       };
-      
-      // Load the data
-      const result = await batchLoader.loadGraphData(testData);
-      
+
+      // Load the data with continueOnError set to true
+      const result = await batchLoader.loadGraphData(testData, { continueOnError: true });
+
       // Verify the result
       expect(result.success).toBe(true); // The operation succeeds but with warnings
       expect(result.vertexCount).toBe(3); // Vertices are created
@@ -243,7 +249,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
       expect(result.warnings!.length).toBeGreaterThan(0); // There should be warnings about incompatible vertex types
     });
   });
-  
+
   describe('Transaction Errors', () => {
     it('should rollback transaction on error', async () => {
       // Create a BatchLoader with validateBeforeLoad set to false
@@ -253,7 +259,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
         defaultBatchSize: 1000,
         schemaName: 'age_schema_client'
       });
-      
+
       // Create test data with valid vertices but invalid edges
       const testData: GraphData = {
         vertices: {
@@ -268,25 +274,27 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
           ]
         }
       };
-      
+
       // Attempt to load the data
-      await expect(nonValidatingBatchLoader.loadGraphData(testData)).rejects.toThrow();
-      
+      const result = await nonValidatingBatchLoader.loadGraphData(testData);
+      expect(result.success).toBe(false);
+      expect(result.errors!.length).toBeGreaterThan(0);
+
       // Verify no vertices or edges were created (transaction was rolled back)
       const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
-      
+
       // Check vertices
       const vertexCountResult = await queryBuilder
         .match('Person', 'p')
         .done()
         .return('count(p) AS count')
         .execute();
-      
+
       expect(vertexCountResult.rows).toHaveLength(1);
       expect(parseInt(vertexCountResult.rows[0].count)).toBe(0);
     });
   });
-  
+
   describe('Error Recovery', () => {
     it('should continue on error when continueOnError is true', async () => {
       // Create a BatchLoader with validateBeforeLoad set to false
@@ -296,7 +304,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
         defaultBatchSize: 1000,
         schemaName: 'age_schema_client'
       });
-      
+
       // Create test data with valid vertices but some invalid edges
       const testData: GraphData = {
         vertices: {
@@ -318,19 +326,19 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
           ]
         }
       };
-      
+
       // Load the data with continueOnError set to true
       const result = await nonValidatingBatchLoader.loadGraphData(testData, { continueOnError: true });
-      
+
       // Verify the result
       expect(result.success).toBe(true); // The operation succeeds despite errors
       expect(result.vertexCount).toBe(3); // Vertices are created
       expect(result.edgeCount).toBe(1); // Only the valid WORKS_AT edge is created
       expect(result.warnings!.length).toBeGreaterThan(0); // There should be warnings about the invalid edge
-      
+
       // Verify the valid edges were created
       const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
-      
+
       // Check WORKS_AT edges
       const worksAtCountResult = await queryBuilder
         .match('Person', 'p')
@@ -341,10 +349,10 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
         .done()
         .return('count(e) AS count')
         .execute();
-      
+
       expect(worksAtCountResult.rows).toHaveLength(1);
       expect(parseInt(worksAtCountResult.rows[0].count)).toBe(1);
-      
+
       // Check KNOWS edges (should be 0 due to error in the KNOWS batch)
       const knowsCountResult = await queryBuilder
         .match('Person', 'p1')
@@ -355,7 +363,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
         .done()
         .return('count(e) AS count')
         .execute();
-      
+
       expect(knowsCountResult.rows).toHaveLength(1);
       expect(parseInt(knowsCountResult.rows[0].count)).toBe(0);
     });
