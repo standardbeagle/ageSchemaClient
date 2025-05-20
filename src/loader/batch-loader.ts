@@ -361,6 +361,13 @@ export interface LoadOptions {
    * ```
    */
   debug?: boolean;
+
+  /**
+   * Internal property for passing the result object to helper methods
+   *
+   * @internal
+   */
+  result?: LoadResult;
 }
 
 /**

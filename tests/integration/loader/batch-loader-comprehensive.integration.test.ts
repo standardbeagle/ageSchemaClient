@@ -50,8 +50,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Comprehensive In
 
   describe('Complete Graph Loading', () => {
     it('should load a complete graph with multiple vertex and edge types', async () => {
-      // Load the extended test data with continueOnError set to true
-      const result = await batchLoader.loadGraphData(extendedTestData, { continueOnError: true });
+      // Load the extended test data with continueOnError set to false
+      const result = await batchLoader.loadGraphData(extendedTestData, { continueOnError: false });
 
       // Verify the result
       expect(result.success).toBe(true);
@@ -193,8 +193,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Comprehensive In
           await connectionManager.releaseConnection(connection);
         }
 
-        // Load data into the custom graph with continueOnError set to true
-        const result = await batchLoader.loadGraphData(extendedTestData, { graphName: customGraphName, continueOnError: true });
+        const result = await batchLoader.loadGraphData(extendedTestData, { graphName: customGraphName, continueOnError: false });
 
         // Verify the result
         expect(result.success).toBe(true);
@@ -230,8 +229,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Comprehensive In
       // Generate a large dataset
       const largeData = generateLargeTestData(100, 5, 0.1);
 
-      // Load the data with a small batch size and continueOnError set to true
-      const result = await batchLoader.loadGraphData(largeData, { batchSize: 20, continueOnError: true });
+      // Load the data with a small batch size and continueOnError set to false
+      const result = await batchLoader.loadGraphData(largeData, { batchSize: 20, continueOnError: false });
 
       // Verify the result
       expect(result.success).toBe(true);
@@ -282,8 +281,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Comprehensive In
         progressEvents.push({ ...progress });
       };
 
-      // Load the extended test data with progress reporting and continueOnError set to true
-      const result = await batchLoader.loadGraphData(extendedTestData, { onProgress, continueOnError: true });
+      // Load the extended test data with progress reporting and continueOnError set to false
+      const result = await batchLoader.loadGraphData(extendedTestData, { onProgress, continueOnError: false });
 
       // Verify the result
       expect(result.success).toBe(true);
@@ -309,8 +308,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Comprehensive In
 
   describe('Transaction Management', () => {
     it('should commit transaction on successful loading', async () => {
-      // Load the extended test data with continueOnError set to true
-      const result = await batchLoader.loadGraphData(extendedTestData, { continueOnError: true });
+      // Load the extended test data with continueOnError set to false
+      const result = await batchLoader.loadGraphData(extendedTestData, { continueOnError: false });
 
       // Verify the result
       expect(result.success).toBe(true);
@@ -328,8 +327,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Comprehensive In
     });
 
     it('should use custom transaction timeout if provided', async () => {
-      // Load the extended test data with a custom transaction timeout and continueOnError set to true
-      const result = await batchLoader.loadGraphData(extendedTestData, { transactionTimeout: 120000, continueOnError: true });
+      // Load the extended test data with a custom transaction timeout and continueOnError set to false
+      const result = await batchLoader.loadGraphData(extendedTestData, { transactionTimeout: 120000, continueOnError: false });
 
       // Verify the result
       expect(result.success).toBe(true);

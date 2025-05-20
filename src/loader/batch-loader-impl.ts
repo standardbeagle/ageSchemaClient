@@ -108,7 +108,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     const graphName = options.graphName || this.defaultGraphName;
     const validateBeforeLoad = options.validateBeforeLoad ?? this.validateBeforeLoad;
     const batchSize = options.batchSize || this.defaultBatchSize;
-    const continueOnError = options.continueOnError === true;
+    const continueOnError = options?.continueOnError === true;
     const queryGenerator = new CypherQueryGenerator<T>(this.schema, {
       schemaName: this.schemaName
     });
@@ -123,6 +123,14 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
       errors: [],
       duration: 0
     };
+
+    // Ensure we have a warnings array in options
+    if (options.collectWarnings === undefined) {
+      options.collectWarnings = true;
+    }
+    if (!Array.isArray(options.warnings)) {
+      options.warnings = [];
+    }
 
     try {
       // Validate data if required
@@ -200,10 +208,10 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             result.errors!.push(new BatchLoaderError('Validation failed', context, error));
           }
 
-          // If continueOnError is true, we already set success to true
           // Just log that we're continuing despite validation errors
           if (continueOnError) {
             console.log('Continuing after validation error due to continueOnError=true');
+            result.success = false;
 
             // Set duration and return result
             result.duration = Date.now() - startTime;
@@ -220,47 +228,6 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
       // We don't need to get a connection directly - the QueryExecutor handles this
 
       try {
-        // Begin a transaction
-        await this.queryExecutor.executeSQL('BEGIN');
-        console.log('Transaction started');
-
-        // Ensure AGE is loaded and in search path
-        try {
-          await this.queryExecutor.executeSQL(`
-            -- Check if AGE is loaded
-            DO $$
-            BEGIN
-              IF NOT EXISTS (
-                SELECT 1 FROM pg_extension WHERE extname = 'age'
-              ) THEN
-                EXECUTE 'LOAD ''age''';
-              END IF;
-            END $$;
-
-            -- Set search path
-            SET search_path TO ag_catalog, "$user", public;
-          `);
-        } catch (error) {
-          // Rollback the transaction if AGE setup fails
-          try {
-            await this.queryExecutor.executeSQL('ROLLBACK');
-            console.log('Transaction rolled back due to AGE setup failure');
-          } catch (rollbackError) {
-            console.error('Error rolling back transaction:', rollbackError);
-          }
-
-          const context: BatchLoaderErrorContext = {
-            phase: 'transaction',
-            type: 'setup',
-            sql: 'LOAD AGE and set search_path'
-          };
-
-          throw new BatchLoaderError(
-            `Failed to load AGE extension or set search path: ${error instanceof Error ? error.message : String(error)}`,
-            context,
-            error
-          );
-        }
 
         // Process data
         let vertexCount = 0;
@@ -278,6 +245,9 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
         // Load vertices
         try {
+          // Pass the result object to the loadVertices method
+          options.result = result;
+
           vertexCount = await this.loadVertices(
             graphData.vertices,
             queryGenerator,
@@ -305,6 +275,9 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
         // Load edges
         try {
+          // Pass the result object to the loadEdges method
+          options.result = result;
+
           edgeCount = await this.loadEdges(
             graphData.edges,
             queryGenerator,
@@ -330,27 +303,8 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
           );
         }
 
-        // Commit the transaction
-        try {
-          await this.queryExecutor.executeSQL('COMMIT');
-          console.log('Transaction committed successfully');
-        } catch (error) {
-          const context: BatchLoaderErrorContext = {
-            phase: 'transaction',
-            type: 'commit',
-            sql: 'COMMIT'
-          };
-
-          throw new BatchLoaderError(
-            `Failed to commit transaction: ${error instanceof Error ? error.message : String(error)}`,
-            context,
-            error
-          );
-        }
-
         // Set success and add warnings to result
         result.success = true;
-        console.log('Setting success to true after successful operation');
         if (warnings.length > 0) {
           result.warnings!.push(...warnings);
         }
@@ -365,27 +319,6 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
 
         return result;
       } catch (error) {
-        // Rollback the transaction
-        try {
-          await this.queryExecutor.executeSQL('ROLLBACK');
-          console.log('Transaction rolled back due to error');
-        } catch (rollbackError) {
-          // Log rollback error but don't throw it
-          console.error('Error rolling back transaction:', rollbackError);
-
-          // Add rollback error to result
-          const rollbackContext: BatchLoaderErrorContext = {
-            phase: 'transaction',
-            type: 'rollback',
-            sql: 'ROLLBACK'
-          };
-
-          result.errors!.push(new BatchLoaderError(
-            `Failed to rollback transaction: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`,
-            rollbackContext,
-            rollbackError
-          ));
-        }
 
         // Add the original error to result
         if (error instanceof Error) {
@@ -394,11 +327,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
           result.errors!.push(new BatchLoaderError('Unknown error during batch loading', undefined, error));
         }
 
-        // Set success to true if continueOnError is true
-        if (continueOnError === true) {
-          result.success = true;
-        }
-
+        result.success = false;
         // Set duration
         result.duration = Date.now() - startTime;
 
@@ -417,11 +346,6 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
         result.errors!.push(error);
       } else {
         result.errors!.push(new BatchLoaderError('Unexpected error during batch loading', undefined, error));
-      }
-
-      // Set success to true if continueOnError is true
-      if (continueOnError === true) {
-        result.success = true;
       }
 
       // Set duration
@@ -455,9 +379,32 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     // Create a QueryBuilder for setting parameters
     const queryBuilder = new QueryBuilder(this.schema, this.queryExecutor, graphName);
 
+    // Get the result object from options
+    const result = options.result as LoadResult;
+
     // Process each vertex type
     for (const [vertexType, vertexArray] of Object.entries(vertices)) {
       if (!vertexArray || !Array.isArray(vertexArray) || vertexArray.length === 0) {
+        continue;
+      }
+
+      // Check if vertex type exists in schema
+      if (!this.schema.vertices[vertexType]) {
+        const warning = `Vertex type ${vertexType} not found in schema, skipping`;
+        console.warn(warning);
+        warnings.push(warning);
+
+        // Add warning to result
+        if (!Array.isArray(result.warnings)) {
+          result.warnings = [];
+        }
+        result.warnings.push(warning);
+
+        // Also add warning to options if provided
+        if (options.collectWarnings && Array.isArray(options.warnings)) {
+          options.warnings.push(warning);
+        }
+
         continue;
       }
 
@@ -639,6 +586,9 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
     // Create a QueryBuilder for setting parameters
     const queryBuilder = new QueryBuilder(this.schema, this.queryExecutor, graphName);
 
+    // Get the result object from options
+    const result = options.result as LoadResult;
+
     // Process each edge type
     for (const [edgeType, edgeArray] of Object.entries(edges)) {
       try {
@@ -652,6 +602,18 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
           const warning = `Edge type ${edgeType} not found in schema, skipping`;
           console.warn(warning);
           warnings.push(warning);
+
+          // Add warning to result
+          if (!Array.isArray(result.warnings)) {
+            result.warnings = [];
+          }
+          result.warnings.push(warning);
+
+          // Also add warning to options if provided
+          if (options.collectWarnings && Array.isArray(options.warnings)) {
+            options.warnings.push(warning);
+          }
+
           continue;
         }
 
@@ -930,7 +892,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
         .return('v.id AS id')
         .execute();
 
-      const existingFromIds = fromResult.rows.map(row =>
+      const existingFromIds = fromResult.rows.map((row: { id: string | any }) =>
         typeof row.id === 'string' ? JSON.parse(row.id) : row.id
       );
 
@@ -946,7 +908,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
         .return('v.id AS id')
         .execute();
 
-      const existingToIds = toResult.rows.map(row =>
+      const existingToIds = toResult.rows.map((row: { id: string | any }) =>
         typeof row.id === 'string' ? JSON.parse(row.id) : row.id
       );
 

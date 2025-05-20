@@ -50,7 +50,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
   describe('Edge Loading', () => {
     it('should load vertices and edges successfully', async () => {
       // Load the complete test data
-      const result = await batchLoader.loadGraphData(basicTestData, { continueOnError: true });
+      const result = await batchLoader.loadGraphData(basicTestData, { continueOnError: false });
 
       // Verify the result
       expect(result.success).toBe(true);
@@ -142,8 +142,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
         }
       };
 
-      // Load the data with continueOnError set to true
-      const result = await batchLoader.loadGraphData(testData, { continueOnError: true });
+      // Load the data with continueOnError set to false
+      const result = await batchLoader.loadGraphData(testData, { continueOnError: false });
 
       // Verify the result
       expect(result.success).toBe(true);
@@ -224,8 +224,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
         }
       };
 
-      // Load the data with continueOnError set to true
-      const result = await batchLoader.loadGraphData(testData, { continueOnError: true });
+      // Load the data with continueOnError set to false
+      const result = await batchLoader.loadGraphData(testData, { continueOnError: false });
 
       // Verify the result
       expect(result.success).toBe(true);
@@ -276,8 +276,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
         }
       };
 
-      // Load the data with a small batch size and continueOnError set to true
-      const result = await batchLoader.loadGraphData(testData, { batchSize: 10, continueOnError: true });
+      // Load the data with a small batch size and continueOnError set to false
+      const result = await batchLoader.loadGraphData(testData, { batchSize: 10, continueOnError: false });
 
       // Verify the result
       expect(result.success).toBe(true);
@@ -327,8 +327,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
         }
       };
 
-      // Attempt to load the data with continueOnError set to true
-      const result = await batchLoader.loadGraphData(testData, { continueOnError: true });
+      // Attempt to load the data with continueOnError set to false
+      const result = await batchLoader.loadGraphData(testData, { continueOnError: false });
 
       // Verify the result
       expect(result.success).toBe(true); // The operation succeeds but with warnings
