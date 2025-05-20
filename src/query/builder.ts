@@ -98,10 +98,18 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
           if (vertexPattern.properties && Object.keys(vertexPattern.properties).length > 0) {
             const props = Object.entries(vertexPattern.properties)
               .map(([key, value]) => {
+                // At this point, null/undefined/NaN values should have been caught by the constraint method
+                // But we'll add an extra check here just to be safe
+                if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+                  throw new Error(
+                    `Invalid property value for '${key}': ${value}. ` +
+                    `Cypher doesn't support null, undefined, or NaN values. ` +
+                    `To match vertices without a specific property, use a WHERE clause with NOT exists(${alias}.${key}).`
+                  );
+                }
+
                 if (typeof value === 'string') {
                   return `${key}: "${value}"`;
-                } else if (value === null) {
-                  return `${key}: null`;
                 } else {
                   return `${key}: ${value}`;
                 }
@@ -164,10 +172,18 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
         if (edgePattern.properties && Object.keys(edgePattern.properties).length > 0) {
           const props = Object.entries(edgePattern.properties)
             .map(([key, value]) => {
+              // At this point, null/undefined/NaN values should have been caught by the constraint method
+              // But we'll add an extra check here just to be safe
+              if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+                throw new Error(
+                  `Invalid property value for '${key}': ${value}. ` +
+                  `Cypher doesn't support null, undefined, or NaN values. ` +
+                  `To match edges without a specific property, use a WHERE clause with NOT exists(alias.${key}).`
+                );
+              }
+
               if (typeof value === 'string') {
                 return `${key}: "${value}"`;
-              } else if (value === null) {
-                return `${key}: null`;
               } else {
                 return `${key}: ${value}`;
               }
@@ -197,10 +213,38 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
    * @returns This query builder
    */
   where(condition: string, params: Record<string, any> = {}): this {
-    this.queryParts.push(new WherePart(condition));
+    // Process the parameters to handle null values
+    const processedParams: Record<string, any> = {};
+    const nullParams: Record<string, string> = {};
 
-    if (params) {
-      this.parameters = { ...this.parameters, ...params };
+    // Identify null parameters and store them separately
+    for (const [key, value] of Object.entries(params)) {
+      if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+        // Store the parameter name for later replacement
+        nullParams[key] = key;
+      } else {
+        // Keep non-null parameters as they are
+        processedParams[key] = value;
+      }
+    }
+
+    // Replace null parameter references in the condition with NOT exists() expressions
+    let processedCondition = condition;
+    for (const [key, paramName] of Object.entries(nullParams)) {
+      // Replace patterns like "x.prop = $paramName" with "NOT exists(x.prop)"
+      // This regex looks for property comparisons with null parameters
+      const regex = new RegExp(`([a-zA-Z0-9_]+)\\.([a-zA-Z0-9_]+)\\s*=\\s*\\$${paramName}\\b`, 'g');
+      processedCondition = processedCondition.replace(regex, `NOT exists($1.$2)`);
+
+      // Replace patterns like "x.prop IS $paramName" with "NOT exists(x.prop)"
+      const isRegex = new RegExp(`([a-zA-Z0-9_]+)\\.([a-zA-Z0-9_]+)\\s+IS\\s+\\$${paramName}\\b`, 'g');
+      processedCondition = processedCondition.replace(isRegex, `NOT exists($1.$2)`);
+    }
+
+    this.queryParts.push(new WherePart(processedCondition));
+
+    if (Object.keys(processedParams).length > 0) {
+      this.parameters = { ...this.parameters, ...processedParams };
     }
 
     return this;

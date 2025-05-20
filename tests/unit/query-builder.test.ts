@@ -304,7 +304,7 @@ describe('QueryBuilder Unit Tests', () => {
   it('should handle vertex property constraints in match clause', () => {
     const cypherQuery = queryBuilder
       .match('Movie', 'm')
-      .constraint('title', '=', 'The Godfather')
+      .constraint({ title: 'The Godfather' })
       .done()
       .return('m.title AS title', 'm.year AS year')
       .toCypher();
@@ -420,8 +420,7 @@ describe('QueryBuilder Unit Tests', () => {
   it('should add property constraints to vertex pattern', () => {
     const cypherQuery = queryBuilder
       .match('Movie', 'm')
-      .constraint('genre', '=', 'Drama')
-      .constraint('rating', '>=', 8.5)
+      .constraint({ genre: 'Drama', rating: 8.5 })
       .done()
       .return('m.title AS title')
       .toCypher();
@@ -505,7 +504,7 @@ describe('QueryBuilder Unit Tests', () => {
       .match('Movie', 'm')
       .done()
       .match('p', 'DIRECTED', 'm', 'e')
-      .constraint('year', '=', 2020)
+      .constraint({ year: 2020 })
       .done()
       .return('p.name AS director', 'm.title AS movie')
       .toCypher();
@@ -525,8 +524,7 @@ describe('QueryBuilder Unit Tests', () => {
       .match('Movie', 'm')
       .done()
       .match('p', 'DIRECTED', 'm', 'e')
-      .constraint('year', '=', 2020)
-      .constraint('role', '=', 'Director')
+      .constraint({ year: 2020, role: 'Director' })
       .done()
       .return('p.name AS director', 'm.title AS movie')
       .toCypher();
@@ -568,7 +566,7 @@ describe('QueryBuilder Unit Tests', () => {
       .match('Movie', 'm')
       .done()
       .match('p', 'DIRECTED', 'm', 'e')
-      .constraint('role', '=', 'Director')
+      .constraint({ role: 'Director' })
       .where('e.year > $year', { year: 2010 })
       .done()
       .return('p.name AS director', 'm.title AS movie')
@@ -584,23 +582,78 @@ describe('QueryBuilder Unit Tests', () => {
     expect(queryBuilder.getParameters()).toEqual({ year: 2010 });
   });
 
-  // Test: Handle null values in edge property constraints
-  it('should handle null values in edge property constraints', () => {
+  // Test: Throw error for null values in edge property constraints
+  it('should throw error for null values in edge property constraints', () => {
+    expect(() => {
+      queryBuilder
+        .match('Person', 'p')
+        .done()
+        .match('Movie', 'm')
+        .done()
+        .match('p', 'DIRECTED', 'm', 'e')
+        .constraint({ year: null })
+        .done();
+    }).toThrow(/Invalid property value for 'year': null/);
+  });
+
+  // Test: Throw error for undefined values in edge property constraints
+  it('should throw error for undefined values in edge property constraints', () => {
+    expect(() => {
+      queryBuilder
+        .match('Person', 'p')
+        .done()
+        .match('Movie', 'm')
+        .done()
+        .match('p', 'DIRECTED', 'm', 'e')
+        .constraint({ year: undefined })
+        .done();
+    }).toThrow(/Invalid property value for 'year': undefined/);
+  });
+
+  // Test: Throw error for NaN values in edge property constraints
+  it('should throw error for NaN values in edge property constraints', () => {
+    expect(() => {
+      queryBuilder
+        .match('Person', 'p')
+        .done()
+        .match('Movie', 'm')
+        .done()
+        .match('p', 'DIRECTED', 'm', 'e')
+        .constraint({ year: NaN })
+        .done();
+    }).toThrow(/Invalid property value for 'year': NaN/);
+  });
+
+  // Test: Automatically convert null values in WHERE clause parameters to NOT exists expressions
+  it('should automatically convert null values in WHERE clause parameters to NOT exists expressions', () => {
     const cypherQuery = queryBuilder
       .match('Person', 'p')
       .done()
       .match('Movie', 'm')
       .done()
-      .match('p', 'DIRECTED', 'm', 'e')
-      .constraint('year', '=', null)
-      .done()
-      .return('p.name AS director', 'm.title AS movie')
+      .where('p.age = $age', { age: null })
+      .return('p.name AS name', 'm.title AS movie')
       .toCypher();
 
     expect(cypherQuery).toContain('MATCH (p:Person)');
     expect(cypherQuery).toContain('MATCH (m:Movie)');
-    // The null property constraint should be added to the edge pattern
-    expect(cypherQuery).toContain('MATCH (p)-[e:DIRECTED {year: null}]->(m)');
-    expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie');
+    // The null parameter should be converted to NOT exists
+    expect(cypherQuery).toContain('WHERE NOT exists(p.age)');
+    expect(cypherQuery).toContain('RETURN p.name AS name, m.title AS movie');
+  });
+
+  // Test: Automatically convert null values with IS operator in WHERE clause
+  it('should automatically convert null values with IS operator in WHERE clause', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .done()
+      .where('p.age IS $age', { age: null })
+      .return('p.name AS name')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person)');
+    // The IS NULL should be converted to NOT exists
+    expect(cypherQuery).toContain('WHERE NOT exists(p.age)');
+    expect(cypherQuery).toContain('RETURN p.name AS name');
   });
 });

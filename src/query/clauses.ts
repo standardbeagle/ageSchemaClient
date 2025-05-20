@@ -40,20 +40,35 @@ export class MatchClause<
   ) {}
 
   /**
-   * Add property constraint to the vertex pattern
+   * Add property constraints to the vertex pattern
    *
-   * @param property - Property name
-   * @param operator - Operator
-   * @param value - Value
+   * @param properties - Object with property-value pairs
    * @returns This match clause
+   * @throws Error if any property value is null, undefined, or NaN
    */
-  constraint(property: keyof T['vertices'][L]['properties'], operator: string, value: any): this {
-    // Add property to vertex pattern
+  constraint(properties: Record<string, any>): this {
+    // Add properties to vertex pattern
     if (!this.vertexPattern.properties) {
       this.vertexPattern.properties = {};
     }
 
-    this.vertexPattern.properties[property as string] = value;
+    // Validate property values - Cypher doesn't support null values
+    // and can only express missing properties
+    for (const [key, value] of Object.entries(properties)) {
+      if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+        throw new Error(
+          `Invalid property value for '${key}': ${value}. ` +
+          `Cypher doesn't support null, undefined, or NaN values. ` +
+          `To match vertices without a specific property, use a WHERE clause with NOT exists(alias.${key}).`
+        );
+      }
+    }
+
+    // Merge the provided properties with existing ones
+    this.vertexPattern.properties = {
+      ...this.vertexPattern.properties,
+      ...properties
+    };
 
     return this;
   }
@@ -249,20 +264,35 @@ export class EdgeMatchClause<T extends SchemaDefinition> implements IEdgeMatchCl
   ) {}
 
   /**
-   * Add property constraint to the edge pattern
+   * Add property constraints to the edge pattern
    *
-   * @param property - Property name
-   * @param operator - Operator
-   * @param value - Value
+   * @param properties - Object with property-value pairs
    * @returns This edge match clause
+   * @throws Error if any property value is null, undefined, or NaN
    */
-  constraint(property: string, operator: string, value: any): this {
-    // Add property to edge pattern
+  constraint(properties: Record<string, any>): this {
+    // Add properties to edge pattern
     if (!this.edgePattern.properties) {
       this.edgePattern.properties = {};
     }
 
-    this.edgePattern.properties[property] = value;
+    // Validate property values - Cypher doesn't support null values
+    // and can only express missing properties
+    for (const [key, value] of Object.entries(properties)) {
+      if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+        throw new Error(
+          `Invalid property value for '${key}': ${value}. ` +
+          `Cypher doesn't support null, undefined, or NaN values. ` +
+          `To match edges without a specific property, use a WHERE clause with NOT exists(alias.${key}).`
+        );
+      }
+    }
+
+    // Merge the provided properties with existing ones
+    this.edgePattern.properties = {
+      ...this.edgePattern.properties,
+      ...properties
+    };
 
     return this;
   }

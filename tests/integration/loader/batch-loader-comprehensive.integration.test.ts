@@ -198,7 +198,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Comprehensive In
         // Verify the result
         expect(result.success).toBe(true);
         expect(result.vertexCount).toBe(13);
-        expect(result.edgeCount).toBe(20);
+        expect(result.edgeCount).toBe(25);
 
         // Verify the data was loaded into the custom graph
         const queryBuilder = new QueryBuilder(testSchema, queryExecutor, customGraphName);

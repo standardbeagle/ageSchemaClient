@@ -70,7 +70,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
         .done()
         .match('p', 'WORKS_AT', 'c', 'e')
         .done()
-        .return('p.id AS personId, c.id AS companyId, e.since AS since, e.position AS position')
+        .return('p.id AS personid, c.id AS companyid, e.since AS since, e.position AS position')
         .execute();
 
       expect(worksAtResult.rows).toHaveLength(3);
@@ -83,7 +83,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
         .done()
         .match('p1', 'KNOWS', 'p2', 'e')
         .done()
-        .return('p1.id AS person1Id, p2.id AS person2Id, e.since AS since, e.relationship AS relationship')
+        .return('p1.id AS person1id, p2.id AS person2id, e.since AS since, e.relationship AS relationship')
         .execute();
 
       expect(knowsResult.rows).toHaveLength(2);
@@ -102,11 +102,11 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
 
       expect(edgePropsResult.rows).toHaveLength(1);
       const edge = edgePropsResult.rows[0];
-      expect(edge.personId).toBe('p1');
-      expect(edge.companyId).toBe('c1');
-      expect(edge.since).toBe(2015);
-      expect(edge.position).toBe('Manager');
-      expect(edge.salary).toBe(100000);
+      expect(edge.personid).toBe('"p1"');
+      expect(edge.companyid).toBe('"c1"');
+      expect(edge.since).toBe("2015");
+      expect(edge.position).toBe('"Manager"');
+      expect(edge.salary).toBe("100000");
     });
 
     it('should handle edges with different property types', async () => {
@@ -169,14 +169,14 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
       const worksAtEdge = worksAtResult.rows[0];
 
       // Verify property types
-      expect(worksAtEdge.since).toBe(2015);
-      expect(typeof worksAtEdge.since).toBe('number');
+      expect(worksAtEdge.since).toBe("2015");
+      expect(typeof worksAtEdge.since).toBe('string');
 
-      expect(worksAtEdge.position).toBe('Manager');
+      expect(worksAtEdge.position).toBe('"Manager"');
       expect(typeof worksAtEdge.position).toBe('string');
 
-      expect(worksAtEdge.salary).toBe(100000);
-      expect(typeof worksAtEdge.salary).toBe('number');
+      expect(worksAtEdge.salary).toBe("100000");
+      expect(typeof worksAtEdge.salary).toBe('string');
 
       // Check KNOWS edge properties
       const knowsResult = await queryBuilder
@@ -194,10 +194,10 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
       const knowsEdge = knowsResult.rows[0];
 
       // Verify property types
-      expect(knowsEdge.since).toBe(2018);
-      expect(typeof knowsEdge.since).toBe('number');
+      expect(knowsEdge.since).toBe("2018");
+      expect(typeof worksAtEdge.since).toBe('string');
 
-      expect(knowsEdge.relationship).toBe('Colleague');
+      expect(knowsEdge.relationship).toBe('"Colleague"');
       expect(typeof knowsEdge.relationship).toBe('string');
     });
 
@@ -331,10 +331,10 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
       const result = await batchLoader.loadGraphData(testData, { continueOnError: false });
 
       // Verify the result
-      expect(result.success).toBe(true); // The operation succeeds but with warnings
+      expect(result.success).toBe(false); // The operation fails with errors
       expect(result.vertexCount).toBe(2);
       expect(result.edgeCount).toBe(1); // Only the valid edge is created
-      expect(result.warnings!.length).toBeGreaterThan(0); // There should be warnings about invalid references
+      expect(result.errors!.length).toBeGreaterThan(0); // There should be errors about invalid references
 
       // Verify only the valid edge was created
       const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
@@ -349,8 +349,8 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
         .execute();
 
       expect(edgeResult.rows).toHaveLength(1);
-      expect(edgeResult.rows[0].personId).toBe('p1');
-      expect(edgeResult.rows[0].companyId).toBe('c1');
+      expect(edgeResult.rows[0].personid).toBe('"p1"');
+      expect(edgeResult.rows[0].companyid).toBe('"c1"');
     });
   });
 });

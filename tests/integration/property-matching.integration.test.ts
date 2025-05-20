@@ -222,7 +222,7 @@ describe('Property Matching Integration', () => {
       .match('Company', 'c')
       .done()
       .match('p', 'WORKS_AT', 'c', 'e')
-      .constraint('role', '=', 'Developer')
+      .constraint({ role: 'Developer' })
       .done()
       .return('p.name AS name', 'c.name AS company', 'e.role AS role')
       .execute();
@@ -277,13 +277,13 @@ describe('Property Matching Integration', () => {
     // Build and execute the query using the query builder with both vertex and edge property constraints
     const result = await queryBuilder
       .match('Person', 'p')
-      .constraint('active', '=', true)
+      .constraint({ active: true })
       .done()
       .match('Company', 'c')
-      .constraint('industry', '=', 'Technology')
+      .constraint({ industry: 'Technology' })
       .done()
       .match('p', 'WORKS_AT', 'c', 'e')
-      .constraint('role', '=', 'Developer')
+      .constraint({ role: 'Developer' })
       .done()
       .return('p.name AS name', 'c.name AS company', 'e.role AS role')
       .execute();
@@ -351,7 +351,7 @@ describe('Property Matching Integration', () => {
       .match('Company', 'c')
       .done()
       .match('p', 'WORKS_AT', 'c', 'e')
-      .constraint('department', '=', 'Engineering')
+      .constraint({ department: 'Engineering' })
       .where('e.salary > $minSalary', { minSalary: 90000 })
       .done()
       .return('p.name AS name', 'c.name AS company', 'e.department AS department', 'e.salary AS salary')
@@ -382,7 +382,7 @@ describe('Property Matching Integration', () => {
       .match('Company', 'c')
       .done()
       .match('p', 'WORKS_AT', 'c', 'e')
-      .constraint('nonExistentProperty', '=', 'someValue')
+      .constraint({ nonExistentProperty: 'someValue' })
       .done()
       .return('p.name AS name', 'c.name AS company')
       .execute();
@@ -391,8 +391,8 @@ describe('Property Matching Integration', () => {
     expect(result.rows).toHaveLength(0);
   });
 
-  // Test: Handle null values in property constraints
-  it('should handle null values in property constraints', async () => {
+  // Test: Throw error for null values in property constraints
+  it('should throw error for null values in property constraints', async () => {
     if (!ageAvailable) {
       console.warn('Skipping test: AGE not available');
       return;
@@ -406,17 +406,56 @@ describe('Property Matching Integration', () => {
     // Create a new query builder for this test
     const queryBuilder = new QueryBuilder(testSchema, queryExecutor, PROPERTY_MATCHING_TEST_GRAPH);
 
-    // Build and execute the query using the query builder with a null property constraint
-    const result = await queryBuilder
+    // Expect an error when using null in property constraints
+    await expect(async () => {
+      await queryBuilder
+        .match('Person', 'p')
+        .constraint({ age: null })
+        .done()
+        .return('p.name AS name', 'p.age AS age')
+        .execute();
+    }).rejects.toThrow(/Invalid property value for 'age': null/);
+
+    // Show how to properly query for missing properties using WHERE clause with NOT exists
+    const missingPropertyResult = await queryBuilder
       .match('Person', 'p')
-      .constraint('age', '=', null)
       .done()
+      .where('NOT exists(p.age)')
       .return('p.name AS name', 'p.age AS age')
       .execute();
 
     // Verify the result
+    expect(missingPropertyResult.rows).toHaveLength(1);
+    expect(JSON.parse(missingPropertyResult.rows[0].name)).toBe('Eve');
+    expect(missingPropertyResult.rows[0].age).toBeNull();
+  });
+
+  // Test: Automatically convert null values in WHERE clause parameters to NOT exists expressions
+  it('should automatically convert null values in WHERE clause parameters to NOT exists expressions', async () => {
+    if (!ageAvailable) {
+      console.warn('Skipping test: AGE not available');
+      return;
+    }
+
+    // First, create a vertex with a null property
+    await queryExecutor.executeCypher(`
+      CREATE (p6:Person {id: 'p6', name: 'Frank', active: true})
+    `, {}, PROPERTY_MATCHING_TEST_GRAPH);
+
+    // Create a new query builder for this test
+    const queryBuilder = new QueryBuilder(testSchema, queryExecutor, PROPERTY_MATCHING_TEST_GRAPH);
+
+    // Use null value in WHERE clause parameter - should be automatically converted to NOT exists
+    const result = await queryBuilder
+      .match('Person', 'p')
+      .done()
+      .where('p.age = $age', { age: null })
+      .return('p.name AS name', 'p.id AS id')
+      .execute();
+
+    // Verify the result - should find the person without an age property
     expect(result.rows).toHaveLength(1);
-    expect(JSON.parse(result.rows[0].name)).toBe('Eve');
-    expect(result.rows[0].age).toBeNull();
+    expect(JSON.parse(result.rows[0].name)).toBe('Frank');
+    expect(JSON.parse(result.rows[0].id)).toBe('p6');
   });
 });

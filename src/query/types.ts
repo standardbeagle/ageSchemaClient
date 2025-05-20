@@ -323,14 +323,13 @@ export interface IMatchClause<
   L extends keyof T['vertices']
 > {
   /**
-   * Add property constraint to the vertex pattern
+   * Add property constraints to the vertex pattern
    *
-   * @param property - Property name
-   * @param operator - Operator
-   * @param value - Value
+   * @param properties - Object with property-value pairs
    * @returns This match clause
+   * @throws Error if any property value is null, undefined, or NaN
    */
-  constraint(property: keyof T['vertices'][L]['properties'], operator: string, value: any): this;
+  constraint(properties: Record<string, any>): this;
 
   /**
    * Add WHERE clause
@@ -382,14 +381,13 @@ export interface IMatchClause<
  */
 export interface IEdgeMatchClause<T extends SchemaDefinition> {
   /**
-   * Add property constraint to the edge pattern
+   * Add property constraints to the edge pattern
    *
-   * @param property - Property name
-   * @param operator - Operator
-   * @param value - Value
+   * @param properties - Object with property-value pairs
    * @returns This edge match clause
+   * @throws Error if any property value is null, undefined, or NaN
    */
-  constraint(property: string, operator: string, value: any): this;
+  constraint(properties: Record<string, any>): this;
 
   /**
    * Add WHERE clause
