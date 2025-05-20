@@ -452,4 +452,55 @@ describe('QueryBuilder Unit Tests', () => {
     expect(cypherQuery).toContain('(p:Person)-[d:DIRECTED]->(m:Movie)');
     expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie');
   });
+
+  // Test: Match edge between already matched vertices (without edge alias)
+  it('should match an edge between already matched vertices without edge alias', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .done()
+      .match('Movie', 'm')
+      .done()
+      .match('p', 'DIRECTED', 'm')
+      .return('p.name AS director', 'm.title AS movie')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person)');
+    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    expect(cypherQuery).toContain('MATCH (p)-[e:DIRECTED]->(m)');
+    expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie');
+  });
+
+  // Test: Match edge between already matched vertices (with edge alias)
+  it('should match an edge between already matched vertices with edge alias', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .done()
+      .match('Movie', 'm')
+      .done()
+      .match('p', 'DIRECTED', 'm', 'directed')
+      .return('p.name AS director', 'm.title AS movie', 'directed AS relationship')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person)');
+    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    expect(cypherQuery).toContain('MATCH (p)-[directed:DIRECTED]->(m)');
+    expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie, directed AS relationship');
+  });
+
+  // Test: Count edges between vertices
+  it('should count edges between vertices', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .done()
+      .match('Movie', 'm')
+      .done()
+      .match('p', 'DIRECTED', 'm', 'e')
+      .return('count(e) AS count')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person)');
+    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    expect(cypherQuery).toContain('MATCH (p)-[e:DIRECTED]->(m)');
+    expect(cypherQuery).toContain('RETURN count(e) AS count');
+  });
 });

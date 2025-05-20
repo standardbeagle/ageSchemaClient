@@ -205,9 +205,39 @@ export type QueryBuilderResult<T> = Promise<QueryResult<T>>;
  */
 export interface IQueryBuilder<T extends SchemaDefinition> {
   /**
-   * Add MATCH clause
+   * Add MATCH clause for a vertex
    */
   match<L extends keyof T['vertices']>(label: L, alias: string): IMatchClause<T, L>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices
+   *
+   * @param sourceAlias - Source vertex alias
+   * @param edgeLabel - Edge label
+   * @param targetAlias - Target vertex alias
+   * @returns Edge match clause
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices with an edge alias
+   *
+   * @param sourceAlias - Source vertex alias
+   * @param edgeLabel - Edge label
+   * @param targetAlias - Target vertex alias
+   * @param edgeAlias - Edge alias
+   * @returns Edge match clause
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string,
+    edgeAlias: string
+  ): IEdgeMatchClause<T>;
 
   /**
    * Add WHERE clause
@@ -326,6 +356,71 @@ export interface IMatchClause<
     otherLabel: keyof T['vertices'],
     otherAlias: string
   ): this;
+
+  /**
+   * Return to the main query builder
+   */
+  done(): IQueryBuilder<T>;
+}
+
+/**
+ * Edge match clause interface
+ */
+export interface IEdgeMatchClause<T extends SchemaDefinition> {
+  /**
+   * Add property constraint to the edge
+   */
+  where(property: string, operator: string, value: any): this;
+
+  /**
+   * Add WHERE clause
+   */
+  where(condition: string, params?: Record<string, any>): this;
+
+  /**
+   * Add RETURN clause
+   */
+  return(...expressions: string[]): this;
+
+  /**
+   * Add ORDER BY clause
+   */
+  orderBy(expression: string, direction?: OrderDirection): this;
+
+  /**
+   * Add LIMIT clause
+   */
+  limit(count: number): this;
+
+  /**
+   * Add SKIP clause
+   */
+  skip(count: number): this;
+
+  /**
+   * Add WITH clause
+   */
+  with(...expressions: string[]): this;
+
+  /**
+   * Add UNWIND clause
+   */
+  unwind(expression: string, alias: string): this;
+
+  /**
+   * Add a parameter to the query
+   */
+  withParam(name: string, value: any): this;
+
+  /**
+   * Execute the query
+   */
+  execute<R = any>(options?: QueryExecutionOptions): QueryBuilderResult<R>;
+
+  /**
+   * Get the Cypher query string
+   */
+  toCypher(): string;
 
   /**
    * Return to the main query builder

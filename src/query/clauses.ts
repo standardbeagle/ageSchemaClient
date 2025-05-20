@@ -8,10 +8,14 @@ import { SchemaDefinition } from '../schema/types';
 import {
   IQueryBuilder,
   IMatchClause,
+  IEdgeMatchClause,
   IReturnClause,
   MatchPatternType,
   VertexPattern,
   EdgePattern,
+  OrderDirection,
+  QueryExecutionOptions,
+  QueryBuilderResult,
 } from './types';
 import { MatchPart, ReturnPart } from './parts';
 
@@ -202,6 +206,157 @@ export class MatchClause<
     this.matchPart.addPattern(edgePattern);
 
     return this;
+  }
+
+  /**
+   * Return to the main query builder
+   *
+   * @returns Query builder
+   */
+  done(): IQueryBuilder<T> {
+    return this.queryBuilder;
+  }
+}
+
+/**
+ * Edge match clause implementation
+ */
+export class EdgeMatchClause<T extends SchemaDefinition> implements IEdgeMatchClause<T> {
+  /**
+   * Create a new edge match clause
+   *
+   * @param queryBuilder - Query builder
+   * @param matchPart - Match part
+   * @param edgePattern - Edge pattern
+   */
+  constructor(
+    private queryBuilder: IQueryBuilder<T>,
+    private matchPart: MatchPart,
+    private edgePattern: EdgePattern
+  ) {}
+
+  /**
+   * Add property constraint to the edge or a WHERE clause
+   *
+   * @param propertyOrCondition - Property name or condition expression
+   * @param operatorOrParams - Operator or parameters
+   * @param value - Value (optional)
+   * @returns This edge match clause
+   */
+  where(propertyOrCondition: string, operatorOrParams?: string | Record<string, any>, value?: any): this {
+    if (typeof operatorOrParams === 'string' && value !== undefined) {
+      // This is a property constraint
+      // Add property to edge pattern
+      if (!this.edgePattern.properties) {
+        this.edgePattern.properties = {};
+      }
+
+      this.edgePattern.properties[propertyOrCondition] = value;
+    } else {
+      // This is a WHERE clause
+      this.queryBuilder.where(propertyOrCondition, operatorOrParams as Record<string, any>);
+    }
+
+    return this;
+  }
+
+  /**
+   * Add RETURN clause
+   *
+   * @param expressions - Return expressions
+   * @returns This edge match clause
+   */
+  return(...expressions: string[]): this {
+    this.queryBuilder.return(...expressions);
+    return this;
+  }
+
+  /**
+   * Add ORDER BY clause
+   *
+   * @param expression - Expression to order by
+   * @param direction - Order direction
+   * @returns This edge match clause
+   */
+  orderBy(expression: string, direction?: OrderDirection): this {
+    this.queryBuilder.orderBy(expression, direction);
+    return this;
+  }
+
+  /**
+   * Add LIMIT clause
+   *
+   * @param count - Limit count
+   * @returns This edge match clause
+   */
+  limit(count: number): this {
+    this.queryBuilder.limit(count);
+    return this;
+  }
+
+  /**
+   * Add SKIP clause
+   *
+   * @param count - Skip count
+   * @returns This edge match clause
+   */
+  skip(count: number): this {
+    this.queryBuilder.skip(count);
+    return this;
+  }
+
+  /**
+   * Add WITH clause
+   *
+   * @param expressions - With expressions
+   * @returns This edge match clause
+   */
+  with(...expressions: string[]): this {
+    this.queryBuilder.with(...expressions);
+    return this;
+  }
+
+  /**
+   * Add UNWIND clause
+   *
+   * @param expression - Expression to unwind
+   * @param alias - Alias for unwound items
+   * @returns This edge match clause
+   */
+  unwind(expression: string, alias: string): this {
+    this.queryBuilder.unwind(expression, alias);
+    return this;
+  }
+
+  /**
+   * Add a parameter to the query
+   *
+   * @param name - Parameter name
+   * @param value - Parameter value
+   * @returns This edge match clause
+   */
+  withParam(name: string, value: any): this {
+    this.queryBuilder.withParam(name, value);
+    return this;
+  }
+
+  /**
+   * Execute the query
+   *
+   * @param options - Query execution options
+   * @returns Query result
+   */
+  execute<R = any>(options?: QueryExecutionOptions): QueryBuilderResult<R> {
+    return this.queryBuilder.execute<R>(options);
+  }
+
+  /**
+   * Get the Cypher query string
+   *
+   * @returns Cypher query string
+   */
+  toCypher(): string {
+    return this.queryBuilder.toCypher();
   }
 
   /**

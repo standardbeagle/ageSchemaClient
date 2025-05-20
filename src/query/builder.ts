@@ -28,7 +28,7 @@ import {
   WithPart,
   UnwindPart,
 } from './parts';
-import { MatchClause } from './clauses';
+import { MatchClause, EdgeMatchClause } from './clauses';
 
 /**
  * Query builder class
@@ -65,28 +65,90 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
   }
 
   /**
-   * Add MATCH clause
+   * Add MATCH clause for a vertex or an edge
    *
-   * @param label - Vertex label
-   * @param alias - Vertex alias
-   * @returns Match clause
+   * @param labelOrSourceAlias - Vertex label or source vertex alias
+   * @param aliasOrEdgeLabel - Vertex alias or edge label
+   * @param targetAlias - Target vertex alias (optional)
+   * @param edgeAlias - Edge alias (optional)
+   * @returns Match clause or edge match clause
    */
-  match<L extends keyof T['vertices']>(label: L, alias: string): IMatchClause<T, L> {
-    const vertexPattern: VertexPattern = {
+  match<L extends keyof T['vertices'] | keyof T['edges']>(
+    labelOrSourceAlias: L | string,
+    aliasOrEdgeLabel: string,
+    targetAlias?: string,
+    edgeAlias?: string
+  ): IMatchClause<T, any> | IEdgeMatchClause<T> {
+    // Case 1: match('Person', 'p') - Match a vertex
+    if (targetAlias === undefined) {
+      // This is a vertex match
+      const label = labelOrSourceAlias as keyof T['vertices'];
+      const alias = aliasOrEdgeLabel;
+
+      const vertexPattern: VertexPattern = {
+        type: MatchPatternType.VERTEX,
+        label: label as string,
+        alias,
+        properties: {},
+        toCypher: () => {
+          const labelStr = label ? `:${String(label)}` : '';
+          return `(${alias}${labelStr})`;
+        }
+      };
+
+      const matchPart = new MatchPart([vertexPattern]);
+      this.queryParts.push(matchPart);
+
+      return new MatchClause<T, any>(this, matchPart, vertexPattern);
+    }
+
+    // Case 2: match('p', 'WORKS_AT', 'c') or match('p', 'WORKS_AT', 'c', 'e')
+    // This is an edge match between two previously matched vertices
+    const sourceAlias = labelOrSourceAlias as string;
+    const edgeLabel = aliasOrEdgeLabel as keyof T['edges'];
+    const edgeAliasToUse = edgeAlias || 'e'; // Default edge alias if not provided
+
+    // Create source vertex pattern (without label, as it's already matched)
+    const sourceVertex: VertexPattern = {
       type: MatchPatternType.VERTEX,
-      label: label as string,
-      alias,
+      label: '',
+      alias: sourceAlias,
+      properties: {},
+      toCypher: () => `(${sourceAlias})`
+    };
+
+    // Create target vertex pattern (without label, as it's already matched)
+    const targetVertex: VertexPattern = {
+      type: MatchPatternType.VERTEX,
+      label: '',
+      alias: targetAlias,
+      properties: {},
+      toCypher: () => `(${targetAlias})`
+    };
+
+    // Create edge pattern
+    const edgePattern: EdgePattern = {
+      type: MatchPatternType.EDGE,
+      label: edgeLabel as string,
+      alias: edgeAliasToUse,
+      fromVertex: sourceVertex,
+      toVertex: targetVertex,
+      direction: 'OUTGOING',
       properties: {},
       toCypher: () => {
-        const labelStr = label ? `:${String(label)}` : '';
-        return `(${alias}${labelStr})`;
+        const sourceStr = sourceVertex.toCypher();
+        const targetStr = targetVertex.toCypher();
+        const labelStr = edgeLabel ? `:${String(edgeLabel)}` : '';
+        return `${sourceStr}-[${edgeAliasToUse}${labelStr}]->${targetStr}`;
       }
     };
 
-    const matchPart = new MatchPart([vertexPattern]);
+    // Create and add match part
+    const matchPart = new MatchPart([edgePattern]);
     this.queryParts.push(matchPart);
 
-    return new MatchClause<T, L>(this, matchPart, vertexPattern);
+    // Return an EdgeMatchClause instance
+    return new EdgeMatchClause<T>(this, matchPart, edgePattern);
   }
 
   /**
