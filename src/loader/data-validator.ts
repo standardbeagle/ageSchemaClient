@@ -7,7 +7,7 @@
  * @packageDocumentation
  */
 
-import { SchemaDefinition, VertexDefinition, EdgeDefinition } from '../schema/types';
+import { SchemaDefinition, VertexLabel, EdgeDefinition } from '../schema/types';
 import {
   validateEdgeProperties,
   validateEdgeReferences,
@@ -20,7 +20,7 @@ import {
 } from './data-validator-types';
 
 // Re-export types
-export { ValidationResult, ValidationError, GraphData } from './data-validator-types';
+export type { ValidationResult, ValidationError, GraphData } from './data-validator-types';
 
 /**
  * Data validator class
@@ -118,7 +118,7 @@ export class DataValidator<T extends SchemaDefinition> {
    */
   private validateVertexArray(
     vertexType: string,
-    vertexDef: VertexDefinition,
+    vertexDef: VertexLabel,
     vertexArray: any[],
     result: ValidationResult
   ): void {
@@ -173,7 +173,7 @@ export class DataValidator<T extends SchemaDefinition> {
    */
   private validateVertexProperties(
     vertexType: string,
-    vertexDef: VertexDefinition,
+    vertexDef: VertexLabel,
     vertex: any,
     index: number,
     result: ValidationResult

@@ -12,6 +12,7 @@ import {
   QueryPart,
   IQueryBuilder,
   IMatchClause,
+  IEdgeMatchClause,
   VertexPattern,
   MatchPatternType
 } from './types';
@@ -143,13 +144,9 @@ export class AnalyticsMatchClause<
    * @param params - Parameters
    * @returns This analytics match clause
    */
-  where(
-    property: keyof T['vertices'][L]['properties'],
-    operator: string,
-    value: any
-  ): this {
+  where(condition: string, params?: Record<string, any>): this {
     // Call the parent method to add the WHERE clause
-    super.where(property, operator, value);
+    super.where(condition, params);
 
     // Return this for method chaining
     return this;
@@ -308,14 +305,48 @@ export class AnalyticsQueryBuilder<T extends SchemaDefinition> extends QueryBuil
   }
 
   /**
-   * Override match method to return AnalyticsMatchClause
-   *
-   * @param label - Vertex label
-   * @param alias - Vertex alias
-   * @returns Analytics match clause
+   * Add MATCH clause for a vertex
    */
-  match<L extends keyof T['vertices']>(label: L, alias: string): IMatchClause<T, L> {
-    // Create a new match part and vertex pattern directly
+  match<L extends keyof T['vertices']>(label: L, alias: string): IMatchClause<T, L>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices with an edge alias
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string,
+    edgeAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Implementation of the match method for analytics
+   */
+  match(
+    labelOrSourceAlias: any,
+    aliasOrEdgeLabel: string,
+    targetAlias?: string,
+    edgeAlias?: string
+  ): any {
+    // If targetAlias is provided, this is an edge match
+    if (targetAlias !== undefined) {
+      return super.match(labelOrSourceAlias, aliasOrEdgeLabel, targetAlias, edgeAlias);
+    }
+
+    // This is a vertex match - create analytics match clause
+    const label = labelOrSourceAlias;
+    const alias = aliasOrEdgeLabel;
+
+    // Create a vertex pattern
     const vertexPattern: VertexPattern = {
       type: MatchPatternType.VERTEX,
       label: label as string,
@@ -324,13 +355,14 @@ export class AnalyticsQueryBuilder<T extends SchemaDefinition> extends QueryBuil
       toCypher: () => `(${alias}:${String(label)})`
     };
 
+    // Create a match part
     const matchPart = new MatchPart([vertexPattern]);
 
-    // Add the match part to query parts (accessing protected property)
+    // Add the match part to query parts
     (this as any).queryParts.push(matchPart);
 
-    // Create and return a new analytics match clause
-    return new AnalyticsMatchClause<T, L>(this, matchPart, vertexPattern);
+    // Return analytics match clause
+    return new AnalyticsMatchClause<T, any>(this, matchPart, vertexPattern);
   }
 
   /**

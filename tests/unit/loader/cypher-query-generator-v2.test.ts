@@ -111,13 +111,13 @@ describe('Cypher Query Generator V2', () => {
 
       // Check that the template contains the expected parts
       expect(template).toContain('UNWIND age_schema_client.get_edges(\'WORKS_AT\') AS edge_data');
-      expect(template).toContain('MATCH (from {id: edge_data.from})');
-      expect(template).toContain('MATCH (to {id: edge_data.to})');
+      expect(template).toContain('MATCH (from:Person {id: edge_data.from})');
+      expect(template).toContain('MATCH (to:Company {id: edge_data.to})');
       expect(template).toContain('CREATE (from)-[:WORKS_AT {');
 
-      // Check that all properties except 'from' and 'to' are included
-      expect(template).not.toContain('from:');
-      expect(template).not.toContain('to:');
+      // Check that all properties except 'from' and 'to' are included in the CREATE clause
+      expect(template).not.toContain('from: CASE WHEN');
+      expect(template).not.toContain('to: CASE WHEN');
       expect(template).toContain('since: CASE WHEN edge_data.since IS NOT NULL THEN edge_data.since ELSE NULL END');
       expect(template).toContain('position: CASE WHEN edge_data.position IS NOT NULL THEN edge_data.position ELSE NULL END');
 

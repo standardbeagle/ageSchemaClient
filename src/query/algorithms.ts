@@ -7,7 +7,7 @@
 import { SchemaDefinition } from '../schema/types';
 import { QueryExecutor } from '../db/query';
 import { AnalyticsQueryBuilder, AnalyticsMatchClause } from './analytics';
-import { OrderDirection, VertexPattern } from './types';
+import { VertexPattern, IEdgeMatchClause, MatchPatternType } from './types';
 import { MatchPart } from './parts';
 
 /**
@@ -139,7 +139,8 @@ export class AlgorithmMatchClause<
     matchPart: MatchPart,
     vertexPattern: VertexPattern
   ) {
-    super(queryBuilder, matchPart, vertexPattern);
+    // Cast to AnalyticsQueryBuilder to satisfy the parent constructor
+    super(queryBuilder as unknown as AnalyticsQueryBuilder<T>, matchPart, vertexPattern);
   }
 
   /**
@@ -343,22 +344,64 @@ export class AlgorithmQueryBuilder<T extends SchemaDefinition> extends Analytics
   }
 
   /**
-   * Override match method to return AlgorithmMatchClause
-   *
-   * @param label - Vertex label
-   * @param alias - Vertex alias
-   * @returns Algorithm match clause
+   * Add MATCH clause for a vertex
    */
-  match<L extends keyof T['vertices']>(label: L, alias: string): AlgorithmMatchClause<T, L> {
-    // Call the parent match method to create the match part and add it to query parts
-    const matchClause = super.match(label, alias);
+  match<L extends keyof T['vertices']>(label: L, alias: string): AlgorithmMatchClause<T, L>;
 
-    // Get the match part and vertex pattern from the match clause
-    const matchPart = (matchClause as any).matchPart as MatchPart;
-    const vertexPattern = (matchClause as any).vertexPattern as VertexPattern;
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string
+  ): IEdgeMatchClause<T>;
 
-    // Create and return a new algorithm match clause
-    return new AlgorithmMatchClause<T, L>(this, matchPart, vertexPattern);
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices with an edge alias
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string,
+    edgeAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Implementation of the match method for algorithms
+   */
+  match(
+    labelOrSourceAlias: any,
+    aliasOrEdgeLabel: string,
+    targetAlias?: string,
+    edgeAlias?: string
+  ): any {
+    // If targetAlias is provided, this is an edge match
+    if (targetAlias !== undefined) {
+      return super.match(labelOrSourceAlias, aliasOrEdgeLabel, targetAlias, edgeAlias);
+    }
+
+    // This is a vertex match - create algorithm match clause
+    const label = labelOrSourceAlias;
+    const alias = aliasOrEdgeLabel;
+
+    // Create a vertex pattern
+    const vertexPattern: VertexPattern = {
+      type: MatchPatternType.VERTEX,
+      label: label as string,
+      alias,
+      properties: {},
+      toCypher: () => `(${alias}:${String(label)})`
+    };
+
+    // Create a match part
+    const matchPart = new MatchPart([vertexPattern]);
+
+    // Add the match part to query parts
+    (this as any).queryParts.push(matchPart);
+
+    // Return algorithm match clause
+    return new AlgorithmMatchClause<T, any>(this, matchPart, vertexPattern);
   }
 
   /**
@@ -441,10 +484,6 @@ export class AlgorithmQueryBuilder<T extends SchemaDefinition> extends Analytics
     const relTypes = options.relationshipTypes
       ? `:${options.relationshipTypes.join('|')}`
       : '';
-
-    const depthConstraint = options.maxDepth !== undefined
-      ? `*1..${options.maxDepth}`
-      : '*';
 
     // Using APOC procedure for Dijkstra (this is a placeholder, actual implementation depends on available procedures)
     this.return(`apoc.algo.dijkstra(${startAlias}, ${endAlias}, '${relTypes}', '${costProperty}') AS ${resultAlias}`);

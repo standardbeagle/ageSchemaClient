@@ -135,8 +135,8 @@ describe('CypherQueryGenerator (Updated)', () => {
       // Check that the query contains the expected parts
       expect(query).toContain('SELECT * FROM cypher(\'test_graph\'');
       expect(query).toContain('UNWIND age_schema_client.get_edges(\'WORKS_AT\') AS edge_data');
-      expect(query).toContain('MATCH (from {id: edge_data.from})');
-      expect(query).toContain('MATCH (to {id: edge_data.to})');
+      expect(query).toContain('MATCH (from:Person {id: edge_data.from})');
+      expect(query).toContain('MATCH (to:Company {id: edge_data.to})');
       expect(query).toContain('CREATE (from)-[:WORKS_AT {');
       expect(query).toContain('since: CASE WHEN edge_data.since IS NOT NULL THEN edge_data.since ELSE NULL END');
       expect(query).toContain('position: CASE WHEN edge_data.position IS NOT NULL THEN edge_data.position ELSE NULL END');

@@ -3,7 +3,7 @@
  */
 
 import { ValidationResult } from './data-validator-types';
-import { EdgeDefinition } from '../schema/types';
+import { EdgeDefinition, PropertyType } from '../schema/types';
 
 /**
  * Validate edge properties against the schema
@@ -154,33 +154,61 @@ export function validateEdgeReferences(
 /**
  * Validate property type
  *
- * @param expectedType - Expected type from schema
+ * @param expectedType - Expected type from schema (can be single type or array of types)
  * @param actualType - Actual type of the property
  * @param value - Property value
  * @returns Whether the property type is valid
  */
 export function validatePropertyType(
-  expectedType: string,
+  expectedType: PropertyType | PropertyType[],
+  actualType: string,
+  value: any
+): boolean {
+  // If expectedType is an array, check if any of the types match
+  if (Array.isArray(expectedType)) {
+    return expectedType.some(type => validateSinglePropertyType(type, actualType, value));
+  }
+
+  // If expectedType is a single type, validate against it
+  return validateSinglePropertyType(expectedType, actualType, value);
+}
+
+/**
+ * Validate a single property type
+ *
+ * @param expectedType - Expected type from schema
+ * @param actualType - Actual type of the property
+ * @param value - Property value
+ * @returns Whether the property type is valid
+ */
+function validateSinglePropertyType(
+  expectedType: PropertyType,
   actualType: string,
   value: any
 ): boolean {
   switch (expectedType) {
-    case 'string':
+    case PropertyType.STRING:
       return actualType === 'string';
 
-    case 'number':
+    case PropertyType.NUMBER:
+    case PropertyType.INTEGER:
+    case PropertyType.FLOAT:
       return actualType === 'number' && !isNaN(value);
 
-    case 'boolean':
+    case PropertyType.BOOLEAN:
       return actualType === 'boolean';
 
-    case 'object':
+    case PropertyType.OBJECT:
       return actualType === 'object' && value !== null;
 
-    case 'array':
+    case PropertyType.ARRAY:
       return Array.isArray(value);
 
-    case 'any':
+    case PropertyType.DATE:
+    case PropertyType.DATETIME:
+      return actualType === 'string' || value instanceof Date;
+
+    case PropertyType.ANY:
       return true;
 
     default:

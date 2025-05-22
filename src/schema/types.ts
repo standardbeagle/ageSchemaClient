@@ -290,6 +290,11 @@ export interface PropertyDefinition {
   default?: unknown;
 
   /**
+   * Whether the property is required
+   */
+  required?: boolean;
+
+  /**
    * Whether the property can be null
    */
   nullable?: boolean;

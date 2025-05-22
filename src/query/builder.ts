@@ -9,6 +9,7 @@ import { QueryExecutor } from '../db/query';
 import {
   IQueryBuilder,
   IMatchClause,
+  IEdgeMatchClause,
   QueryPart,
   QueryPartType,
   OrderDirection,
@@ -65,20 +66,38 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
   }
 
   /**
-   * Add MATCH clause for a vertex or an edge
-   *
-   * @param labelOrSourceAlias - Vertex label or source vertex alias
-   * @param aliasOrEdgeLabel - Vertex alias or edge label
-   * @param targetAlias - Target vertex alias (optional)
-   * @param edgeAlias - Edge alias (optional)
-   * @returns Match clause or edge match clause
+   * Add MATCH clause for a vertex
    */
-  match<L extends keyof T['vertices'] | keyof T['edges']>(
-    labelOrSourceAlias: L | string,
+  match<L extends keyof T['vertices']>(label: L, alias: string): IMatchClause<T, L>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices with an edge alias
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string,
+    edgeAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Implementation of the match method
+   */
+  match(
+    labelOrSourceAlias: any,
     aliasOrEdgeLabel: string,
     targetAlias?: string,
     edgeAlias?: string
-  ): IMatchClause<T, any> | IEdgeMatchClause<T> {
+  ): any {
     // Case 1: match('Person', 'p') - Match a vertex
     if (targetAlias === undefined) {
       // This is a vertex match
@@ -230,7 +249,7 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
 
     // Replace null parameter references in the condition with NOT exists() expressions
     let processedCondition = condition;
-    for (const [key, paramName] of Object.entries(nullParams)) {
+    for (const [, paramName] of Object.entries(nullParams)) {
       // Replace patterns like "x.prop = $paramName" with "NOT exists(x.prop)"
       // This regex looks for property comparisons with null parameters
       const regex = new RegExp(`([a-zA-Z0-9_]+)\\.([a-zA-Z0-9_]+)\\s*=\\s*\\$${paramName}\\b`, 'g');
