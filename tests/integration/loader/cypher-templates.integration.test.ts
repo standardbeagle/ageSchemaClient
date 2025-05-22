@@ -6,12 +6,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import {
-  createParameterizedVertexTemplate,
-  createParameterizedEdgeTemplate
-} from '../../../src/loader/cypher-templates';
 import { CypherQueryGenerator } from '../../../src/loader/cypher-query-generator';
-import { SchemaDefinition } from '../../../src/schema/types';
+import { SchemaDefinition, PropertyType } from '../../../src/schema/types';
 import {
   queryExecutor,
   isAgeAvailable
@@ -19,22 +15,23 @@ import {
 
 // Sample schema for testing
 const testSchema: SchemaDefinition = {
+  version: '1.0.0',
   vertices: {
     Person: {
-      label: 'Person',
       properties: {
-        id: { type: 'string', required: true },
-        name: { type: 'string', required: true },
-        age: { type: 'number' }
-      }
+        id: { type: PropertyType.STRING },
+        name: { type: PropertyType.STRING },
+        age: { type: PropertyType.NUMBER }
+      },
+      required: ['id', 'name']
     },
     Company: {
-      label: 'Company',
       properties: {
-        id: { type: 'string', required: true },
-        name: { type: 'string', required: true },
-        founded: { type: 'number' }
-      }
+        id: { type: PropertyType.STRING },
+        name: { type: PropertyType.STRING },
+        founded: { type: PropertyType.NUMBER }
+      },
+      required: ['id', 'name']
     }
   },
   edges: {
@@ -42,12 +39,17 @@ const testSchema: SchemaDefinition = {
       label: 'WORKS_AT',
       from: 'Person',
       to: 'Company',
+      fromLabel: 'Person',
+      toLabel: 'Company',
+      fromVertex: 'Person',
+      toVertex: 'Company',
       properties: {
-        from: { type: 'string', required: true },
-        to: { type: 'string', required: true },
-        since: { type: 'number' },
-        position: { type: 'string' }
-      }
+        from: { type: PropertyType.STRING },
+        to: { type: PropertyType.STRING },
+        since: { type: PropertyType.NUMBER },
+        position: { type: PropertyType.STRING }
+      },
+      required: ['from', 'to']
     }
   }
 };

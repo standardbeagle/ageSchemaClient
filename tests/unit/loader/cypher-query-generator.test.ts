@@ -2,9 +2,9 @@
  * Unit tests for CypherQueryGenerator
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { CypherQueryGenerator } from '../../../src/loader/cypher-query-generator';
-import { SchemaDefinition } from '../../../src/schema/types';
+import { SchemaDefinition, PropertyType } from '../../../src/schema/types';
 
 // Mock schema definition
 const mockSchema: SchemaDefinition = {
@@ -12,38 +12,48 @@ const mockSchema: SchemaDefinition = {
   vertices: {
     Person: {
       properties: {
-        name: { type: 'string' },
-        age: { type: 'number' }
+        name: { type: PropertyType.STRING },
+        age: { type: PropertyType.NUMBER }
       },
       required: ['name']
     },
     Location: {
       properties: {
-        name: { type: 'string' },
-        latitude: { type: 'number' },
-        longitude: { type: 'number' }
+        name: { type: PropertyType.STRING },
+        latitude: { type: PropertyType.NUMBER },
+        longitude: { type: PropertyType.NUMBER }
       },
       required: ['name']
     }
   },
   edges: {
     KNOWS: {
+      label: 'KNOWS',
       properties: {
-        since: { type: 'date' },
-        weight: { type: 'number' }
+        since: { type: PropertyType.DATE },
+        weight: { type: PropertyType.NUMBER }
       },
-      source: 'Person',
-      target: 'Person',
+      from: 'Person',
+      to: 'Person',
+      fromLabel: 'Person',
+      toLabel: 'Person',
+      fromVertex: 'Person',
+      toVertex: 'Person',
       required: ['since']
     },
     VISITED: {
+      label: 'VISITED',
       properties: {
-        date: { type: 'date' },
-        rating: { type: 'number' },
-        distance: { type: 'number' }
+        date: { type: PropertyType.DATE },
+        rating: { type: PropertyType.NUMBER },
+        distance: { type: PropertyType.NUMBER }
       },
-      source: 'Person',
-      target: 'Location',
+      from: 'Person',
+      to: 'Location',
+      fromLabel: 'Person',
+      toLabel: 'Location',
+      fromVertex: 'Person',
+      toVertex: 'Location',
       required: ['date']
     }
   }

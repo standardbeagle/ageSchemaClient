@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { SchemaDefinition } from '../../../src/schema/types';
+import { SchemaDefinition, PropertyType } from '../../../src/schema/types';
 import {
   createParameterizedVertexTemplate,
   createParameterizedEdgeTemplate
@@ -14,24 +14,25 @@ import {
 
 // Sample schema for testing
 const testSchema: SchemaDefinition = {
+  version: '1.0.0',
   vertices: {
     Person: {
-      label: 'Person',
       properties: {
-        id: { type: 'string', required: true },
-        name: { type: 'string', required: true },
-        age: { type: 'number' },
-        email: { type: 'string' }
-      }
+        id: { type: PropertyType.STRING },
+        name: { type: PropertyType.STRING },
+        age: { type: PropertyType.NUMBER },
+        email: { type: PropertyType.STRING }
+      },
+      required: ['id', 'name']
     },
     Company: {
-      label: 'Company',
       properties: {
-        id: { type: 'string', required: true },
-        name: { type: 'string', required: true },
-        founded: { type: 'number' },
-        industry: { type: 'string' }
-      }
+        id: { type: PropertyType.STRING },
+        name: { type: PropertyType.STRING },
+        founded: { type: PropertyType.NUMBER },
+        industry: { type: PropertyType.STRING }
+      },
+      required: ['id', 'name']
     }
   },
   edges: {
@@ -39,22 +40,32 @@ const testSchema: SchemaDefinition = {
       label: 'WORKS_AT',
       from: 'Person',
       to: 'Company',
+      fromLabel: 'Person',
+      toLabel: 'Company',
+      fromVertex: 'Person',
+      toVertex: 'Company',
       properties: {
-        from: { type: 'string', required: true },
-        to: { type: 'string', required: true },
-        since: { type: 'number' },
-        position: { type: 'string' }
-      }
+        from: { type: PropertyType.STRING },
+        to: { type: PropertyType.STRING },
+        since: { type: PropertyType.NUMBER },
+        position: { type: PropertyType.STRING }
+      },
+      required: ['from', 'to']
     },
     KNOWS: {
       label: 'KNOWS',
       from: 'Person',
       to: 'Person',
+      fromLabel: 'Person',
+      toLabel: 'Person',
+      fromVertex: 'Person',
+      toVertex: 'Person',
       properties: {
-        from: { type: 'string', required: true },
-        to: { type: 'string', required: true },
-        since: { type: 'number' }
-      }
+        from: { type: PropertyType.STRING },
+        to: { type: PropertyType.STRING },
+        since: { type: PropertyType.NUMBER }
+      },
+      required: ['from', 'to']
     }
   }
 };
@@ -96,7 +107,7 @@ describe('Cypher Query Generator V2', () => {
       const edgeType = 'WORKS_AT';
       const propertyNames = ['from', 'to', 'since', 'position'];
 
-      const template = createParameterizedEdgeTemplate(edgeType, propertyNames);
+      const template = createParameterizedEdgeTemplate(edgeType, propertyNames, 'Company', 'Person');
 
       // Check that the template contains the expected parts
       expect(template).toContain('UNWIND age_schema_client.get_edges(\'WORKS_AT\') AS edge_data');

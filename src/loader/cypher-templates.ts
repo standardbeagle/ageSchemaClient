@@ -1,23 +1,23 @@
 /**
  * Cypher query templates for batch operations
- * 
+ *
  * This module provides templates for Cypher queries used in batch operations
  * with Apache AGE. The templates use the UNWIND operator with PostgreSQL functions
  * to efficiently load data from the age_params temporary table.
- * 
+ *
  * @packageDocumentation
  */
 
 /**
  * Template for creating vertices in batch
- * 
+ *
  * This template uses the UNWIND operator with the get_vertices function
  * to create vertices with the specified type and properties.
- * 
+ *
  * @param vertexType - The type of vertex to create
  * @param schemaName - The schema name for the PostgreSQL functions
  * @returns Cypher query template
- * 
+ *
  * @example
  * ```typescript
  * const template = createVertexTemplate('Person', 'age_schema_client');
@@ -47,15 +47,15 @@ export function createVertexTemplate(
 
 /**
  * Generate a dynamic property mapping for a vertex or edge
- * 
+ *
  * This function generates a Cypher property mapping string for a vertex or edge
  * based on the provided property names. The mapping includes conditional logic
  * to handle null values and type conversions.
- * 
+ *
  * @param propertyNames - Array of property names to include in the mapping
  * @param prefix - Prefix for the property access (e.g., 'vertex_data' or 'edge_data')
  * @returns Cypher property mapping string
- * 
+ *
  * @example
  * ```typescript
  * const mapping = generatePropertyMapping(['name', 'age', 'email'], 'vertex_data');
@@ -75,7 +75,7 @@ export function generatePropertyMapping(
       if (prop === 'id' || prop === 'from' || prop === 'to') {
         return null;
       }
-      
+
       return `${prop}: CASE WHEN ${prefix}.${prop} IS NOT NULL THEN ${prefix}.${prop} ELSE NULL END`;
     })
     .filter(Boolean) // Remove null entries
@@ -84,15 +84,15 @@ export function generatePropertyMapping(
 
 /**
  * Create a parameterized vertex template with dynamic property mapping
- * 
+ *
  * This function creates a Cypher query template for creating vertices with
  * dynamic property mapping based on the provided property names.
- * 
+ *
  * @param vertexType - The type of vertex to create
  * @param propertyNames - Array of property names to include in the mapping
  * @param schemaName - The schema name for the PostgreSQL functions
  * @returns Cypher query template with dynamic property mapping
- * 
+ *
  * @example
  * ```typescript
  * const template = createParameterizedVertexTemplate(
@@ -108,7 +108,7 @@ export function createParameterizedVertexTemplate(
   schemaName: string = 'age_schema_client'
 ): string {
   const propertyMapping = generatePropertyMapping(propertyNames, 'vertex_data');
-  
+
   return `
     UNWIND ${schemaName}.get_vertices('${vertexType}') AS vertex_data
     CREATE (v:${vertexType} {
@@ -121,20 +121,24 @@ export function createParameterizedVertexTemplate(
 
 /**
  * Create a parameterized edge template with dynamic property mapping
- * 
+ *
  * This function creates a Cypher query template for creating edges with
  * dynamic property mapping based on the provided property names.
- * 
+ *
  * @param edgeType - The type of edge to create
  * @param propertyNames - Array of property names to include in the mapping
+ * @param toLabel - The target vertex label (optional)
+ * @param fromLabel - The source vertex label (optional)
  * @param schemaName - The schema name for the PostgreSQL functions
  * @returns Cypher query template with dynamic property mapping
- * 
+ *
  * @example
  * ```typescript
  * const template = createParameterizedEdgeTemplate(
  *   'KNOWS',
  *   ['from', 'to', 'since', 'strength'],
+ *   'Person',
+ *   'Person',
  *   'age_schema_client'
  * );
  * ```
@@ -150,7 +154,7 @@ export function createParameterizedEdgeTemplate(
 
   const fromMatch = fromLabel ? `MATCH (from:${fromLabel} {id: edge_data.from})` : `MATCH (from {id: edge_data.from})`;
   const toMatch = toLabel ? `MATCH (to:${toLabel} {id: edge_data.to})` : `MATCH (to {id: edge_data.to})`;
-  
+
   return `
     UNWIND ${schemaName}.get_edges('${edgeType}') AS edge_data
     ${fromMatch}
@@ -160,4 +164,62 @@ export function createParameterizedEdgeTemplate(
     }]->(to)
     RETURN count(*) AS created_edges
   `;
+}
+
+/**
+ * Template for creating edges in batch (legacy function)
+ *
+ * This template uses the UNWIND operator with the get_edges function
+ * to create edges with the specified type and properties.
+ *
+ * @param edgeType - The type of edge to create
+ * @param schemaName - The schema name for the PostgreSQL functions
+ * @returns Cypher query template
+ *
+ * @example
+ * ```typescript
+ * const template = createEdgeTemplate('KNOWS', 'age_schema_client');
+ * ```
+ */
+export function createEdgeTemplate(
+  edgeType: string,
+  schemaName: string = 'age_schema_client'
+): string {
+  return `
+    UNWIND ${schemaName}.get_edges('${edgeType}') AS edge_data
+    MATCH (from {id: edge_data.from})
+    MATCH (to {id: edge_data.to})
+    CREATE (from)-[:${edgeType} {
+      /* Properties will be added dynamically */
+    }]->(to)
+    RETURN count(*) AS created_edges
+  `;
+}
+
+/**
+ * Generate a complete Cypher query for creating edges
+ *
+ * This function generates a complete Cypher query for creating edges
+ * with the specified type and property mappings.
+ *
+ * @param edgeType - The type of edge to create
+ * @param propertyNames - Array of property names to include
+ * @param fromLabel - The source vertex label (optional)
+ * @param toLabel - The target vertex label (optional)
+ * @param schemaName - The schema name for the PostgreSQL functions
+ * @returns Complete Cypher query for creating edges
+ *
+ * @example
+ * ```typescript
+ * const query = generateCreateEdgesQuery('KNOWS', ['from', 'to', 'since'], 'Person', 'Person');
+ * ```
+ */
+export function generateCreateEdgesQuery(
+  edgeType: string,
+  propertyNames: string[],
+  fromLabel?: string,
+  toLabel?: string,
+  schemaName: string = 'age_schema_client'
+): string {
+  return createParameterizedEdgeTemplate(edgeType, propertyNames, toLabel, fromLabel, schemaName);
 }
