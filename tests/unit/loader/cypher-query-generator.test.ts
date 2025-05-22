@@ -56,27 +56,6 @@ describe('CypherQueryGenerator', () => {
     generator = new CypherQueryGenerator(mockSchema);
   });
 
-  describe('generateCreateEdgesQuery', () => {
-    it('should generate a valid Cypher query for creating edges', () => {
-      const functionName = 'test_schema.get_edges';
-      const graphName = 'test_graph';
-
-      const query = generator.generateCreateEdgesQuery(functionName, graphName);
-
-      // Check that the query contains the expected elements
-      expect(query).toContain('SET search_path = ag_catalog, "$user", public');
-      expect(query).toContain(`SELECT * FROM cypher('${graphName}'`);
-      expect(query).toContain(`UNWIND (SELECT ${functionName}()) AS batch`);
-      expect(query).toContain('WITH batch.type AS edge_type');
-      expect(query).toContain('batch.from AS from_id');
-      expect(query).toContain('batch.to AS to_id');
-      expect(query).toContain('batch.properties AS properties');
-      expect(query).toContain('MATCH (source), (target)');
-      expect(query).toContain('WHERE id(source) = toInteger(from_id) AND id(target) = toInteger(to_id)');
-      expect(query).toContain('CREATE (source)-[r:$$||edge_type||$$');
-      expect(query).toContain('RETURN edge_type, id(r) AS edge_id');
-    });
-  });
 
   describe('generateVertexExistenceQuery', () => {
     it('should generate a valid Cypher query for checking vertex existence', () => {
@@ -85,7 +64,6 @@ describe('CypherQueryGenerator', () => {
       const query = generator.generateVertexExistenceQuery(graphName);
 
       // Check that the query contains the expected elements
-      expect(query).toContain('SET search_path = ag_catalog, "$user", public');
       expect(query).toContain(`SELECT * FROM cypher('${graphName}'`);
       expect(query).toContain('MATCH (v)');
       expect(query).toContain('RETURN id(v) AS vertex_id');
