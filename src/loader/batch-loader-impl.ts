@@ -492,6 +492,14 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             const batchNumber = Math.floor(i / batchSize) + 1;
             const totalBatches = Math.ceil(vertexArray.length / batchSize);
 
+            // Calculate estimated time remaining
+            const processed = i + batch.length;
+            const total = vertexArray.length;
+            let estimatedTimeRemaining: number | undefined = undefined;
+            if (processed > 0 && processed < total && elapsedTime > 0) {
+              estimatedTimeRemaining = Math.floor((elapsedTime / processed) * (total - processed));
+            }
+
             // Collect any warnings for this batch
             const batchWarnings = warnings.length > 0 ?
               warnings.slice(Math.max(0, warnings.length - batch.length)) :
@@ -500,13 +508,13 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             options.onProgress({
               phase: 'vertices',
               type: vertexType,
-              processed: i + batch.length,
-              total: vertexArray.length,
+              processed,
+              total,
               percentage,
               batchNumber,
               totalBatches,
               elapsedTime,
-              estimatedTimeRemaining: undefined,
+              estimatedTimeRemaining,
               warnings: batchWarnings
             });
           }
@@ -518,16 +526,24 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
             const batchNumber = Math.floor(i / batchSize) + 1;
             const totalBatches = Math.ceil(vertexArray.length / batchSize);
 
+            // Calculate estimated time remaining
+            const processed = i;
+            const total = vertexArray.length;
+            let estimatedTimeRemaining: number | undefined = undefined;
+            if (processed > 0 && processed < total && elapsedTime > 0) {
+              estimatedTimeRemaining = Math.floor((elapsedTime / processed) * (total - processed));
+            }
+
             options.onProgress({
               phase: 'vertices',
               type: vertexType,
-              processed: i,
-              total: vertexArray.length,
+              processed,
+              total,
               percentage,
               batchNumber,
               totalBatches,
               elapsedTime,
-              estimatedTimeRemaining: undefined,
+              estimatedTimeRemaining,
               error: {
                 message: error instanceof Error ? error.message : String(error),
                 type: error instanceof Error ? error.constructor.name : 'Unknown',
@@ -737,6 +753,12 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
               const batchNumber = Math.floor(processedCount / batchSize) + 1;
               const totalBatches = Math.ceil(totalCount / batchSize);
 
+              // Calculate estimated time remaining
+              let estimatedTimeRemaining: number | undefined = undefined;
+              if (processedCount > 0 && processedCount < totalCount && elapsedTime > 0) {
+                estimatedTimeRemaining = Math.floor((elapsedTime / processedCount) * (totalCount - processedCount));
+              }
+
               // Collect any warnings for this batch
               const batchWarnings = warnings.length > 0 ?
                 warnings.slice(Math.max(0, warnings.length - batch.length)) :
@@ -751,7 +773,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
                 batchNumber,
                 totalBatches,
                 elapsedTime,
-                estimatedTimeRemaining: undefined,
+                estimatedTimeRemaining,
                 warnings: batchWarnings
               });
             }
@@ -763,6 +785,12 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
               const batchNumber = Math.floor(processedCount / batchSize) + 1;
               const totalBatches = Math.ceil(totalCount / batchSize);
 
+              // Calculate estimated time remaining
+              let estimatedTimeRemaining: number | undefined = undefined;
+              if (processedCount > 0 && processedCount < totalCount && elapsedTime > 0) {
+                estimatedTimeRemaining = Math.floor((elapsedTime / processedCount) * (totalCount - processedCount));
+              }
+
               options.onProgress({
                 phase: 'edges',
                 type: edgeType,
@@ -772,7 +800,7 @@ class BatchLoaderImpl<T extends SchemaDefinition> implements BatchLoader<T> {
                 batchNumber,
                 totalBatches,
                 elapsedTime,
-                estimatedTimeRemaining: undefined,
+                estimatedTimeRemaining,
                 error: {
                   message: error instanceof Error ? error.message : String(error),
                   type: error instanceof Error ? error.constructor.name : 'Unknown',
