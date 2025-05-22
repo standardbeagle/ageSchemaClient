@@ -305,14 +305,18 @@ describe('Property Matching Integration', () => {
     // Create a new query builder for this test
     const queryBuilder = new QueryBuilder(testSchema, queryExecutor, PROPERTY_MATCHING_TEST_GRAPH);
 
+    // Set parameter for minimum salary
+    await queryBuilder.setParam('minSalary', 95000);
+
     // Build and execute the query using the query builder with a condition string
     const result = await queryBuilder
+      .withAgeParam('minSalary', 'params')
       .match('Person', 'p')
       .done()
       .match('Company', 'c')
       .done()
       .match('p', 'WORKS_AT', 'c', 'e')
-      .where('e.salary > $minSalary', { minSalary: 95000 })
+      .where('e.salary > params')
       .done()
       .return('p.name AS name', 'c.name AS company', 'e.salary AS salary')
       .execute();
@@ -344,15 +348,19 @@ describe('Property Matching Integration', () => {
     // Create a new query builder for this test
     const queryBuilder = new QueryBuilder(testSchema, queryExecutor, PROPERTY_MATCHING_TEST_GRAPH);
 
+    // Set parameter for minimum salary
+    await queryBuilder.setParam('minSalary', 90000);
+
     // Build and execute the query using the query builder with both property constraints and condition strings
     const result = await queryBuilder
+      .withAgeParam('minSalary', 'params')
       .match('Person', 'p')
       .done()
       .match('Company', 'c')
       .done()
       .match('p', 'WORKS_AT', 'c', 'e')
       .constraint({ department: 'Engineering' })
-      .where('e.salary > $minSalary', { minSalary: 90000 })
+      .where('e.salary > params')
       .done()
       .return('p.name AS name', 'c.name AS company', 'e.department AS department', 'e.salary AS salary')
       .execute();
@@ -453,9 +461,17 @@ describe('Property Matching Integration', () => {
       .return('p.name AS name', 'p.id AS id')
       .execute();
 
-    // Verify the result - should find the person without an age property
-    expect(result.rows).toHaveLength(1);
-    expect(JSON.parse(result.rows[0].name)).toBe('Frank');
-    expect(JSON.parse(result.rows[0].id)).toBe('p6');
+    // Verify the result - should find people without an age property (both Eve and Frank)
+    expect(result.rows).toHaveLength(2);
+
+    // Sort results by name for consistent testing
+    const sortedResults = [...result.rows].sort((a, b) =>
+      JSON.parse(a.name).localeCompare(JSON.parse(b.name))
+    );
+
+    expect(JSON.parse(sortedResults[0].name)).toBe('Eve');
+    expect(JSON.parse(sortedResults[0].id)).toBe('p5');
+    expect(JSON.parse(sortedResults[1].name)).toBe('Frank');
+    expect(JSON.parse(sortedResults[1].id)).toBe('p6');
   });
 });

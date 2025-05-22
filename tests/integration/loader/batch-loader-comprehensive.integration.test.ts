@@ -56,7 +56,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Comprehensive In
       // Verify the result
       expect(result.success).toBe(true);
       expect(result.vertexCount).toBe(13); // 5 Person + 2 Company + 3 Department + 3 Project
-      expect(result.edgeCount).toBe(20); // 5 WORKS_AT + 4 KNOWS + 3 BELONGS_TO + 5 WORKS_IN + 5 WORKS_ON + 3 MANAGES
+      expect(result.edgeCount).toBe(25); // 5 WORKS_AT + 4 KNOWS + 3 BELONGS_TO + 5 WORKS_IN + 5 WORKS_ON + 3 MANAGES
       expect(result.errors).toHaveLength(0);
       expect(result.warnings).toHaveLength(0);
 

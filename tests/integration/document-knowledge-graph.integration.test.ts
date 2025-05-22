@@ -14,12 +14,12 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   queryExecutor,
-  isAgeAvailable,
-  TEST_SCHEMA
+  isAgeAvailable
 } from '../setup/integration';
 import { QueryBuilder } from '../../src/query/builder';
 import { OrderDirection } from '../../src/query/types';
-import { SchemaLoader } from '../../src/loader/schema-loader';
+import { createBatchLoader } from '../../src/loader/batch-loader-impl';
+import { BatchLoader } from '../../src/loader/batch-loader';
 import { documentKnowledgeSchema } from '../fixtures/document-knowledge-schema';
 import { generateGraphName } from '../setup/name-generator';
 
@@ -197,7 +197,9 @@ const testData = {
       { from: 'sec2', to: 'con1', relevance: 0.85, context: 'benefits', mentionCount: 2 },
       { from: 'sec3', to: 'con4', relevance: 0.90, context: 'use case', mentionCount: 1 },
       { from: 'sec4', to: 'con1', relevance: 0.75, context: 'application', mentionCount: 1 },
-      { from: 'sec5', to: 'con3', relevance: 0.85, context: 'technique', mentionCount: 2 },
+      { from: 'sec5', to: 'con3', relevance: 0.85, context: 'technique', mentionCount: 2 }
+    ],
+    SUMMARY_RELATES_TO: [
       { from: 'sum1', to: 'con1', relevance: 0.90, context: 'summary', mentionCount: 1 },
       { from: 'sum3', to: 'con4', relevance: 0.85, context: 'summary', mentionCount: 1 }
     ],
@@ -224,7 +226,7 @@ const testData = {
 
 describe('Document Knowledge Graph Integration', () => {
   let ageAvailable = false;
-  let schemaLoader: SchemaLoader<typeof documentKnowledgeSchema>;
+  let batchLoader: BatchLoader<typeof documentKnowledgeSchema>;
 
   // Before all tests, check if AGE is available and create the test graph
   beforeAll(async () => {
@@ -237,11 +239,12 @@ describe('Document Knowledge Graph Integration', () => {
     }
 
     try {
-      // Create the schema loader
-      schemaLoader = new SchemaLoader<typeof documentKnowledgeSchema>(documentKnowledgeSchema, queryExecutor, {
+      // Create the batch loader
+      batchLoader = createBatchLoader(documentKnowledgeSchema, queryExecutor, {
         validateBeforeLoad: true,
         defaultGraphName: DOCUMENT_KNOWLEDGE_GRAPH,
-        defaultBatchSize: 100
+        defaultBatchSize: 100,
+        schemaName: 'age_schema_client'
       });
 
       // Create the graph
@@ -252,7 +255,7 @@ describe('Document Knowledge Graph Integration', () => {
       console.log(`Created test graph: ${DOCUMENT_KNOWLEDGE_GRAPH}`);
 
       // Load the test data
-      const result = await schemaLoader.loadGraphData(testData, {
+      const result = await batchLoader.loadGraphData(testData, {
         graphName: DOCUMENT_KNOWLEDGE_GRAPH
       });
 
@@ -411,7 +414,7 @@ describe('Document Knowledge Graph Integration', () => {
     const result = await queryBuilder
       .withAgeParam('conceptName', 'params')
       .match('Summary', 's') // Start match from Summary
-      .outgoing('RELATES_TO', 'r1', 'Concept', 'c1') // (s:Summary)-[r1:RELATES_TO]->(c1:Concept)
+      .outgoing('SUMMARY_RELATES_TO', 'r1', 'Concept', 'c1') // (s:Summary)-[r1:SUMMARY_RELATES_TO]->(c1:Concept)
       .done() // Done with the MATCH clause
       .where('c1.name = params') // Filter where the concept c1's name is the one from params
       .return('c1.name AS concept', 's.content AS summary', 'r1.relevance AS relevance')

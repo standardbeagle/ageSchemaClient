@@ -21,6 +21,7 @@ export const documentKnowledgeSchema: SchemaDefinition = {
   version: '1.0.0',
   vertices: {
     Document: {
+      label: 'Document',
       properties: {
         id: { type: 'string', required: true },
         title: { type: 'string', required: true },
@@ -31,10 +32,10 @@ export const documentKnowledgeSchema: SchemaDefinition = {
         tags: { type: 'array' },
         url: { type: 'string' },
         sourceId: { type: 'string' }
-      },
-      required: ['id', 'title']
+      }
     },
     Section: {
+      label: 'Section',
       properties: {
         id: { type: 'string', required: true },
         title: { type: 'string' },
@@ -43,10 +44,10 @@ export const documentKnowledgeSchema: SchemaDefinition = {
         level: { type: 'number' },
         wordCount: { type: 'number' },
         documentId: { type: 'string', required: true }
-      },
-      required: ['id', 'content', 'documentId']
+      }
     },
     Summary: {
+      label: 'Summary',
       properties: {
         id: { type: 'string', required: true },
         content: { type: 'string', required: true },
@@ -55,10 +56,10 @@ export const documentKnowledgeSchema: SchemaDefinition = {
         generatedBy: { type: 'string' }, // e.g., 'human', 'ai', 'hybrid'
         confidence: { type: 'number' }, // 0-1 score for AI-generated summaries
         sectionId: { type: 'string', required: true }
-      },
-      required: ['id', 'content', 'sectionId']
+      }
     },
     Concept: {
+      label: 'Concept',
       properties: {
         id: { type: 'string', required: true },
         name: { type: 'string', required: true },
@@ -66,10 +67,10 @@ export const documentKnowledgeSchema: SchemaDefinition = {
         aliases: { type: 'array' },
         externalId: { type: 'string' }, // e.g., Wikidata ID
         importance: { type: 'number' } // 0-1 score
-      },
-      required: ['id', 'name']
+      }
     },
     Topic: {
+      label: 'Topic',
       properties: {
         id: { type: 'string', required: true },
         name: { type: 'string', required: true },
@@ -77,58 +78,115 @@ export const documentKnowledgeSchema: SchemaDefinition = {
         broader: { type: 'array' }, // Array of broader topic IDs
         narrower: { type: 'array' }, // Array of narrower topic IDs
         category: { type: 'string' }
-      },
-      required: ['id', 'name']
+      }
     }
   },
   edges: {
     CONTAINS: {
+      label: 'CONTAINS',
+      from: 'Document',
+      to: 'Section',
+      fromLabel: 'Document',
+      toLabel: 'Section',
+      fromVertex: 'Document',
+      toVertex: 'Section',
       properties: {
+        from: { type: 'string', required: true },
+        to: { type: 'string', required: true },
         section_order: { type: 'number' } // Position of the section within the document
-      },
-      from: ['Document'],
-      to: ['Section']
+      }
     },
     SUMMARIZES: {
+      label: 'SUMMARIZES',
+      from: 'Summary',
+      to: 'Section',
+      fromLabel: 'Summary',
+      toLabel: 'Section',
+      fromVertex: 'Summary',
+      toVertex: 'Section',
       properties: {
+        from: { type: 'string', required: true },
+        to: { type: 'string', required: true },
         quality: { type: 'number' }, // 0-1 score for summary quality
         createdAt: { type: 'string' }
-      },
-      from: ['Summary'],
-      to: ['Section']
+      }
     },
     RELATES_TO: {
+      label: 'RELATES_TO',
+      from: 'Section',
+      to: 'Concept',
+      fromLabel: 'Section',
+      toLabel: 'Concept',
+      fromVertex: 'Section',
+      toVertex: 'Concept',
       properties: {
+        from: { type: 'string', required: true },
+        to: { type: 'string', required: true },
         relevance: { type: 'number' }, // 0-1 score for relevance
         context: { type: 'string' }, // How the concept relates to the section/summary
         mentionCount: { type: 'number' } // Number of mentions
-      },
-      from: ['Section', 'Summary'],
-      to: ['Concept']
+      }
+    },
+    SUMMARY_RELATES_TO: {
+      label: 'SUMMARY_RELATES_TO',
+      from: 'Summary',
+      to: 'Concept',
+      fromLabel: 'Summary',
+      toLabel: 'Concept',
+      fromVertex: 'Summary',
+      toVertex: 'Concept',
+      properties: {
+        from: { type: 'string', required: true },
+        to: { type: 'string', required: true },
+        relevance: { type: 'number' }, // 0-1 score for relevance
+        context: { type: 'string' }, // How the concept relates to the section/summary
+        mentionCount: { type: 'number' } // Number of mentions
+      }
     },
     BELONGS_TO: {
+      label: 'BELONGS_TO',
+      from: 'Concept',
+      to: 'Topic',
+      fromLabel: 'Concept',
+      toLabel: 'Topic',
+      fromVertex: 'Concept',
+      toVertex: 'Topic',
       properties: {
+        from: { type: 'string', required: true },
+        to: { type: 'string', required: true },
         confidence: { type: 'number' }, // 0-1 score for confidence
         primary: { type: 'boolean' } // Whether this is the primary topic
-      },
-      from: ['Concept'],
-      to: ['Topic']
+      }
     },
     REFERENCES: {
+      label: 'REFERENCES',
+      from: 'Section',
+      to: 'Section',
+      fromLabel: 'Section',
+      toLabel: 'Section',
+      fromVertex: 'Section',
+      toVertex: 'Section',
       properties: {
+        from: { type: 'string', required: true },
+        to: { type: 'string', required: true },
         context: { type: 'string' },
         page: { type: 'number' }
-      },
-      from: ['Section'],
-      to: ['Section']
+      }
     },
     SIMILAR_TO: {
+      label: 'SIMILAR_TO',
+      from: 'Concept',
+      to: 'Concept',
+      fromLabel: 'Concept',
+      toLabel: 'Concept',
+      fromVertex: 'Concept',
+      toVertex: 'Concept',
       properties: {
+        from: { type: 'string', required: true },
+        to: { type: 'string', required: true },
         similarity: { type: 'number' }, // 0-1 score for similarity
         method: { type: 'string' } // e.g., 'semantic', 'citation', 'co-occurrence'
-      },
-      from: ['Concept', 'Section', 'Document'],
-      to: ['Concept', 'Section', 'Document']
+      }
     }
   }
 };

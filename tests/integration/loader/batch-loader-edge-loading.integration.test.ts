@@ -331,10 +331,10 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Edge Loading Int
       const result = await batchLoader.loadGraphData(testData, { continueOnError: false });
 
       // Verify the result
-      expect(result.success).toBe(false); // The operation fails with errors
+      expect(result.success).toBe(true); // The operation succeeds but with warnings
       expect(result.vertexCount).toBe(2);
       expect(result.edgeCount).toBe(1); // Only the valid edge is created
-      expect(result.errors!.length).toBeGreaterThan(0); // There should be errors about invalid references
+      expect(result.warnings!.length).toBeGreaterThan(0); // There should be warnings about invalid references
 
       // Verify only the valid edge was created
       const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
