@@ -50,11 +50,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/beagle/age-schema-client.git"
+    "url": "https://github.com/standardbeagle/ageSchemaClient.git"
   },
-  "homepage": "https://github.com/beagle/age-schema-client#readme",
+  "homepage": "https://github.com/standardbeagle/ageSchemaClient#readme",
   "bugs": {
-    "url": "https://github.com/beagle/age-schema-client/issues"
+    "url": "https://github.com/standardbeagle/ageSchemaClient/issues"
   },
   "packageManager": "pnpm@10.10.0",
   "engines": {
