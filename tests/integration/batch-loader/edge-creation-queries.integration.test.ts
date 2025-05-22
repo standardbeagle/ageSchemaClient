@@ -339,9 +339,9 @@ describe('Edge creation Cypher queries', () => {
     
     // Generate the Cypher query for creating edges with specific properties
     const createEdgesQuery = `
-      UNWIND age_schema_client.get_edges($edge_type) AS edge_data
-      MATCH (from {id: edge_data.from})
-      MATCH (to {id: edge_data.to})
+      UNWIND age_schema_client.get_edges('WORKS_AT') AS edge_data
+      MATCH (from:Person {id: edge_data.from})
+      MATCH (to:Company {id: edge_data.to})
       CREATE (from)-[e:WORKS_AT {
         since: edge_data.since,
         position: edge_data.position
@@ -353,7 +353,7 @@ describe('Edge creation Cypher queries', () => {
     // Execute the query
     const result = await queryExecutor.executeCypher(
       createEdgesQuery,
-      { edge_type: 'WORKS_AT' },
+      {},
       TEST_GRAPH_NAME
     );
     

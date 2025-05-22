@@ -20,7 +20,7 @@ describe('Cypher query templates', () => {
       const template = createVertexTemplate('Person');
       
       // Check that the template contains the expected parts
-      expect(template).toContain('UNWIND age_schema_client.get_vertices($vertex_type) AS vertex_data');
+      expect(template).toContain('UNWIND age_schema_client.get_vertices(\'Person\') AS vertex_data');
       expect(template).toContain('CREATE (v:Person {');
       expect(template).toContain('id: vertex_data.id');
       expect(template).toContain('RETURN count(v) AS created_vertices');
@@ -29,26 +29,7 @@ describe('Cypher query templates', () => {
     it('should use the provided schema name', () => {
       const template = createVertexTemplate('Person', 'custom_schema');
       
-      expect(template).toContain('UNWIND custom_schema.get_vertices($vertex_type) AS vertex_data');
-    });
-  });
-  
-  describe('createEdgeTemplate', () => {
-    it('should generate a basic edge creation template', () => {
-      const template = createEdgeTemplate('KNOWS');
-      
-      // Check that the template contains the expected parts
-      expect(template).toContain('UNWIND age_schema_client.get_edges($edge_type) AS edge_data');
-      expect(template).toContain('MATCH (from {id: edge_data.from})');
-      expect(template).toContain('MATCH (to {id: edge_data.to})');
-      expect(template).toContain('CREATE (from)-[:KNOWS {');
-      expect(template).toContain('RETURN count(*) AS created_edges');
-    });
-    
-    it('should use the provided schema name', () => {
-      const template = createEdgeTemplate('KNOWS', 'custom_schema');
-      
-      expect(template).toContain('UNWIND custom_schema.get_edges($edge_type) AS edge_data');
+      expect(template).toContain('UNWIND custom_schema.get_vertices(\'Person\') AS vertex_data');
     });
   });
   
@@ -93,7 +74,7 @@ describe('Cypher query templates', () => {
       );
       
       // Check that the template contains the expected parts
-      expect(template).toContain('UNWIND age_schema_client.get_vertices($vertex_type) AS vertex_data');
+      expect(template).toContain('UNWIND age_schema_client.get_vertices(\'Person\') AS vertex_data');
       expect(template).toContain('CREATE (v:Person {');
       expect(template).toContain('id: vertex_data.id');
       
@@ -110,13 +91,15 @@ describe('Cypher query templates', () => {
     it('should generate an edge template with dynamic property mapping', () => {
       const template = createParameterizedEdgeTemplate(
         'KNOWS',
-        ['from', 'to', 'since', 'strength']
+        ['from', 'to', 'since', 'strength'],
+        'Person',
+        'Person'
       );
       
       // Check that the template contains the expected parts
-      expect(template).toContain('UNWIND age_schema_client.get_edges($edge_type) AS edge_data');
-      expect(template).toContain('MATCH (from {id: edge_data.from})');
-      expect(template).toContain('MATCH (to {id: edge_data.to})');
+      expect(template).toContain('UNWIND age_schema_client.get_edges(\'KNOWS\') AS edge_data');
+      expect(template).toContain('MATCH (from:Person {id: edge_data.from})');
+      expect(template).toContain('MATCH (to:Person {id: edge_data.to})');
       expect(template).toContain('CREATE (from)-[:KNOWS {');
       
       // Check that the property mapping is included

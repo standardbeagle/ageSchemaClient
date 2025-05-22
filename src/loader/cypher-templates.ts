@@ -35,51 +35,13 @@ export function createVertexTemplate(
   schemaName: string = 'age_schema_client'
 ): string {
   return `
-    UNWIND ${schemaName}.get_vertices($vertex_type) AS vertex_data
+    UNWIND ${schemaName}.get_vertices('${vertexType}') AS vertex_data
     CREATE (v:${vertexType} {
       id: vertex_data.id,
       name: CASE WHEN vertex_data.name IS NOT NULL THEN vertex_data.name ELSE NULL END
       /* Additional properties will be added dynamically */
     })
     RETURN count(v) AS created_vertices
-  `;
-}
-
-/**
- * Template for creating edges in batch
- * 
- * This template uses the UNWIND operator with the get_edges function
- * to create edges between vertices with the specified type and properties.
- * 
- * @param edgeType - The type of edge to create
- * @param schemaName - The schema name for the PostgreSQL functions
- * @returns Cypher query template
- * 
- * @example
- * ```typescript
- * const template = createEdgeTemplate('KNOWS', 'age_schema_client');
- * // Returns:
- * // UNWIND age_schema_client.get_edges($edge_type) AS edge_data
- * // MATCH (from {id: edge_data.from})
- * // MATCH (to {id: edge_data.to})
- * // CREATE (from)-[:KNOWS {
- * //   ...edge_data
- * // }]->(to)
- * // RETURN count(*) AS created_edges
- * ```
- */
-export function createEdgeTemplate(
-  edgeType: string,
-  schemaName: string = 'age_schema_client'
-): string {
-  return `
-    UNWIND ${schemaName}.get_edges($edge_type) AS edge_data
-    MATCH (from {id: edge_data.from})
-    MATCH (to {id: edge_data.to})
-    CREATE (from)-[:${edgeType} {
-      /* Properties will be added dynamically */
-    }]->(to)
-    RETURN count(*) AS created_edges
   `;
 }
 
@@ -178,16 +140,16 @@ export function createParameterizedVertexTemplate(
  * ```
  */
 export function createParameterizedEdgeTemplate(
-  toType: string,
+  edgeType: string,
   propertyNames: string[],
-  edgeType: string | undefined,
-  fromType: string | undefined,
+  toLabel: string | undefined,
+  fromLabel: string | undefined,
   schemaName: string = 'age_schema_client'
 ): string {
   const propertyMapping = generatePropertyMapping(propertyNames, 'edge_data');
 
-  const fromMatch = fromType ? `MATCH (from:${fromType} {id: edge_data.from})` : `MATCH (from {id: edge_data.from})`;
-  const toMatch = toType ? `MATCH (to:${toType} {id: edge_data.to})` : `MATCH (to {id: edge_data.to})`;
+  const fromMatch = fromLabel ? `MATCH (from:${fromLabel} {id: edge_data.from})` : `MATCH (from {id: edge_data.from})`;
+  const toMatch = toLabel ? `MATCH (to:${toLabel} {id: edge_data.to})` : `MATCH (to {id: edge_data.to})`;
   
   return `
     UNWIND ${schemaName}.get_edges('${edgeType}') AS edge_data

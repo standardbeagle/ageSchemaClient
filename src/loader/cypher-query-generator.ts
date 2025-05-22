@@ -125,7 +125,7 @@ export class CypherQueryGenerator<T extends SchemaDefinition> {
     }
 
     // Generate the template
-    const template = createParameterizedEdgeTemplate(edgeType, propertyNames, edgeDef.fromLabel, edgeDef.toLabel, this.schemaName);
+    const template = createParameterizedEdgeTemplate(edgeType, propertyNames, edgeDef.toLabel, edgeDef.fromLabel, this.schemaName);
 
     // Add comments if requested
     const query = this.includeComments
