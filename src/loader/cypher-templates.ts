@@ -178,16 +178,21 @@ export function createParameterizedVertexTemplate(
  * ```
  */
 export function createParameterizedEdgeTemplate(
-  edgeType: string,
+  toType: string,
   propertyNames: string[],
+  edgeType: string | undefined,
+  fromType: string | undefined,
   schemaName: string = 'age_schema_client'
 ): string {
   const propertyMapping = generatePropertyMapping(propertyNames, 'edge_data');
+
+  const fromMatch = fromType ? `MATCH (from:${fromType} {id: edge_data.from})` : `MATCH (from {id: edge_data.from})`;
+  const toMatch = toType ? `MATCH (to:${toType} {id: edge_data.to})` : `MATCH (to {id: edge_data.to})`;
   
   return `
     UNWIND ${schemaName}.get_edges('${edgeType}') AS edge_data
-    MATCH (from {id: edge_data.from})
-    MATCH (to {id: edge_data.to})
+    ${fromMatch}
+    ${toMatch}
     CREATE (from)-[:${edgeType} {
       ${propertyMapping}
     }]->(to)

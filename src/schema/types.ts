@@ -5,6 +5,86 @@
  */
 
 /**
+ * Vertex definition interface
+ */
+export interface VertexDefinition {
+  /**
+   * Vertex label
+   */
+  label: string;
+
+  /**
+   * Vertex properties
+   */
+  properties: Record<string, PropertyDefinition>;
+
+  /**
+   * Required properties
+   */
+  required?: string[];
+
+  /**
+   * Vertex description
+   */
+  description?: string;
+
+  /**
+   * Additional metadata
+   */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Edge definition interface
+ */
+export interface EdgeDefinition {
+  /**
+   * Edge label
+   */
+  label: string;
+
+  /**
+   * Edge properties
+   */
+  properties: Record<string, PropertyDefinition>;
+
+  /**
+   * Source vertex type
+   */
+  from: string;
+
+  /**
+   * Target vertex type
+   */
+  to: string;
+
+  /**
+   * Source vertex label
+   */
+  fromLabel: string;
+
+  /**
+   * Target vertex label
+   */
+  toLabel: string;
+
+  /**
+   * Required properties
+   */
+  required?: string[];
+
+  /**
+   * Edge description
+   */
+  description?: string;
+
+  /**
+   * Additional metadata
+   */
+  metadata?: Record<string, unknown>;
+}
+
+/**
  * Schema version information
  */
 export interface SchemaVersion {
@@ -309,6 +389,11 @@ export interface VertexLabel {
  */
 export interface EdgeLabel {
   /**
+   * Edge label
+   */
+  label: string;
+
+  /**
    * Edge properties
    */
   properties: Record<string, PropertyDefinition>;
@@ -327,6 +412,26 @@ export interface EdgeLabel {
    * Target vertex constraint
    */
   toVertex: VertexConnectionConstraint | string;
+
+  /**
+   * Source vertex type
+   */
+  from: string;
+
+  /**
+   * Target vertex type
+   */
+  to: string;
+
+  /**
+   * Source vertex label
+   */
+  fromLabel: string;
+
+  /**
+   * Target vertex label
+   */
+  toLabel: string;
 
   /**
    * Edge multiplicity

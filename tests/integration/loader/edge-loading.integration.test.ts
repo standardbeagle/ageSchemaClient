@@ -45,6 +45,10 @@ const testSchema: SchemaDefinition = {
       label: 'WORKS_AT',
       from: 'Person',
       to: 'Company',
+      fromLabel: 'Person',
+      toLabel: 'Company',
+      fromVertex: 'Person',
+      toVertex: 'Company',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },
@@ -56,6 +60,10 @@ const testSchema: SchemaDefinition = {
       label: 'BELONGS_TO',
       from: 'Department',
       to: 'Company',
+      fromLabel: 'Department',
+      toLabel: 'Company',
+      fromVertex: 'Department',
+      toVertex: 'Company',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },
@@ -66,6 +74,10 @@ const testSchema: SchemaDefinition = {
       label: 'WORKS_IN',
       from: 'Person',
       to: 'Department',
+      fromLabel: 'Person',
+      toLabel: 'Department',
+      fromVertex: 'Person',
+      toVertex: 'Department',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },
@@ -76,6 +88,10 @@ const testSchema: SchemaDefinition = {
       label: 'KNOWS',
       from: 'Person',
       to: 'Person',
+      fromLabel: 'Person',
+      toLabel: 'Person',
+      fromVertex: 'Person',
+      toVertex: 'Person',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },

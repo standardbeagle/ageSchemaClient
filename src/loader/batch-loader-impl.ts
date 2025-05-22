@@ -11,7 +11,6 @@
 
 import { SchemaDefinition } from '../schema/types';
 import { QueryExecutor } from '../db/query';
-import { TransactionManager } from '../db/transaction';
 import { DataValidator } from './data-validator';
 import { CypherQueryGenerator } from './cypher-query-generator';
 import { QueryBuilder } from '../query/builder';
@@ -21,7 +20,6 @@ import {
   BatchLoaderOptions,
   GraphData,
   LoadOptions,
-  LoadProgress,
   LoadResult
 } from './batch-loader';
 

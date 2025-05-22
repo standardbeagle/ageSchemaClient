@@ -21,14 +21,14 @@ describe('Schema Guards', () => {
         minor: 2,
         patch: 3,
       })).toBe(true);
-      
+
       expect(isSchemaVersion({
         major: 1,
         minor: 2,
         patch: 3,
         prerelease: 'alpha.1',
       })).toBe(true);
-      
+
       expect(isSchemaVersion({
         major: 1,
         minor: 2,
@@ -36,7 +36,7 @@ describe('Schema Guards', () => {
         build: 'build.456',
       })).toBe(true);
     });
-    
+
     it('should return false for invalid schema versions', () => {
       expect(isSchemaVersion(null)).toBe(false);
       expect(isSchemaVersion(undefined)).toBe(false);
@@ -48,28 +48,28 @@ describe('Schema Guards', () => {
       expect(isSchemaVersion({ major: 1, minor: 2 })).toBe(false);
     });
   });
-  
+
   describe('isSchemaMetadata', () => {
     it('should return true for valid schema metadata', () => {
       expect(isSchemaMetadata({})).toBe(true);
-      
+
       expect(isSchemaMetadata({
         author: 'Test User',
       })).toBe(true);
-      
+
       expect(isSchemaMetadata({
         author: 'Test User',
         description: 'Test schema',
         created: '2023-01-01T00:00:00Z',
         updated: '2023-01-02T00:00:00Z',
       })).toBe(true);
-      
+
       expect(isSchemaMetadata({
         author: 'Test User',
         customField: 'Custom value',
       })).toBe(true);
     });
-    
+
     it('should return false for invalid schema metadata', () => {
       expect(isSchemaMetadata(null)).toBe(false);
       expect(isSchemaMetadata(undefined)).toBe(false);
@@ -80,25 +80,25 @@ describe('Schema Guards', () => {
       expect(isSchemaMetadata({ updated: 123 })).toBe(false);
     });
   });
-  
+
   describe('isPropertyDefinition', () => {
     it('should return true for valid property definitions', () => {
       expect(isPropertyDefinition({
         type: PropertyType.STRING,
       })).toBe(true);
-      
+
       expect(isPropertyDefinition({
         type: PropertyType.NUMBER,
         description: 'A number property',
         nullable: true,
       })).toBe(true);
-      
+
       expect(isPropertyDefinition({
         type: [PropertyType.STRING, PropertyType.NUMBER],
         description: 'A union property',
       })).toBe(true);
     });
-    
+
     it('should return false for invalid property definitions', () => {
       expect(isPropertyDefinition(null)).toBe(false);
       expect(isPropertyDefinition(undefined)).toBe(false);
@@ -110,7 +110,7 @@ describe('Schema Guards', () => {
       expect(isPropertyDefinition({ type: PropertyType.STRING, nullable: 'true' })).toBe(false);
     });
   });
-  
+
   describe('isVertexLabel', () => {
     it('should return true for valid vertex labels', () => {
       expect(isVertexLabel({
@@ -120,7 +120,7 @@ describe('Schema Guards', () => {
           },
         },
       })).toBe(true);
-      
+
       expect(isVertexLabel({
         properties: {
           id: {
@@ -134,7 +134,7 @@ describe('Schema Guards', () => {
         description: 'A vertex',
       })).toBe(true);
     });
-    
+
     it('should return false for invalid vertex labels', () => {
       expect(isVertexLabel(null)).toBe(false);
       expect(isVertexLabel(undefined)).toBe(false);
@@ -149,10 +149,11 @@ describe('Schema Guards', () => {
       expect(isVertexLabel({ properties: { id: { type: PropertyType.STRING } }, description: 123 })).toBe(false);
     });
   });
-  
+
   describe('isEdgeLabel', () => {
     it('should return true for valid edge labels', () => {
       expect(isEdgeLabel({
+        label: 'KNOWS',
         properties: {
           since: {
             type: PropertyType.DATE,
@@ -160,9 +161,14 @@ describe('Schema Guards', () => {
         },
         fromVertex: 'Person',
         toVertex: 'Person',
+        from: 'Person',
+        to: 'Person',
+        fromLabel: 'Person',
+        toLabel: 'Person',
       })).toBe(true);
-      
+
       expect(isEdgeLabel({
+        label: 'FRIEND_OF',
         properties: {
           since: {
             type: PropertyType.DATE,
@@ -174,12 +180,16 @@ describe('Schema Guards', () => {
         required: ['since'],
         fromVertex: 'Person',
         toVertex: 'Person',
+        from: 'Person',
+        to: 'Person',
+        fromLabel: 'Person',
+        toLabel: 'Person',
         multiplicity: EdgeMultiplicity.MANY_TO_MANY,
         direction: EdgeDirection.BIDIRECTIONAL,
         description: 'An edge',
       })).toBe(true);
     });
-    
+
     it('should return false for invalid edge labels', () => {
       expect(isEdgeLabel(null)).toBe(false);
       expect(isEdgeLabel(undefined)).toBe(false);
@@ -195,7 +205,7 @@ describe('Schema Guards', () => {
       expect(isEdgeLabel({ properties: {}, fromVertex: 'Person', toVertex: 123 })).toBe(false);
     });
   });
-  
+
   describe('isSchemaDefinition', () => {
     it('should return true for valid schema definitions', () => {
       expect(isSchemaDefinition({
@@ -203,7 +213,7 @@ describe('Schema Guards', () => {
         vertices: {},
         edges: {},
       })).toBe(true);
-      
+
       expect(isSchemaDefinition({
         version: {
           major: 1,
@@ -235,7 +245,7 @@ describe('Schema Guards', () => {
         },
       })).toBe(true);
     });
-    
+
     it('should return false for invalid schema definitions', () => {
       expect(isSchemaDefinition(null)).toBe(false);
       expect(isSchemaDefinition(undefined)).toBe(false);

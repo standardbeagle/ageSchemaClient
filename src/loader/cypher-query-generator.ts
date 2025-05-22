@@ -8,7 +8,7 @@
  * @packageDocumentation
  */
 
-import { SchemaDefinition, VertexDefinition, EdgeDefinition } from '../schema/types';
+import { SchemaDefinition, VertexLabel, EdgeLabel } from '../schema/types';
 import {
   createParameterizedVertexTemplate,
   createParameterizedEdgeTemplate
@@ -125,7 +125,7 @@ export class CypherQueryGenerator<T extends SchemaDefinition> {
     }
 
     // Generate the template
-    const template = createParameterizedEdgeTemplate(edgeType, propertyNames, this.schemaName);
+    const template = createParameterizedEdgeTemplate(edgeType, propertyNames, edgeDef.fromLabel, edgeDef.toLabel, this.schemaName);
 
     // Add comments if requested
     const query = this.includeComments
@@ -150,22 +150,29 @@ export class CypherQueryGenerator<T extends SchemaDefinition> {
    */
   private addCommentsToQuery(
     query: string,
-    def: VertexDefinition | EdgeDefinition,
+    def: VertexLabel | EdgeLabel,
     type: 'vertex' | 'edge'
   ): string {
     const comments = [
-      `/* Cypher query for creating ${type}s of type "${def.label}" */`,
+      `/* Cypher query for creating ${type}s */`,
       `/* Generated from schema definition */`,
     ];
 
     if (type === 'vertex') {
-      const vertexDef = def as VertexDefinition;
+      const vertexDef = def as VertexLabel;
       comments.push(`/* Vertex properties: ${Object.keys(vertexDef.properties).join(', ')} */`);
     } else {
-      const edgeDef = def as EdgeDefinition;
+      const edgeDef = def as EdgeLabel;
       comments.push(`/* Edge properties: ${Object.keys(edgeDef.properties).join(', ')} */`);
-      comments.push(`/* From vertex type: ${edgeDef.from} */`);
-      comments.push(`/* To vertex type: ${edgeDef.to} */`);
+
+      // Get from/to information from either direct properties or from vertex constraints
+      const fromType = edgeDef.from ||
+        (typeof edgeDef.fromVertex === 'string' ? edgeDef.fromVertex : edgeDef.fromVertex.label);
+      const toType = edgeDef.to ||
+        (typeof edgeDef.toVertex === 'string' ? edgeDef.toVertex : edgeDef.toVertex.label);
+
+      comments.push(`/* From vertex type: ${fromType} */`);
+      comments.push(`/* To vertex type: ${toType} */`);
     }
 
     return `${comments.join('\n')}\n${query}`;

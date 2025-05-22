@@ -1,6 +1,6 @@
 /**
  * Test data fixtures for BatchLoader integration tests
- * 
+ *
  * This module provides test data for integration tests of the BatchLoader.
  * It includes sample vertices and edges for various test scenarios.
  */
@@ -58,6 +58,10 @@ export const testSchema: SchemaDefinition = {
       label: 'WORKS_AT',
       from: 'Person',
       to: 'Company',
+      fromLabel: 'Person',
+      toLabel: 'Company',
+      fromVertex: 'Person',
+      toVertex: 'Company',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },
@@ -70,6 +74,10 @@ export const testSchema: SchemaDefinition = {
       label: 'KNOWS',
       from: 'Person',
       to: 'Person',
+      fromLabel: 'Person',
+      toLabel: 'Person',
+      fromVertex: 'Person',
+      toVertex: 'Person',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },
@@ -81,6 +89,10 @@ export const testSchema: SchemaDefinition = {
       label: 'BELONGS_TO',
       from: 'Department',
       to: 'Company',
+      fromLabel: 'Department',
+      toLabel: 'Company',
+      fromVertex: 'Department',
+      toVertex: 'Company',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },
@@ -91,6 +103,10 @@ export const testSchema: SchemaDefinition = {
       label: 'WORKS_IN',
       from: 'Person',
       to: 'Department',
+      fromLabel: 'Person',
+      toLabel: 'Department',
+      fromVertex: 'Person',
+      toVertex: 'Department',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },
@@ -101,6 +117,10 @@ export const testSchema: SchemaDefinition = {
       label: 'WORKS_ON',
       from: 'Person',
       to: 'Project',
+      fromLabel: 'Person',
+      toLabel: 'Project',
+      fromVertex: 'Person',
+      toVertex: 'Project',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },
@@ -112,6 +132,10 @@ export const testSchema: SchemaDefinition = {
       label: 'MANAGES',
       from: 'Department',
       to: 'Project',
+      fromLabel: 'Department',
+      toLabel: 'Project',
+      fromVertex: 'Department',
+      toVertex: 'Project',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },
@@ -220,7 +244,7 @@ export const extendedTestData: GraphData = {
 
 /**
  * Generate a large dataset for performance testing
- * 
+ *
  * @param personCount - Number of persons to generate
  * @param companyCount - Number of companies to generate
  * @param edgeDensity - Percentage of possible edges to create (0-1)
@@ -235,12 +259,12 @@ export function generateLargeTestData(
     Person: [],
     Company: []
   };
-  
+
   const edges: GraphData['edges'] = {
     WORKS_AT: [],
     KNOWS: []
   };
-  
+
   // Generate persons
   for (let i = 0; i < personCount; i++) {
     vertices.Person.push({
@@ -251,7 +275,7 @@ export function generateLargeTestData(
       active: i % 5 !== 0 // 80% active
     });
   }
-  
+
   // Generate companies
   for (let i = 0; i < companyCount; i++) {
     vertices.Company.push({
@@ -262,7 +286,7 @@ export function generateLargeTestData(
       public: i % 2 === 0 // 50% public
     });
   }
-  
+
   // Generate WORKS_AT edges
   for (let i = 0; i < personCount; i++) {
     // Each person works at one company
@@ -275,7 +299,7 @@ export function generateLargeTestData(
       salary: 50000 + (i % 10) * 10000
     });
   }
-  
+
   // Generate KNOWS edges
   for (let i = 0; i < personCount; i++) {
     // Each person knows some other persons based on edge density
@@ -290,6 +314,6 @@ export function generateLargeTestData(
       }
     }
   }
-  
+
   return { vertices, edges };
 }

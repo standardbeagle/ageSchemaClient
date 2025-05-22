@@ -1,6 +1,6 @@
 /**
  * Integration tests for the DataValidator class
- * 
+ *
  * These tests verify that the DataValidator correctly validates
  * vertex and edge data against the schema.
  */
@@ -35,6 +35,10 @@ const testSchema: SchemaDefinition = {
       label: 'WORKS_AT',
       from: 'Person',
       to: 'Company',
+      fromLabel: 'Person',
+      toLabel: 'Company',
+      fromVertex: 'Person',
+      toVertex: 'Company',
       properties: {
         from: { type: 'string', required: true },
         to: { type: 'string', required: true },
@@ -47,7 +51,7 @@ const testSchema: SchemaDefinition = {
 describe('DataValidator Integration Tests', () => {
   it('should validate valid graph data', () => {
     const validator = new DataValidator(testSchema);
-    
+
     const graphData: GraphData = {
       vertices: {
         Person: [
@@ -65,17 +69,17 @@ describe('DataValidator Integration Tests', () => {
         ]
       }
     };
-    
+
     const result = validator.validateData(graphData);
-    
+
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
   });
-  
+
   it('should detect unknown vertex types', () => {
     const validator = new DataValidator(testSchema);
-    
+
     const graphData: GraphData = {
       vertices: {
         Person: [
@@ -87,9 +91,9 @@ describe('DataValidator Integration Tests', () => {
       },
       edges: {}
     };
-    
+
     const result = validator.validateData(graphData);
-    
+
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
     expect(result.errors[0].type).toBe('vertex');

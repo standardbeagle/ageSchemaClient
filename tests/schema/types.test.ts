@@ -21,7 +21,7 @@ describe('Schema Types', () => {
         pattern: '^[a-zA-Z0-9]+$',
       },
     };
-    
+
     expect(property.type).toBe(PropertyType.STRING);
     expect(property.description).toBe('A string property');
     expect(property.nullable).toBe(false);
@@ -29,7 +29,7 @@ describe('Schema Types', () => {
     expect(property.stringConstraints?.maxLength).toBe(100);
     expect(property.stringConstraints?.pattern).toBe('^[a-zA-Z0-9]+$');
   });
-  
+
   it('should create a valid vertex label', () => {
     const vertex: VertexLabel = {
       properties: {
@@ -50,7 +50,7 @@ describe('Schema Types', () => {
       required: ['id', 'name'],
       description: 'A person vertex',
     };
-    
+
     expect(vertex.properties).toHaveProperty('id');
     expect(vertex.properties).toHaveProperty('name');
     expect(vertex.properties).toHaveProperty('age');
@@ -58,9 +58,10 @@ describe('Schema Types', () => {
     expect(vertex.required).toContain('name');
     expect(vertex.description).toBe('A person vertex');
   });
-  
+
   it('should create a valid edge label', () => {
     const edge: EdgeLabel = {
+      label: 'FRIEND_OF',
       properties: {
         since: {
           type: PropertyType.DATE,
@@ -75,11 +76,15 @@ describe('Schema Types', () => {
       required: ['since'],
       fromVertex: 'Person',
       toVertex: 'Person',
+      from: 'Person',
+      to: 'Person',
+      fromLabel: 'Person',
+      toLabel: 'Person',
       multiplicity: EdgeMultiplicity.MANY_TO_MANY,
       direction: EdgeDirection.BIDIRECTIONAL,
       description: 'A friendship relationship',
     };
-    
+
     expect(edge.properties).toHaveProperty('since');
     expect(edge.properties).toHaveProperty('strength');
     expect(edge.required).toContain('since');
@@ -89,7 +94,7 @@ describe('Schema Types', () => {
     expect(edge.direction).toBe(EdgeDirection.BIDIRECTIONAL);
     expect(edge.description).toBe('A friendship relationship');
   });
-  
+
   it('should create a valid schema definition', () => {
     const schema: SchemaDefinition = {
       version: '1.0.0',
@@ -116,6 +121,7 @@ describe('Schema Types', () => {
       },
       edges: {
         FRIEND_OF: {
+          label: 'FRIEND_OF',
           properties: {
             since: {
               type: PropertyType.DATE,
@@ -130,6 +136,10 @@ describe('Schema Types', () => {
           required: ['since'],
           fromVertex: 'Person',
           toVertex: 'Person',
+          from: 'Person',
+          to: 'Person',
+          fromLabel: 'Person',
+          toLabel: 'Person',
           multiplicity: EdgeMultiplicity.MANY_TO_MANY,
           direction: EdgeDirection.BIDIRECTIONAL,
           description: 'A friendship relationship',
@@ -141,7 +151,7 @@ describe('Schema Types', () => {
         created: '2023-01-01T00:00:00Z',
       },
     };
-    
+
     expect(schema.version).toBe('1.0.0');
     expect(schema.vertices).toHaveProperty('Person');
     expect(schema.edges).toHaveProperty('FRIEND_OF');
