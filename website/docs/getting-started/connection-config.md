@@ -562,6 +562,6 @@ Now that you have your connection configured:
 
 - [First Graph](./first-graph) - Create your first graph database
 - [Basic Usage](./basic-usage) - Learn the fundamentals
-- [Query Builder Guide](../how-to-guides/query-builder) - Master query building
-- [Performance Optimization](../how-to-guides/performance) - Optimize your application
-- [Monitoring and Logging](../how-to-guides/monitoring) - Monitor your database operations
+- [Basic Queries](../how-to-guides/basic-queries) - Master query building
+- [Performance Optimization](../how-to-guides/performance-optimization) - Optimize your application
+- [Troubleshooting](../how-to-guides/troubleshooting) - Monitor your database operations

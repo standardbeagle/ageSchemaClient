@@ -10,6 +10,10 @@
  * - pnpm test:unit -- --workspace=unit
  * - pnpm test:integration -- --workspace=integration
  * - pnpm test -- --workspace=default
+ *
+ * NOTE: Documentation builds (website/) are NOT tested by unit or integration tests.
+ * These tests should only focus on the core library functionality.
+ * Documentation builds are handled separately by GitHub Actions.
  */
 
 import { defineConfig } from 'vitest/config';
@@ -70,9 +74,9 @@ export default defineConfig({
       concurrent: false,
       shuffle: false,
     },
-    // Include all test files
+    // Include all test files (core library only, not documentation)
     include: ['**/*.test.{js,ts}'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/website/**'],
     // Setup files for all tests
     setupFiles: [
       './tests/setup/global.ts',

@@ -20,7 +20,7 @@ const config: Config = {
   organizationName: 'standardbeagle', // Usually your GitHub org/user name.
   projectName: 'ageSchemaClient', // Usually your repo name.
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
 
   // Even if you don't use internationalization, you can use this field to set

@@ -306,6 +306,6 @@ Now that you understand the basics:
 
 - [Connection Configuration](./connection-config) - Advanced connection options
 - [First Graph](./first-graph) - Create your first graph database
-- [Query Builder Guide](../how-to-guides/query-builder) - Master the query builder
-- [Schema Management](../how-to-guides/schema-management) - Learn about schema validation
+- [Basic Queries](../how-to-guides/basic-queries) - Master the query builder
+- [Schema Validation](../how-to-guides/schema-validation) - Learn about schema validation
 - [Batch Operations](../how-to-guides/batch-operations) - Efficient bulk operations

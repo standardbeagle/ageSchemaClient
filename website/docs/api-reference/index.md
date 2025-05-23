@@ -4,29 +4,29 @@ Complete API documentation for ageSchemaClient.
 
 ## Auto-Generated API Documentation
 
-For the most comprehensive and up-to-date API documentation, see our **[Complete API Reference](./api-generated/)** which is automatically generated from TypeScript source code.
+For the most comprehensive and up-to-date API documentation, see our **[Complete API Reference](../api-generated/)** which is automatically generated from TypeScript source code.
 
 ### Quick Navigation
-- **[Classes](./api-generated/#classes)** - All available classes including AgeSchemaClient, QueryBuilder, BatchOperations, etc.
-- **[Interfaces](./api-generated/#interfaces)** - Type definitions and contracts
-- **[Functions](./api-generated/#functions)** - Utility functions and helpers
-- **[Type Aliases](./api-generated/#type-aliases)** - Custom type definitions
+- **[Classes](../api-generated/#classes)** - All available classes including AgeSchemaClient, QueryBuilder, BatchOperations, etc.
+- **[Interfaces](../api-generated/#interfaces)** - Type definitions and contracts
+- **[Functions](../api-generated/#functions)** - Utility functions and helpers
+- **[Type Aliases](../api-generated/#type-aliases)** - Custom type definitions
 
 ## Core Classes Overview
 
-### [AgeSchemaClient](./client) | [Full API](./api-generated/classes/AgeSchemaClient)
+### [AgeSchemaClient](./client) | [Full API](../api-generated/classes/AgeSchemaClient)
 The main client class for interacting with Apache AGE graph databases.
 
-### [QueryBuilder](./query-builder) | [Full API](./api-generated/classes/QueryBuilder)
+### [QueryBuilder](./query-builder) | [Full API](../api-generated/classes/QueryBuilder)
 Fluent API for constructing type-safe Cypher queries.
 
-### [BatchLoader](./batch-loader) | [Full API](./api-generated/classes/SchemaLoader)
+### [BatchLoader](./batch-loader) | [Full API](../api-generated/classes/SchemaLoader)
 Efficient batch loading for large datasets.
 
-### [SchemaManager](./schema-manager) | [Full API](./api-generated/classes/SchemaValidator)
+### [SchemaManager](./schema-manager) | [Full API](../api-generated/classes/SchemaValidator)
 Schema validation and management for graph databases.
 
-### [Transaction](./transaction) | [Full API](./api-generated/classes/TransactionManager)
+### [Transaction](./transaction) | [Full API](../api-generated/classes/TransactionManager)
 Transactional operations for data consistency.
 
 ## Quick Reference

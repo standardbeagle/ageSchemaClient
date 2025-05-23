@@ -762,10 +762,10 @@ Congratulations! You've successfully created your first graph database with ageS
 
 ### Continue Learning
 
-- **[Query Builder Guide](../how-to-guides/query-builder)** - Master advanced query patterns
-- **[Schema Management](../how-to-guides/schema-management)** - Learn comprehensive schema validation
+- **[Basic Queries](../how-to-guides/basic-queries)** - Master advanced query patterns
+- **[Schema Validation](../how-to-guides/schema-validation)** - Learn comprehensive schema validation
 - **[Batch Operations](../how-to-guides/batch-operations)** - Optimize for large datasets
-- **[Performance Optimization](../how-to-guides/performance)** - Make your queries faster
+- **[Performance Optimization](../how-to-guides/performance-optimization)** - Make your queries faster
 - **[API Reference](../api-reference/)** - Explore all available methods
 
 ### Example Projects
