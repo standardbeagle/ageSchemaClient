@@ -21,7 +21,13 @@ function HomepageHeader() {
           <Link
             className="button button--secondary button--lg"
             to="/docs/intro">
-            Docusaurus Tutorial - 5min ⏱️
+            Get Started 🚀
+          </Link>
+          <Link
+            className="button button--outline button--secondary button--lg"
+            to="/docs/api-reference"
+            style={{ marginLeft: '1rem' }}>
+            API Reference 📚
           </Link>
         </div>
       </div>
@@ -33,8 +39,8 @@ export default function Home(): ReactNode {
   const {siteConfig} = useDocusaurusContext();
   return (
     <Layout
-      title={`Hello from ${siteConfig.title}`}
-      description="Description will go into a meta tag in <head />">
+      title={`${siteConfig.title} - Apache AGE Graph Database Client`}
+      description="TypeScript library for Apache AGE graph databases with schema validation, query building, and batch operations">
       <HomepageHeader />
       <main>
         <HomepageFeatures />

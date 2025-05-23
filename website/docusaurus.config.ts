@@ -121,6 +121,8 @@ const config: Config = {
       logo: {
         alt: 'ageSchemaClient Logo',
         src: 'img/logo.svg',
+        width: 32,
+        height: 32,
       },
       items: [
         {

@@ -11,32 +11,32 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
+    title: 'Type-Safe Graph Operations',
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        Built with TypeScript for complete type safety. Define your graph schema
+        and get full IntelliSense support for vertices, edges, and properties.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Apache AGE Integration',
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Seamlessly integrates with Apache AGE PostgreSQL extension. Leverage the power
+        of graph databases while maintaining your existing PostgreSQL infrastructure.
       </>
     ),
   },
   {
-    title: 'Powered by React',
+    title: 'Powerful Query Builder',
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        Fluent API for building complex Cypher queries with parameter handling,
+        batch operations, and transaction management. Focus on your logic, not syntax.
       </>
     ),
   },

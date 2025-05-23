@@ -1,0 +1,126 @@
+/**
+ * Logo component styles
+ */
+
+.logo {
+  transition: all 0.2s ease-in-out;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+}
+
+/* Graph nodes - primary */
+.node {
+  fill: var(--ifm-color-primary);
+  stroke: var(--ifm-background-color);
+  stroke-width: 1;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Graph nodes - secondary */
+.nodeSecondary {
+  fill: var(--ifm-color-secondary);
+  stroke: var(--ifm-background-color);
+  stroke-width: 1;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Central connection node */
+.centerNode {
+  fill: var(--ifm-color-warning);
+  stroke: var(--ifm-background-color);
+  stroke-width: 0.5;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Graph edges - primary */
+.edge {
+  stroke: var(--ifm-color-primary);
+  opacity: 0.7;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Graph edges - secondary */
+.edgeSecondary {
+  stroke: var(--ifm-color-secondary);
+  opacity: 0.5;
+  stroke-dasharray: 3, 2;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Logo with text container */
+.logoWithText {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: var(--ifm-font-weight-bold);
+  color: var(--ifm-navbar-link-color);
+  text-decoration: none;
+}
+
+.logoText {
+  font-size: 1.1rem;
+  font-weight: var(--ifm-font-weight-bold);
+  background: linear-gradient(135deg, var(--ifm-color-primary), var(--ifm-color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Dark theme adjustments */
+[data-theme='dark'] .node {
+  stroke: var(--ifm-background-color);
+}
+
+[data-theme='dark'] .nodeSecondary {
+  stroke: var(--ifm-background-color);
+}
+
+[data-theme='dark'] .centerNode {
+  stroke: var(--ifm-background-color);
+}
+
+/* Hover effects */
+.logo:hover .node {
+  fill: var(--ifm-color-primary-light);
+}
+
+.logo:hover .nodeSecondary {
+  fill: var(--ifm-color-secondary-light);
+}
+
+.logo:hover .centerNode {
+  fill: var(--ifm-color-warning);
+}
+
+.logo:hover .edge {
+  opacity: 1;
+  stroke: var(--ifm-color-primary-light);
+}
+
+.logo:hover .edgeSecondary {
+  opacity: 0.8;
+  stroke: var(--ifm-color-secondary-light);
+}
+
+/* Animation for the logo */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.logo:hover .centerNode {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .logoText {
+    display: none;
+  }
+}
