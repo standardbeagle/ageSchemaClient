@@ -8,6 +8,7 @@ A TypeScript library for Apache AGE graph databases with schema validation and e
 - Type-safe query building
 - SQL generation for batch operations
 - Efficient data loading with single-function approach
+- **Extensible connection pool system** - Support for multiple PostgreSQL extensions
 - Transaction management
 - Progress tracking for large operations
 - Comprehensive error handling
@@ -107,6 +108,7 @@ const result = await client.query
 
 For detailed documentation, see the following resources:
 
+- [Extension System](./docs/extension-system.md) - **NEW**: Pluggable extension system for PostgreSQL extensions
 - [Schema Loader](./docs/schema-loader.md) - Documentation for the SchemaLoader class
 - [Examples](./examples/) - Example code for common use cases
 - [API Reference](./docs/api-reference.md) - Detailed API documentation

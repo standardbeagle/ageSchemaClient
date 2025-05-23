@@ -4,7 +4,7 @@
  * @packageDocumentation
  */
 
-import { ConnectionConfig as PgConnectionConfig } from 'pg';
+import { ConnectionConfig as PgConnectionConfig, PoolClient } from 'pg';
 
 /**
  * Connection state
@@ -126,6 +126,35 @@ export interface DriverOptions {
 }
 
 /**
+ * Extension initializer interface
+ *
+ * Extension initializers are responsible for setting up PostgreSQL extensions
+ * and schemas when a new connection is created in the pool.
+ */
+export interface ExtensionInitializer {
+  /**
+   * The name of the extension (for logging and identification)
+   */
+  readonly name: string;
+
+  /**
+   * Initialize the extension on a new connection
+   *
+   * @param client - The PostgreSQL client
+   * @param config - The connection configuration
+   */
+  initialize(client: PoolClient, config: ConnectionConfig): Promise<void>;
+
+  /**
+   * Optional cleanup when connection is released (if needed)
+   *
+   * @param client - The PostgreSQL client
+   * @param config - The connection configuration
+   */
+  cleanup?(client: PoolClient, config: ConnectionConfig): Promise<void>;
+}
+
+/**
  * PostgreSQL connection options
  */
 export interface PgConnectionOptions {
@@ -179,6 +208,12 @@ export interface ConnectionConfig extends PgConnectionConfig {
    * PostgreSQL-specific connection options
    */
   pgOptions?: PgConnectionOptions;
+
+  /**
+   * Extension initializers to run on new connections
+   * If not provided, defaults to AGE extension initializer
+   */
+  extensions?: ExtensionInitializer[];
 }
 
 /**

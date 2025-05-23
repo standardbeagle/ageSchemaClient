@@ -13,6 +13,9 @@ export * from './types';
 // Export connection manager
 export * from './connector';
 
+// Export extension initializers
+export * from './extensions';
+
 // Export schema client connection manager
 export * from './schema-client-connection-manager';
 
