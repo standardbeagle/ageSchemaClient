@@ -36,7 +36,11 @@
     "test:performance:compare:analyze": "ts-node --esm tests/performance/analyze-performance-comparison.ts",
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.ts\"",
-    "prepublishOnly": "pnpm run build:publish"
+    "prepublishOnly": "pnpm run build:publish",
+    "docs:start": "cd website && pnpm start",
+    "docs:build": "cd website && pnpm build",
+    "docs:serve": "cd website && pnpm serve",
+    "docs:deploy": "cd website && pnpm deploy"
   },
   "keywords": [
     "apache",
