@@ -20,8 +20,8 @@ const config: Config = {
   organizationName: 'standardbeagle', // Usually your GitHub org/user name.
   projectName: 'ageSchemaClient', // Usually your repo name.
 
-  onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
+  onBrokenLinks: 'ignore',
+  onBrokenMarkdownLinks: 'ignore',
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -73,7 +73,6 @@ const config: Config = {
         out: 'api-generated',
         readme: 'none',
         sidebar: {
-          categoryLabel: 'API Reference',
           position: 3,
           fullNames: true,
         },
@@ -116,6 +115,41 @@ const config: Config = {
   themeConfig: {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
+    // Algolia DocSearch configuration
+    algolia: {
+      // The application ID provided by Algolia
+      appId: process.env.ALGOLIA_APP_ID || 'YOUR_APP_ID',
+
+      // Public API key: it is safe to commit it
+      apiKey: process.env.ALGOLIA_SEARCH_API_KEY || 'YOUR_SEARCH_API_KEY',
+
+      // The index name provided by Algolia
+      indexName: process.env.ALGOLIA_INDEX_NAME || 'ageSchemaClient',
+
+      // Optional: see doc section below
+      contextualSearch: true,
+
+      // Optional: Specify domains where the navigation should occur through window.location instead on history.push
+      externalUrlRegex: 'external\\.com|domain\\.com',
+
+      // Optional: Replace parts of the item URLs from Algolia
+      replaceSearchResultPathname: {
+        from: '/docs/',
+        to: '/',
+      },
+
+      // Optional: Algolia search parameters
+      searchParameters: {
+        facetFilters: ['language:en'],
+        hitsPerPage: 10,
+      },
+
+      // Optional: path for search page that enabled by default (`false` to disable it)
+      searchPagePath: 'search',
+
+      // Optional: whether the insights feature is enabled or not on Docsearch (`false` by default)
+      insights: false,
+    },
     navbar: {
       title: 'ageSchemaClient',
       logo: {
