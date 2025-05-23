@@ -64,6 +64,55 @@ const config: Config = {
     ],
   ],
 
+  plugins: [
+    [
+      'docusaurus-plugin-typedoc',
+      {
+        entryPoints: ['../src/index.ts'],
+        tsconfig: '../tsconfig.json',
+        out: 'api-generated',
+        readme: 'none',
+        sidebar: {
+          categoryLabel: 'API Reference',
+          position: 3,
+          fullNames: true,
+        },
+        plugin: ['typedoc-plugin-markdown'],
+        hidePageTitle: false,
+        hidePageHeader: false,
+        hideBreadcrumbs: false,
+        useCodeBlocks: true,
+        parametersFormat: 'table',
+        interfacePropertiesFormat: 'table',
+        classPropertiesFormat: 'table',
+        enumMembersFormat: 'table',
+        typeDeclarationFormat: 'table',
+        propertyMembersFormat: 'table',
+        typeAliasPropertiesFormat: 'table',
+        excludePrivate: true,
+        excludeProtected: false,
+        excludeInternal: true,
+        excludeNotDocumented: false,
+        categorizeByGroup: true,
+        categoryOrder: [
+          'Classes',
+          'Interfaces',
+          'Type Aliases',
+          'Functions',
+          'Variables',
+          '*'
+        ],
+        sort: ['source-order'],
+        gitRevision: 'main',
+        sourceLinkTemplate: 'https://github.com/standardbeagle/ageSchemaClient/blob/{gitRevision}/{path}#L{line}',
+        disableSources: false,
+        includeVersion: true,
+        cleanOutputDir: true,
+        watch: process.env.TYPEDOC_WATCH === 'true',
+      },
+    ],
+  ],
+
   themeConfig: {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
