@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { PgConnectionManager } from '../../src/db/connector';
+import { PgConnectionManager } from '../../../src/db/connector';
 import * as dotenv from 'dotenv';
 
 // Load environment variables from .env.test
