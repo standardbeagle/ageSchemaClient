@@ -1,0 +1,66 @@
+name: Test Self-Hosted Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner_label:
+        description: 'Runner label to test'
+        required: false
+        default: 'standardbeagle'
+        type: string
+
+jobs:
+  test-runner:
+    runs-on: [self-hosted, "${{ inputs.runner_label }}"]
+    timeout-minutes: 5
+    
+    steps:
+    - name: Check runner info
+      run: |
+        echo "Runner name: $RUNNER_NAME"
+        echo "Runner OS: $RUNNER_OS"
+        echo "Runner arch: $RUNNER_ARCH"
+        echo "Runner temp: $RUNNER_TEMP"
+        echo "GitHub workspace: $GITHUB_WORKSPACE"
+        
+    - name: Check system info
+      run: |
+        echo "=== System Info ==="
+        uname -a
+        echo ""
+        echo "=== CPU Info ==="
+        lscpu | head -20
+        echo ""
+        echo "=== Memory Info ==="
+        free -h
+        echo ""
+        echo "=== Disk Info ==="
+        df -h
+        
+    - name: Check Docker
+      run: |
+        echo "=== Docker Version ==="
+        docker --version || echo "Docker not installed"
+        echo ""
+        echo "=== Docker Info ==="
+        docker info || echo "Docker daemon not running"
+        
+    - name: Check Node.js versions
+      run: |
+        echo "=== Available Node.js versions ==="
+        which node || echo "Node not in PATH"
+        node --version || echo "Node not available"
+        echo ""
+        echo "=== NVM check ==="
+        command -v nvm || echo "NVM not found"
+        echo ""
+        echo "=== Check common Node locations ==="
+        ls -la /usr/local/bin/node* 2>/dev/null || echo "No node in /usr/local/bin"
+        ls -la /usr/bin/node* 2>/dev/null || echo "No node in /usr/bin"
+        
+    - name: Test with matrix simulation
+      run: |
+        echo "Testing if we can switch Node versions..."
+        for version in 18.x 20.x; do
+          echo "Would use Node.js $version"
+        done

@@ -7,9 +7,10 @@ on:
     branches: [ main ]
 
 jobs:
-  integration-test:
-    runs-on: [self-hosted, standardbeagle]
-    timeout-minutes: 60
+  # Quick integration test on GitHub-hosted runners
+  integration-test-github:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     strategy:
       matrix:
@@ -66,6 +67,70 @@ jobs:
         POSTGRES_PASSWORD: postgres
         POSTGRES_DB: test_db
       run: pnpm test:integration
+
+  # Full integration test on self-hosted runner (when available)
+  integration-test-self-hosted:
+    # Only run on self-hosted if it exists, otherwise skip
+    if: github.repository == 'standardbeagle/ageSchemaClient'
+    runs-on: [self-hosted, standardbeagle]
+    timeout-minutes: 60
+    continue-on-error: true
+
+    # Single Node version for self-hosted runner
+    env:
+      NODE_VERSION: '20.x'
+
+    services:
+      postgres:
+        image: apache/age:latest
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+    
+    - name: Get pnpm store directory
+      id: pnpm-cache
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+    
+    - name: Setup pnpm cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+    
+    - name: Install dependencies
+      run: pnpm install
+    
+    - name: Run integration tests
+      env:
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DB: test_db
+      run: pnpm test:integration
     
     - name: Run performance tests
       env:
@@ -80,7 +145,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: test-results-${{ matrix.node-version }}
+        name: test-results-self-hosted
         path: |
           coverage/
           reports/
