@@ -1,0 +1,8 @@
+{
+  "label": "How-To Guides",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Practical guides for common tasks and patterns when working with ageSchemaClient and Apache AGE."
+  }
+}
