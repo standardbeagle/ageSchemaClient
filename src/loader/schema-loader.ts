@@ -688,7 +688,7 @@ export class SchemaLoader<T extends SchemaDefinition> {
     // Start a transaction if one wasn't provided
     const transaction = mergedOptions.transaction || await this.queryExecutor.beginTransaction();
     let success = false;
-    let tempTableName = '';
+    const tempTableName = '';
 
     try {
       // Validate vertex data if required
@@ -969,7 +969,7 @@ export class SchemaLoader<T extends SchemaDefinition> {
     // Start a transaction if one wasn't provided
     const transaction = mergedOptions.transaction || await this.queryExecutor.beginTransaction();
     let success = false;
-    let tempTableName = '';
+    const tempTableName = '';
 
     try {
       // Validate edge data if required
