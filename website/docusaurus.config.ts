@@ -73,7 +73,6 @@ const config: Config = {
         out: 'api-generated',
         readme: 'none',
         sidebar: {
-          position: 3,
           fullNames: true,
         },
         plugin: ['typedoc-plugin-markdown'],

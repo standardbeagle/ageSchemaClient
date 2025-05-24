@@ -58,6 +58,27 @@ const sidebars: SidebarsConfig = {
         'architecture/extension-development',
       ],
     },
+    {
+      type: 'category',
+      label: 'Contributing',
+      items: [
+        'contributing/README',
+        'contributing/documentation-guidelines',
+        'contributing/style-guide',
+        'contributing/build-deployment',
+        'contributing/version-management',
+        'contributing/quality-assurance',
+        {
+          type: 'category',
+          label: 'Templates',
+          items: [
+            'contributing/templates/api-method-template',
+            'contributing/templates/how-to-guide-template',
+            'contributing/templates/troubleshooting-template',
+          ],
+        },
+      ],
+    },
   ],
 };
 
