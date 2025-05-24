@@ -16,6 +16,7 @@ const sidebars: SidebarsConfig = {
   // Main documentation sidebar
   tutorialSidebar: [
     'intro',
+    'versioning-guide',
     {
       type: 'category',
       label: 'Getting Started',

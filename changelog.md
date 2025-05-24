@@ -3,6 +3,17 @@
 ## [Unreleased]
 
 ### Added
+- **Documentation Versioning System**: Complete Docusaurus versioning implementation
+  - Docusaurus 3.7.0 versioning configuration with version dropdown in navbar
+  - Initial version 0.3.0 created with full documentation snapshot
+  - Version-specific routing: latest at `/docs/`, next at `/docs/next/`
+  - Versioned docs stored in `website/versioned_docs/version-X.X.X/`
+  - Versioned sidebars in `website/versioned_sidebars/`
+  - Version management scripts: `pnpm docs:version X.X.X`, `pnpm docs:version:list`
+  - Comprehensive versioning documentation and guides for maintainers
+  - Automated testing scripts for versioning system validation
+  - Build system support for multiple documentation versions
+
 - **Extension System**: Added pluggable extension system for PostgreSQL extensions
   - New `ExtensionInitializer` interface for creating custom extension initializers
   - Built-in initializers for Apache AGE, pgvector, PostGIS, and search path management

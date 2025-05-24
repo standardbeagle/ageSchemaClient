@@ -41,6 +41,20 @@ const config: Config = {
           // Remove this to remove the "edit this page" links.
           editUrl:
             'https://github.com/standardbeagle/ageSchemaClient/tree/main/website/',
+          // Versioning configuration
+          lastVersion: '0.3.0',
+          versions: {
+            current: {
+              label: 'Next',
+              path: 'next',
+              banner: 'unreleased',
+            },
+            '0.3.0': {
+              label: '0.3.0',
+              path: '',
+              banner: 'none',
+            },
+          },
         },
         blog: {
           showReadingTime: true,
@@ -166,6 +180,11 @@ const config: Config = {
           label: 'Documentation',
         },
         {to: '/blog', label: 'Blog', position: 'left'},
+        {
+          type: 'docsVersionDropdown',
+          position: 'left',
+          dropdownActiveClassDisabled: true,
+        },
         {
           href: 'https://github.com/standardbeagle/ageSchemaClient',
           label: 'GitHub',
