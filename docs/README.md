@@ -190,6 +190,16 @@ See the [examples](../examples) directory for complete examples.
 
 For detailed API documentation, see the [API Reference](./api-reference.md).
 
+## Contributing
+
+We welcome contributions to improve our documentation! See our [Contributing Guidelines](./contributing/README.md) for information on:
+
+- [Documentation Guidelines](./contributing/documentation-guidelines.md) - How to update and maintain documentation
+- [Style Guide](./contributing/style-guide.md) - Writing and formatting standards
+- [Templates](./contributing/templates/) - Templates for different types of content
+- [Build and Deployment](./contributing/build-deployment.md) - Technical setup and deployment process
+- [Quality Assurance](./contributing/quality-assurance.md) - Review checklist and testing procedures
+
 ## License
 
 Apache License 2.0

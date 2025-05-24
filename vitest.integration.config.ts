@@ -4,6 +4,9 @@
  * This configuration is used when running integration tests only.
  * It includes only integration tests and configures the test environment
  * appropriately for database integration testing.
+ *
+ * NOTE: Documentation builds (website/) are NOT tested by integration tests.
+ * Integration tests should only focus on the core library functionality.
  */
 
 import { defineConfig } from 'vitest/config';
@@ -14,7 +17,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['**/*.integration.test.{js,ts}'],
-    exclude: ['**/node_modules/**', '**/dist/**', '**/backup/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/backup/**', '**/website/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
