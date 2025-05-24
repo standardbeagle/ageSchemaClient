@@ -24,20 +24,7 @@ export function getConnectionManager(config: ConnectionConfig): PgConnectionMana
     console.log('Creating singleton connection manager...');
     instance = new PgConnectionManager(config);
 
-    // Register cleanup handler for process exit
-    process.on('exit', () => {
-      if (instance) {
-        console.log('Process exiting, closing connection pool...');
-        // We can't use async functions in exit handlers, so we just try our best
-        try {
-          // @ts-ignore - We know this is synchronous, but TypeScript doesn't
-          instance.pool.end();
-          console.log('Connection pool closed.');
-        } catch (error) {
-          console.error(`Error closing connection pool: ${(error as Error).message}`);
-        }
-      }
-    });
+    // Note: Process exit handler removed - pool closure is handled by global teardown
   }
 
   return instance;

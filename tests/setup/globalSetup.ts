@@ -103,6 +103,15 @@ export default async function() {
       console.error(`Error cleaning up resources: ${(error as Error).message}`);
     }
 
+    // Close the singleton connection pool
+    try {
+      console.log('Closing singleton connection pool...');
+      await connectionManager.closeAll();
+      console.log('Singleton connection pool closed successfully.');
+    } catch (error) {
+      console.error(`Error closing singleton connection pool: ${(error as Error).message}`);
+    }
+
     // Clean up any global resources
     delete process.env.AGE_GLOBAL_SETUP;
 

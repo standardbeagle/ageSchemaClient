@@ -47,24 +47,7 @@ export class ConnectionManagerForTests {
       }
     }, 60000); // Check every minute
 
-    // Register cleanup handler for process exit
-    process.on('exit', () => {
-      console.log('Process exiting, closing test connection pool...');
-      try {
-        // We can't use async functions in exit handlers, so we just try our best
-        // @ts-ignore - We know this is synchronous, but TypeScript doesn't
-        this.connectionManager.pool.end();
-        console.log('Test connection pool closed.');
-
-        // Log any active connections that weren't properly released
-        const activeCount = this.activeConnections.size;
-        if (activeCount > 0) {
-          console.warn(`Warning: ${activeCount} connections were not properly released`);
-        }
-      } catch (error) {
-        console.error(`Error closing test connection pool: ${(error as Error).message}`);
-      }
-    });
+    // Note: Process exit handler removed - pool closure is handled by global teardown
   }
 
   /**

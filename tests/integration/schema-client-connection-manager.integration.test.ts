@@ -81,8 +81,8 @@ beforeAll(async () => {
 
 // Cleanup after all tests
 afterAll(async () => {
-  // Close all connections
-  await schemaClientConnectionManager.closeAll();
+  // Don't do anything here - let individual tests release their own connections
+  // and let global teardown handle pool closure
 });
 
 // Test suite

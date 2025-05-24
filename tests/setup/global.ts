@@ -62,11 +62,10 @@ afterAll(async () => {
     await resourceRegistry.cleanupAll();
   }
 
-  // Release all connections from registered connection managers
-  await releaseAllConnectionManagerConnections();
+  // Note: We don't close connection pools here because:
+  // 1. The singleton pool is closed in globalSetup.ts teardown
+  // 2. Individual test connection managers should not be closed here
+  //    as it would interfere with concurrent tests
 
-  // Close all connection pools
-  await closeAllConnectionPools();
-
-  console.log('Global teardown complete');
-}, 30000); // 30 second timeout for releasing all connections
+  console.log('Global afterAll complete');
+}, 30000); // 30 second timeout for cleanup

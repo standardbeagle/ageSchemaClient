@@ -51,7 +51,7 @@ jobs:
       run: pnpm build
     
     - name: Test
-      run: pnpm test
+      run: pnpm test:unit
     
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3

@@ -42,6 +42,11 @@ describe('PgConnectionManager Integration', () => {
     connectionManager = new PgConnectionManager(connectionConfig);
   });
 
+  afterAll(async () => {
+    // Don't do anything here - each test should release its own connections
+    // and global teardown will handle pool closure
+  });
+
   it('should connect to the database', async () => {
     // Get a connection from the pool
     const connection = await connectionManager.getConnection();

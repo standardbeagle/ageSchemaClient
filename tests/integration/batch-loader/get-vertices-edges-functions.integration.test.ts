@@ -176,8 +176,11 @@ afterAll(async () => {
     }
   }
   
-  // Close all connections
-  await connectionManager.closeAll();
+  // Don't close the connection pool here - let global teardown handle it
+  // Just release the connection back to the pool
+  if (queryExecutor && queryExecutor.connection) {
+    await connectionManager.releaseConnection(queryExecutor.connection);
+  }
 });
 
 // Test suite
