@@ -47,6 +47,20 @@ const config: Config = {
           // tags: {
           //   basePath: '/tags',
           // },
+          // Versioning configuration
+          lastVersion: '0.3.0',
+          versions: {
+            current: {
+              label: 'Next',
+              path: 'next',
+              banner: 'unreleased',
+            },
+            '0.3.0': {
+              label: '0.3.0',
+              path: '',
+              banner: 'none',
+            },
+          },
         },
         blog: {
           showReadingTime: true,
@@ -70,6 +84,7 @@ const config: Config = {
     ],
   ],
 
+<<<<<<< HEAD
   // plugins: [
   //   [
   //     'docusaurus-plugin-typedoc',
@@ -116,6 +131,53 @@ const config: Config = {
   //     },
   //   ],
   // ],
+=======
+  plugins: [
+    [
+      'docusaurus-plugin-typedoc',
+      {
+        entryPoints: ['../src/index.ts'],
+        tsconfig: '../tsconfig.json',
+        out: 'api-generated',
+        readme: 'none',
+        sidebar: {
+          fullNames: true,
+        },
+        plugin: ['typedoc-plugin-markdown'],
+        hidePageTitle: false,
+        hidePageHeader: false,
+        hideBreadcrumbs: false,
+        useCodeBlocks: true,
+        parametersFormat: 'table',
+        interfacePropertiesFormat: 'table',
+        classPropertiesFormat: 'table',
+        enumMembersFormat: 'table',
+        typeDeclarationFormat: 'table',
+        propertyMembersFormat: 'table',
+        typeAliasPropertiesFormat: 'table',
+        excludePrivate: true,
+        excludeProtected: false,
+        excludeInternal: true,
+        excludeNotDocumented: false,
+        categorizeByGroup: true,
+        categoryOrder: [
+          'Classes',
+          'Interfaces',
+          'Type Aliases',
+          'Functions',
+          'Variables',
+          '*'
+        ],
+        sort: ['source-order'],
+        gitRevision: 'main',
+        sourceLinkTemplate: 'https://github.com/standardbeagle/ageSchemaClient/blob/{gitRevision}/{path}#L{line}',
+        disableSources: false,
+        includeVersion: true,
+        cleanOutputDir: true,
+        watch: process.env.TYPEDOC_WATCH === 'true',
+      },
+    ],
+  ],
 
   themeConfig: {
     // Replace with your project's social card
@@ -172,6 +234,11 @@ const config: Config = {
         },
         {to: '/blog', label: 'Blog', position: 'left'},
         {to: '/glossary', label: 'Glossary', position: 'left'},
+        {
+          type: 'docsVersionDropdown',
+          position: 'left',
+          dropdownActiveClassDisabled: true,
+        },
         {
           href: 'https://github.com/standardbeagle/ageSchemaClient',
           label: 'GitHub',

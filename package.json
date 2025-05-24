@@ -44,7 +44,10 @@
     "docs:api": "typedoc",
     "docs:api:watch": "TYPEDOC_WATCH=true typedoc --watch",
     "docs:api:clean": "rm -rf website/docs/api-generated",
-    "docs:full": "pnpm docs:api && pnpm docs:build"
+    "docs:full": "pnpm docs:api && pnpm docs:build",
+    "docs:version": "cd website && pnpm docusaurus docs:version",
+    "docs:version:list": "cd website && pnpm docusaurus docs:version --list",
+    "docs:clear": "cd website && pnpm docusaurus clear"
   },
   "keywords": [
     "apache",

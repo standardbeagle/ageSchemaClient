@@ -16,6 +16,7 @@ const sidebars: SidebarsConfig = {
   // Main documentation sidebar
   tutorialSidebar: [
     'intro',
+    'versioning-guide',
     {
       type: 'category',
       label: 'Getting Started',
@@ -57,6 +58,27 @@ const sidebars: SidebarsConfig = {
         'architecture/connection-management',
         'architecture/query-processing',
         'architecture/extension-development',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Contributing',
+      items: [
+        'contributing/README',
+        'contributing/documentation-guidelines',
+        'contributing/style-guide',
+        'contributing/build-deployment',
+        'contributing/version-management',
+        'contributing/quality-assurance',
+        {
+          type: 'category',
+          label: 'Templates',
+          items: [
+            'contributing/templates/api-method-template',
+            'contributing/templates/how-to-guide-template',
+            'contributing/templates/troubleshooting-template',
+          ],
+        },
       ],
     },
   ],
