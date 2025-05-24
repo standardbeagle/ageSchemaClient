@@ -12,9 +12,9 @@ import { SchemaDefinition } from '../schema/types';
 import { QueryExecutor } from '../db/query';
 import { CypherQueryGenerator } from './cypher-query-generator';
 import { SchemaValidator } from '../schema/validator';
-import { ValidationErrorCollection } from '../schema/errors';
-import { DatabaseError as DbError, DatabaseErrorType } from '../db/types';
-import { createArrayFunction, toAgType } from '../utils/age-type-utils';
+
+import { DatabaseError as DbError } from '../db/types';
+import { createArrayFunction } from '../utils/age-type-utils';
 import fs from 'fs';
 import path from 'path';
 

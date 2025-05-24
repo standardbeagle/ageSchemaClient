@@ -10,8 +10,7 @@
 import {
   SchemaDefinition,
   VertexLabel,
-  EdgeLabel,
-  PropertyDefinition
+  EdgeLabel
 } from './types';
 
 /**

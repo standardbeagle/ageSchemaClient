@@ -5,7 +5,8 @@
  */
 
 import { PropertyType } from '../schema/types';
-import { SQLParameter, SQLParameters } from './types';
+import { SQLParameters } from '../db/types';
+export type SQLParameter = any;
 
 /**
  * Escape a SQL string value

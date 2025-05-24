@@ -5,9 +5,9 @@
  */
 
 import { SchemaDefinition, EdgeLabel, PropertyType } from '../schema/types';
-import { QueryExecutor, QueryResult } from './query';
+import { QueryExecutor } from './query';
 import { SQLGenerator } from '../sql/generator';
-import { SQLQueryOptions, SQLFilterCondition, SQLOrderDirection, SQLFilterOperator } from '../sql/types';
+import { SQLOrderDirection, SQLFilterOperator } from './types';
 import { ValidationError } from '../core/errors';
 import { Vertex } from './vertex';
 
@@ -411,14 +411,14 @@ export class EdgeOperations<T extends SchemaDefinition> {
     // Transform results to Edge objects
     return result.rows.map(row => {
       const edgeData = JSON.parse(row.r);
-      const fromData = JSON.parse(row.a);
-      const toData = JSON.parse(row.b);
+      const _fromData = JSON.parse(row.a);
+      const _toData = JSON.parse(row.b);
 
       return {
         id: edgeData.id || edgeData.identity.toString(),
         label: label,
-        fromId: fromData.id || fromData.identity.toString(),
-        toId: toData.id || toData.identity.toString(),
+        fromId: _fromData.id || _fromData.identity.toString(),
+        toId: _toData.id || _toData.identity.toString(),
         properties: edgeData.properties || {}
       } as Edge<T, L>;
     });
@@ -493,8 +493,8 @@ export class EdgeOperations<T extends SchemaDefinition> {
     // Transform results to Edge objects
     return result.rows.map(row => {
       const edgeData = JSON.parse(row.r);
-      const fromData = JSON.parse(row.a);
-      const toData = JSON.parse(row.b);
+      const _fromData = JSON.parse(row.a);
+      const _toData = JSON.parse(row.b);
 
       return {
         id: edgeData.id || edgeData.identity.toString(),
@@ -820,8 +820,8 @@ export class EdgeOperations<T extends SchemaDefinition> {
     // Transform results to Edge objects
     return result.rows.map(row => {
       const edgeData = JSON.parse(row.r);
-      const fromData = JSON.parse(row.a);
-      const toData = JSON.parse(row.b);
+      const _fromData = JSON.parse(row.a);
+      const _toData = JSON.parse(row.b);
 
       return {
         id: edgeData.id || edgeData.identity.toString(),
@@ -1129,14 +1129,14 @@ export class EdgeOperations<T extends SchemaDefinition> {
           // Try to parse as JSON first
           try {
             edgeData = JSON.parse(row.r);
-          } catch (jsonError) {
+          } catch (_jsonError) {
             // If JSON parsing fails, it might be an AGE-specific format with type annotations
             // Example: {"id": 844424930131969, "label": "KNOWS", "properties": {"since": 2020}}::edge
             // Strip the type annotation and try again
             const cleanedStr = row.r.replace(/::edge$/, '');
             try {
               edgeData = JSON.parse(cleanedStr);
-            } catch (cleanedJsonError) {
+            } catch (_cleanedJsonError) {
               // If that still fails, use a default structure
               edgeData = {
                 identity: 0,
@@ -1158,7 +1158,7 @@ export class EdgeOperations<T extends SchemaDefinition> {
           if (typeof row.a === 'string') {
             try {
               fromData = JSON.parse(row.a.replace(/::vertex$/, ''));
-            } catch (error) {
+            } catch (_error) {
               fromData = { identity: 0 };
             }
           } else if (typeof row.a === 'object') {
@@ -1175,7 +1175,7 @@ export class EdgeOperations<T extends SchemaDefinition> {
           if (typeof row.b === 'string') {
             try {
               toData = JSON.parse(row.b.replace(/::vertex$/, ''));
-            } catch (error) {
+            } catch (_error) {
               toData = { identity: 0 };
             }
           } else if (typeof row.b === 'object') {
@@ -1194,8 +1194,8 @@ export class EdgeOperations<T extends SchemaDefinition> {
           toId: toData.id || (toData.identity ? toData.identity.toString() : '0'),
           properties: edgeData.properties || {}
         } as Edge<T, L>;
-      } catch (error) {
-        console.error('Error parsing edge data:', error);
+      } catch (_error) {
+        console.error('Error parsing edge data:', _error);
 
         // Last resort fallback
         return {

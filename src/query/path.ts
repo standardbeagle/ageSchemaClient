@@ -12,12 +12,12 @@ import {
   QueryPartType,
   MatchPatternType,
   VertexPattern,
-  EdgePattern,
-  PathPattern,
-  QueryExecutionOptions,
-  QueryBuilderResult,
+
+
+
+
 } from './types';
-import { MatchPart, ReturnPart } from './parts';
+import { MatchPart } from './parts';
 
 /**
  * Path part class
@@ -100,8 +100,9 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
     relationshipTypes?: string[],
     maxDepth?: number
   ): this {
-    const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
+    // const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
     const depthConstraint = maxDepth !== undefined ? `*1..${maxDepth}` : '*';
+    const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
     const pathPattern = `shortestPath((${startAlias})-[${relTypes}]${depthConstraint}->(${endAlias}))`;
 
     (this as any).queryParts.push(new PathPart(pathPattern, 'p'));
@@ -123,8 +124,9 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
     relationshipTypes?: string[],
     maxDepth?: number
   ): this {
-    const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
+    // const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
     const depthConstraint = maxDepth !== undefined ? `*1..${maxDepth}` : '*';
+    const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
     const pathPattern = `allShortestPaths((${startAlias})-[${relTypes}]${depthConstraint}->(${endAlias}))`;
 
     (this as any).queryParts.push(new PathPart(pathPattern, 'p'));
@@ -150,9 +152,10 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
     minDepth: number = 1,
     maxDepth?: number
   ): this {
-    const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
+    // const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
     const depthConstraint = maxDepth !== undefined ? `*${minDepth}..${maxDepth}` : `*${minDepth}..`;
 
+    const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
     const pattern = `(${startAlias})-[${relationshipAlias}${relTypes}]${depthConstraint}->(${endAlias})`;
     (this as any).queryParts.push(new MatchPart([{
       type: MatchPatternType.PATH,
@@ -174,10 +177,10 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
    */
   breadthFirstSearch(
     startAlias: string,
-    relationshipAlias: string,
-    endAlias: string,
+    _relationshipAlias: string,
+    _endAlias: string,
     relationshipTypes?: string[],
-    maxDepth: number = 5
+    _maxDepth: number = 5
   ): this {
     // First match the start and end vertices
     (this as any).queryParts.push(new MatchPart([{
@@ -189,8 +192,8 @@ export class PathQueryBuilder<T extends SchemaDefinition> extends QueryBuilder<T
     } as VertexPattern]));
 
     // Then use APOC to perform BFS (this is a placeholder, actual implementation depends on available procedures)
-    const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
-    const cypher = `CALL apoc.path.expandBFS(${startAlias}, "${relTypes}", null, 1, ${maxDepth}) YIELD path`;
+    // const relTypes = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
+    // const cypher = `CALL apoc.path.expandBFS(${startAlias}, "${relTypes}", null, 1, ${maxDepth}) YIELD path`;
 
     // Add WITH clause to pass the path to the next part of the query
     this.with('path');

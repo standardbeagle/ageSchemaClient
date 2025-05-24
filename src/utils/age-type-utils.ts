@@ -64,11 +64,11 @@ export function fromAgType(value: any): any {
     if (value.startsWith('{') && value.endsWith('}')) {
       try {
         return JSON.parse(value);
-      } catch (e) {
+      } catch (_e) {
         // Try parsing as a JSON string with the braces
         try {
           return JSON.parse(value);
-        } catch (e2) {
+        } catch (_e2) {
           return value;
         }
       }
@@ -98,7 +98,7 @@ export function fromAgType(value: any): any {
            (val.startsWith('[') && val.endsWith(']')))) {
         try {
           result[key] = JSON.parse(val);
-        } catch (e) {
+        } catch (_e) {
           result[key] = fromAgType(val);
         }
       } else {

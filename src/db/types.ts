@@ -535,3 +535,111 @@ export class TimeoutError extends DatabaseError {
     this.name = 'TimeoutError';
   }
 }
+
+/**
+ * SQL filter operator
+ */
+export enum SQLFilterOperator {
+  EQUALS = '=',
+  NOT_EQUALS = '<>',
+  LESS_THAN = '<',
+  LESS_THAN_OR_EQUALS = '<=',
+  GREATER_THAN = '>',
+  GREATER_THAN_OR_EQUALS = '>=',
+  LIKE = 'LIKE',
+  NOT_LIKE = 'NOT LIKE',
+  IN = 'IN',
+  NOT_IN = 'NOT IN',
+  IS_NULL = 'IS NULL',
+  IS_NOT_NULL = 'IS NOT NULL'
+}
+
+/**
+ * SQL order direction
+ */
+export enum SQLOrderDirection {
+  ASC = 'ASC',
+  DESC = 'DESC'
+}
+
+/**
+ * SQL filter condition
+ */
+export interface SQLFilterCondition {
+  property: string;
+  operator: SQLFilterOperator;
+  value: any;
+}
+
+/**
+ * SQL order by
+ */
+export interface SQLOrderBy {
+  property: string;
+  direction: SQLOrderDirection;
+}
+
+/**
+ * SQL query options
+ */
+export interface SQLQueryOptions {
+  limit?: number;
+  offset?: number;
+  orderBy?: SQLOrderBy[];
+  orderDirection?: SQLOrderDirection;
+  filters?: SQLFilterCondition[];
+}
+
+/**
+ * SQL result
+ */
+export interface SQLResult {
+  sql: string;
+  params: SQLParameters;
+}
+
+/**
+ * SQL parameters
+ */
+export type SQLParameters = any[];
+
+/**
+ * SQL transaction type
+ */
+export enum SQLTransactionType {
+  BEGIN = 'BEGIN',
+  COMMIT = 'COMMIT',
+  ROLLBACK = 'ROLLBACK',
+  SAVEPOINT = 'SAVEPOINT',
+  RELEASE = 'RELEASE SAVEPOINT'
+}
+
+/**
+ * SQL statement type
+ */
+export enum SQLStatementType {
+  SELECT = 'SELECT',
+  INSERT = 'INSERT',
+  UPDATE = 'UPDATE',
+  DELETE = 'DELETE'
+}
+
+/**
+ * SQL vertex table options
+ */
+export interface SQLVertexTableOptions {
+  tablePrefix?: string;
+  includeMetadata?: boolean;
+  primaryKeyColumn?: string;
+}
+
+/**
+ * SQL edge table options
+ */
+export interface SQLEdgeTableOptions {
+  tablePrefix?: string;
+  includeMetadata?: boolean;
+  primaryKeyColumn?: string;
+  sourceIdColumn?: string;
+  targetIdColumn?: string;
+}

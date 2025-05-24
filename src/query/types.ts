@@ -320,6 +320,7 @@ export interface IQueryBuilder<T extends SchemaDefinition> {
  */
 export interface IMatchClause<
   T extends SchemaDefinition,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   L extends keyof T['vertices']
 > {
   /**

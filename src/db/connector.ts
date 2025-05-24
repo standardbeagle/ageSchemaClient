@@ -13,13 +13,11 @@ import {
   ConnectionHooks,
   ConnectionManager,
   ConnectionState,
-  DatabaseErrorType,
   DriverType,
   ExtensionInitializer,
   PoolError,
   PoolStats,
   RetryConfig,
-  TimeoutError,
 } from './types';
 import { AgeExtensionInitializer } from './extensions';
 

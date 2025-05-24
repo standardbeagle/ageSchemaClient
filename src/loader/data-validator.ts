@@ -15,7 +15,7 @@ import {
 } from './data-validator-methods';
 import {
   ValidationResult,
-  ValidationError,
+
   GraphData
 } from './data-validator-types';
 

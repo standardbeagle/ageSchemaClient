@@ -8,10 +8,10 @@ import {
   QueryPart,
   QueryPartType,
   MatchPattern,
-  MatchPatternType,
-  VertexPattern,
-  EdgePattern,
-  PathPattern,
+
+
+
+
   OrderDirection,
 } from './types';
 

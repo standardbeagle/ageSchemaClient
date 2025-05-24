@@ -5,12 +5,11 @@
  */
 
 import { SchemaDefinition } from '../schema/types';
-import { QueryExecutor, QueryResult } from './query';
+import { QueryExecutor } from './query';
 import { SQLGenerator } from '../sql/generator';
 import { Transaction } from './transaction';
 import { VertexData, Vertex, VertexOperations } from './vertex';
 import { EdgeData, Edge, EdgeOperations } from './edge';
-import { ValidationError } from '../core/errors';
 import { getTempTableName } from '../sql/utils';
 import { performance } from 'perf_hooks';
 

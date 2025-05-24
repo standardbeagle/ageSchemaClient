@@ -15,18 +15,17 @@ import {
   SQLResult,
   SQLParameters,
   SQLQueryOptions,
-  SQLFilterCondition,
   SQLVertexTableOptions,
   SQLEdgeTableOptions,
   SQLTransactionType,
-} from './types';
+} from '../db/types';
 import {
   quoteIdentifier,
   getPostgresDataType,
   convertToPostgresValue,
   getVertexTableName,
   getEdgeTableName,
-  getTempTableName,
+
 } from './utils';
 
 /**
@@ -473,7 +472,7 @@ ${offsetClause}`.trim();
 
     const tableName = getVertexTableName(label, tablePrefix);
     const functionName = `filter_${label}_vertices`;
-    const tempTableName = `temp_${label}_vertices`;
+    // const tempTableName = `temp_${label}_vertices`;
 
     // Generate function parameters based on vertex properties
     const functionParams: string[] = [];

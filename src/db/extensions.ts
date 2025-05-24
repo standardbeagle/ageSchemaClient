@@ -22,9 +22,9 @@ import { ExtensionInitializer, ConnectionConfig } from './types';
 export class AgeExtensionInitializer implements ExtensionInitializer {
   readonly name = 'Apache AGE';
 
-  async initialize(client: PoolClient, config: ConnectionConfig): Promise<void> {
+  async initialize(client: PoolClient, _config: ConnectionConfig): Promise<void> {
     try {
-      const searchPath = config.pgOptions?.searchPath || 'ag_catalog, "$user", public';
+      const searchPath = _config.pgOptions?.searchPath || 'ag_catalog, "$user", public';
 
       // Use a single query to initialize the connection
       // This ensures all setup is done atomically
@@ -55,7 +55,7 @@ export class AgeExtensionInitializer implements ExtensionInitializer {
     }
   }
 
-  async cleanup(client: PoolClient, config: ConnectionConfig): Promise<void> {
+  async cleanup(client: PoolClient, _config: ConnectionConfig): Promise<void> {
     try {
       // Truncate the age_params table before releasing the connection
       await client.query('TRUNCATE TABLE age_params');
@@ -226,7 +226,7 @@ export class AgeExtensionInitializer implements ExtensionInitializer {
 export class PgVectorExtensionInitializer implements ExtensionInitializer {
   readonly name = 'pgvector';
 
-  async initialize(client: PoolClient, config: ConnectionConfig): Promise<void> {
+  async initialize(client: PoolClient, _config: ConnectionConfig): Promise<void> {
     try {
       // Create the pgvector extension if it doesn't exist
       await client.query('CREATE EXTENSION IF NOT EXISTS vector');
@@ -249,7 +249,7 @@ export class PgVectorExtensionInitializer implements ExtensionInitializer {
 export class PostGISExtensionInitializer implements ExtensionInitializer {
   readonly name = 'PostGIS';
 
-  async initialize(client: PoolClient, config: ConnectionConfig): Promise<void> {
+  async initialize(client: PoolClient, _config: ConnectionConfig): Promise<void> {
     try {
       // Create the PostGIS extension if it doesn't exist
       await client.query('CREATE EXTENSION IF NOT EXISTS postgis');
@@ -279,13 +279,13 @@ export class SearchPathInitializer implements ExtensionInitializer {
     this.additionalSchemas = additionalSchemas;
   }
 
-  async initialize(client: PoolClient, config: ConnectionConfig): Promise<void> {
+  async initialize(client: PoolClient, _config: ConnectionConfig): Promise<void> {
     try {
       if (this.additionalSchemas.length === 0) {
         return;
       }
 
-      const currentSearchPath = config.pgOptions?.searchPath || 'ag_catalog, "$user", public';
+      const currentSearchPath = _config.pgOptions?.searchPath || 'ag_catalog, "$user", public';
       const newSearchPath = `${currentSearchPath}, ${this.additionalSchemas.join(', ')}`;
       
       // Set the extended search path

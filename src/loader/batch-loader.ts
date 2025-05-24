@@ -9,7 +9,7 @@
 
 import { SchemaDefinition } from '../schema/types';
 import { QueryExecutor } from '../db/query';
-import { QueryBuilder } from '../query/builder';
+
 
 /**
  * Progress information during the loading process
@@ -648,6 +648,7 @@ export interface GraphData {
  *
  * @template T - Schema definition type
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export interface BatchLoader<T extends SchemaDefinition> {
   /**
    * Load graph data into the database

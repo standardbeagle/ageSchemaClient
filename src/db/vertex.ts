@@ -9,11 +9,11 @@
  * - Added graph name validation to prevent errors
  */
 
-import { QueryExecutor, QueryResult } from './query';
+import { QueryExecutor } from './query';
 import { SQLGenerator } from '../sql/generator';
 import { PropertyType, VertexLabel, SchemaDefinition } from '../schema/types';
 import { ValidationError } from '../core/errors';
-import { SQLFilterOperator, SQLOrderDirection } from '../sql/types';
+import { SQLFilterOperator, SQLOrderDirection } from './types';
 
 /**
  * Vertex query options
@@ -816,14 +816,14 @@ export class VertexOperations<T extends SchemaDefinition> {
           // Try to parse as JSON first
           try {
             vertexData = JSON.parse(row.v);
-          } catch (jsonError) {
+          } catch (_jsonError) {
             // If JSON parsing fails, it might be an AGE-specific format with type annotations
             // Example: {"id": 844424930131969, "label": "Person", "properties": {"age": 30, "name": "Alice"}}::vertex
             // Strip the type annotation and try again
             const cleanedStr = row.v.replace(/::vertex$/, '');
             try {
               vertexData = JSON.parse(cleanedStr);
-            } catch (cleanedJsonError) {
+            } catch (_cleanedJsonError) {
               // If that still fails, try to extract data using regex
               const str = String(row.v);
               const idMatch = str.match(/id[=:]\s*(\d+)/);

@@ -4,8 +4,8 @@
  * @packageDocumentation
  */
 
-import { SQLGenerator } from './generator';
-import { SQLResult, SQLParameters, SQLVertexTableOptions, SQLEdgeTableOptions } from './types';
+
+import { SQLResult, SQLVertexTableOptions, SQLEdgeTableOptions } from '../db/types';
 import { quoteIdentifier, getPostgresDataType, getVertexTableName, getEdgeTableName } from './utils';
 import { PropertyType } from '../schema/types';
 
@@ -235,9 +235,9 @@ FROM STDIN WITH (FORMAT TEXT, DELIMITER E'\\t', NULL '\\N')`;
       : getVertexTableName(label, mergedOptions.tablePrefix);
 
     // Get all columns from the temporary table
-    const columnsSQL = `SELECT column_name FROM information_schema.columns
+    /* const columnsSQL = `SELECT column_name FROM information_schema.columns
 WHERE table_name = '${tempTableName.replace(/"/g, '')}'
-ORDER BY ordinal_position`;
+ORDER BY ordinal_position`; */
 
     // Insert from temp table to actual table
     const sql = `INSERT INTO ${tableName} (

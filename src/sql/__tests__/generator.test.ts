@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { SQLGenerator } from '../generator';
 import { SchemaDefinition, PropertyType } from '../../schema/types';
-import { SQLTransactionType } from '../types';
+import { SQLTransactionType } from '../../db/types';
 
 // Sample schema for testing
 const testSchema: SchemaDefinition = {

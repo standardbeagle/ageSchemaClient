@@ -4,8 +4,8 @@
  * @packageDocumentation
  */
 
-import { SQLGenerator } from './generator';
-import { SQLResult, SQLParameters } from './types';
+
+import { SQLResult } from '../db/types';
 import { quoteIdentifier, getPostgresDataType, getVertexTableName, getEdgeTableName } from './utils';
 import { PropertyDefinition, PropertyType } from '../schema/types';
 

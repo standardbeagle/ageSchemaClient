@@ -4,7 +4,7 @@
  * @packageDocumentation
  */
 
-import { Connection, TransactionError, TimeoutError } from './types';
+import { Connection, TransactionError } from './types';
 
 /**
  * Transaction isolation level

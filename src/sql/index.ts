@@ -7,8 +7,23 @@
 // Initialize SQL module
 import './init';
 
-// Export SQL types
-export * from './types';
+// Export SQL types from db/types
+export type {
+  SQLResult,
+  SQLParameters,
+  SQLQueryOptions,
+  SQLFilterCondition,
+  SQLOrderBy,
+  SQLVertexTableOptions,
+  SQLEdgeTableOptions
+} from '../db/types';
+
+export {
+  SQLOrderDirection,
+  SQLFilterOperator,
+  SQLTransactionType,
+  SQLStatementType
+} from '../db/types';
 
 // Export SQL utilities
 export * from './utils';

@@ -9,7 +9,7 @@ import {
   VertexLabel,
   EdgeLabel,
   PropertyDefinition,
-  SchemaVersion,
+
 } from './types';
 import { SchemaVersionError } from './errors';
 import { parseVersion, formatVersion } from './utils';

@@ -6,12 +6,12 @@
 
 import {
   SchemaDefinition,
-  VertexLabel,
-  EdgeLabel,
+
+
   PropertyDefinition,
   PropertyType,
 } from './types';
-import { SchemaValidationError } from './errors';
+
 import { ErrorCollector } from './error-collector';
 import { ValidationResult, createSuccessResult, createFailureResult } from './validator-result';
 
@@ -530,7 +530,7 @@ export class SchemaValidator {
             `String does not match pattern: ${constraints.pattern}`
           );
         }
-      } catch (error) {
+      } catch (_error) {
         // Ignore invalid pattern
       }
     }

@@ -11,13 +11,13 @@ import {
   PropertyDefinition,
   PropertyType,
   SchemaVersion,
-  EdgeMultiplicity,
-  EdgeDirection,
+
+
 } from './types';
 import {
   SchemaParseError,
   SchemaValidationError,
-  SchemaVersionError,
+
   ValidationErrorCollection,
 } from './errors';
 import { ErrorCollector } from './error-collector';
@@ -131,12 +131,12 @@ export class SchemaParser {
       }
 
       return schema as SchemaDefinition;
-    } catch (error) {
-      if (error instanceof SchemaValidationError || error instanceof ValidationErrorCollection) {
-        throw error;
+    } catch (_error) {
+      if (_error instanceof SchemaValidationError || _error instanceof ValidationErrorCollection) {
+        throw _error;
       }
 
-      throw new SchemaParseError('Failed to parse schema JSON', error);
+      throw new SchemaParseError('Failed to parse schema JSON', _error);
     }
   }
 
@@ -271,7 +271,7 @@ export class SchemaParser {
       if (typeof schema.version === 'string') {
         try {
           version = parseVersion(schema.version);
-        } catch (error) {
+        } catch (_error) {
           errorCollector.addValidationError(`Invalid version string: ${schema.version}`);
           return;
         }
@@ -296,7 +296,7 @@ export class SchemaParser {
               `Schema version ${formatVersion(version)} is less than minimum supported version ${this.config.minVersion}`
             );
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore invalid min version
         }
       }
@@ -315,7 +315,7 @@ export class SchemaParser {
               `Schema version ${formatVersion(version)} is greater than maximum supported version ${this.config.maxVersion}`
             );
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore invalid max version
         }
       }
@@ -579,7 +579,7 @@ export class SchemaParser {
         } else if (stringConstraints.pattern !== undefined) {
           try {
             new RegExp(stringConstraints.pattern);
-          } catch (error) {
+          } catch (_error) {
             errorCollector.addValidationError(`Invalid regular expression pattern: ${stringConstraints.pattern}`);
           }
         }

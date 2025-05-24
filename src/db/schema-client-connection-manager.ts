@@ -11,14 +11,14 @@
  * @packageDocumentation
  */
 
-import { PoolClient } from 'pg';
+import { } from 'pg';
 import {
   Connection,
-  ConnectionConfig,
+
   ConnectionError,
-  ConnectionEvent,
-  ConnectionManager,
-  ConnectionState,
+
+
+
 } from './types';
 import { PgConnectionManager } from './connector';
 import { QueryExecutor } from './query';
