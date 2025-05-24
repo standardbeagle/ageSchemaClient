@@ -1,3 +1,19 @@
+---
+title: Basic Usage
+tags:
+  - getting-started
+  - tutorial
+  - query-builder
+  - examples
+difficulty: beginner
+content_type: tutorial
+last_updated: 2024-01-15
+related_articles:
+  - /docs/getting-started/installation
+  - /docs/how-to-guides/basic-queries
+  - /docs/api-reference/client
+---
+
 # Basic Usage
 
 Learn the fundamentals of using ageSchemaClient with Apache AGE graph databases.

@@ -1,3 +1,18 @@
+---
+title: Welcome to ageSchemaClient Documentation
+tags:
+  - introduction
+  - getting-started
+  - overview
+difficulty: beginner
+content_type: concept
+last_updated: 2024-01-15
+related_articles:
+  - /docs/getting-started/installation
+  - /docs/getting-started/basic-usage
+  - /docs/architecture/overview
+---
+
 # Welcome to ageSchemaClient Documentation
 
 **ageSchemaClient** is a comprehensive TypeScript library for Apache AGE graph databases with schema validation, query building, and advanced data loading capabilities.
