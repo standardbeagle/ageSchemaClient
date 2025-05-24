@@ -46,6 +46,7 @@ const sidebars: SidebarsConfig = {
         'how-to-guides/advanced-queries',
         'how-to-guides/batch-operations',
         'how-to-guides/schema-validation',
+        'how-to-guides/navigation-features',
         'how-to-guides/troubleshooting',
       ],
     },

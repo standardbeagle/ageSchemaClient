@@ -41,6 +41,12 @@ const config: Config = {
           // Remove this to remove the "edit this page" links.
           editUrl:
             'https://github.com/standardbeagle/ageSchemaClient/tree/main/website/',
+          showLastUpdateTime: true,
+          showLastUpdateAuthor: true,
+          breadcrumbs: true,
+          // tags: {
+          //   basePath: '/tags',
+          // },
           // Versioning configuration
           lastVersion: '0.3.0',
           versions: {
@@ -78,6 +84,54 @@ const config: Config = {
     ],
   ],
 
+<<<<<<< HEAD
+  // plugins: [
+  //   [
+  //     'docusaurus-plugin-typedoc',
+  //     {
+  //       entryPoints: ['../src/index.ts'],
+  //       tsconfig: '../tsconfig.json',
+  //       out: 'api-generated',
+  //       readme: 'none',
+  //       sidebar: {
+  //         fullNames: true,
+  //       },
+  //       plugin: ['typedoc-plugin-markdown'],
+  //       hidePageTitle: false,
+  //       hidePageHeader: false,
+  //       hideBreadcrumbs: false,
+  //       useCodeBlocks: true,
+  //       parametersFormat: 'table',
+  //       interfacePropertiesFormat: 'table',
+  //       classPropertiesFormat: 'table',
+  //       enumMembersFormat: 'table',
+  //       typeDeclarationFormat: 'table',
+  //       propertyMembersFormat: 'table',
+  //       typeAliasPropertiesFormat: 'table',
+  //       excludePrivate: true,
+  //       excludeProtected: false,
+  //       excludeInternal: true,
+  //       excludeNotDocumented: false,
+  //       categorizeByGroup: true,
+  //       categoryOrder: [
+  //         'Classes',
+  //         'Interfaces',
+  //         'Type Aliases',
+  //         'Functions',
+  //         'Variables',
+  //         '*'
+  //       ],
+  //       sort: ['source-order'],
+  //       gitRevision: 'main',
+  //       sourceLinkTemplate: 'https://github.com/standardbeagle/ageSchemaClient/blob/{gitRevision}/{path}#L{line}',
+  //       disableSources: false,
+  //       includeVersion: true,
+  //       cleanOutputDir: true,
+  //       watch: process.env.TYPEDOC_WATCH === 'true',
+  //     },
+  //   ],
+  // ],
+=======
   plugins: [
     [
       'docusaurus-plugin-typedoc',
@@ -179,6 +233,7 @@ const config: Config = {
           label: 'Documentation',
         },
         {to: '/blog', label: 'Blog', position: 'left'},
+        {to: '/glossary', label: 'Glossary', position: 'left'},
         {
           type: 'docsVersionDropdown',
           position: 'left',
@@ -204,6 +259,10 @@ const config: Config = {
             {
               label: 'API Reference',
               to: '/docs/api-reference',
+            },
+            {
+              label: 'Glossary',
+              to: '/glossary',
             },
           ],
         },
