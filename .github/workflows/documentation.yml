@@ -43,6 +43,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
 
       - name: Get pnpm store directory
         id: pnpm-cache
@@ -110,6 +112,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
 
       - name: Install dependencies
         run: pnpm install
