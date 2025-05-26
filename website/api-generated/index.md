@@ -1,8 +1,8 @@
-**age-schema-client v0.3.0**
+**age-schema-client v0.4.0**
 
 ***
 
-# age-schema-client v0.3.0
+# age-schema-client v0.4.0
 
 ageSchemaClient - A TypeScript library for Apache AGE graph databases with schema validation
 
@@ -12,6 +12,10 @@ It allows developers to define graph schemas and use them to validate and optimi
 ## Enumerations
 
 - [ErrorCode](enumerations/ErrorCode.md)
+- [SQLFilterOperator](enumerations/SQLFilterOperator.md)
+- [SQLOrderDirection](enumerations/SQLOrderDirection.md)
+- [SQLTransactionType](enumerations/SQLTransactionType.md)
+- [SQLStatementType](enumerations/SQLStatementType.md)
 - [AlgorithmType](enumerations/AlgorithmType.md)
 - [WindowFunctionType](enumerations/WindowFunctionType.md)
 - [QueryPartType](enumerations/QueryPartType.md)
@@ -21,10 +25,6 @@ It allows developers to define graph schemas and use them to validate and optimi
 - [PropertyType](enumerations/PropertyType.md)
 - [EdgeMultiplicity](enumerations/EdgeMultiplicity.md)
 - [EdgeDirection](enumerations/EdgeDirection.md)
-- [SQLStatementType](enumerations/SQLStatementType.md)
-- [SQLTransactionType](enumerations/SQLTransactionType.md)
-- [SQLFilterOperator](enumerations/SQLFilterOperator.md)
-- [SQLOrderDirection](enumerations/SQLOrderDirection.md)
 
 ## Classes
 
@@ -97,6 +97,12 @@ It allows developers to define graph schemas and use them to validate and optimi
 - [QueryResult](interfaces/QueryResult.md)
 - [QueryOptions](interfaces/QueryOptions.md)
 - [Connection](interfaces/Connection.md)
+- [SQLFilterCondition](interfaces/SQLFilterCondition.md)
+- [SQLOrderBy](interfaces/SQLOrderBy.md)
+- [SQLQueryOptions](interfaces/SQLQueryOptions.md)
+- [SQLResult](interfaces/SQLResult.md)
+- [SQLVertexTableOptions](interfaces/SQLVertexTableOptions.md)
+- [SQLEdgeTableOptions](interfaces/SQLEdgeTableOptions.md)
 - [PathFindingOptions](interfaces/PathFindingOptions.md)
 - [CentralityOptions](interfaces/CentralityOptions.md)
 - [CommunityDetectionOptions](interfaces/CommunityDetectionOptions.md)
@@ -139,15 +145,10 @@ It allows developers to define graph schemas and use them to validate and optimi
 - [EdgeLabel](interfaces/EdgeLabel.md)
 - [SchemaDefinition](interfaces/SchemaDefinition.md)
 - [SchemaValidatorConfig](interfaces/SchemaValidatorConfig.md)
-- [SQLResult](interfaces/SQLResult.md)
-- [SQLFilterCondition](interfaces/SQLFilterCondition.md)
-- [SQLOrderBy](interfaces/SQLOrderBy.md)
-- [SQLQueryOptions](interfaces/SQLQueryOptions.md)
-- [SQLVertexTableOptions](interfaces/SQLVertexTableOptions.md)
-- [SQLEdgeTableOptions](interfaces/SQLEdgeTableOptions.md)
 
 ## Type Aliases
 
+- [SQLParameters](type-aliases/SQLParameters.md)
 - [QueryBuilderResult](type-aliases/QueryBuilderResult.md)
 - [ExtractVertexType](type-aliases/ExtractVertexType.md)
 - [ExtractEdgeType](type-aliases/ExtractEdgeType.md)
@@ -157,7 +158,6 @@ It allows developers to define graph schemas and use them to validate and optimi
 - [ConnectedVertices](type-aliases/ConnectedVertices.md)
 - [RequiredProperties](type-aliases/RequiredProperties.md)
 - [SQLParameter](type-aliases/SQLParameter.md)
-- [SQLParameters](type-aliases/SQLParameters.md)
 
 ## Variables
 

@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,14 +6,14 @@
 
 # Interface: SQLFilterCondition
 
-Defined in: [src/sql/types.ts:79](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L79)
+Defined in: [src/db/types.ts:568](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L568)
 
 SQL filter condition
 
 ## Properties
 
-| Property | Type | Description | Defined in |
-| ------ | ------ | ------ | ------ |
-| <a id="property"></a> `property` | `string` | Property name | [src/sql/types.ts:83](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L83) |
-| <a id="operator"></a> `operator` | [`SQLFilterOperator`](../enumerations/SQLFilterOperator.md) | Filter operator | [src/sql/types.ts:88](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L88) |
-| <a id="value"></a> `value?` | \| [`SQLParameter`](../type-aliases/SQLParameter.md) \| [`SQLParameter`](../type-aliases/SQLParameter.md)[] | Filter value | [src/sql/types.ts:93](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L93) |
+| Property | Type | Defined in |
+| ------ | ------ | ------ |
+| <a id="property"></a> `property` | `string` | [src/db/types.ts:569](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L569) |
+| <a id="operator"></a> `operator` | [`SQLFilterOperator`](../enumerations/SQLFilterOperator.md) | [src/db/types.ts:570](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L570) |
+| <a id="value"></a> `value` | `any` | [src/db/types.ts:571](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L571) |

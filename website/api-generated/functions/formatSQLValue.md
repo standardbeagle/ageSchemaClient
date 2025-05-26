@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -10,7 +10,7 @@
 function formatSQLValue(value): string;
 ```
 
-Defined in: [src/sql/utils.ts:38](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L38)
+Defined in: [src/sql/utils.ts:39](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L39)
 
 Format a SQL value based on its type
 
@@ -18,7 +18,7 @@ Format a SQL value based on its type
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `value` | [`SQLParameter`](../type-aliases/SQLParameter.md) | Value to format |
+| `value` | `any` | Value to format |
 
 ## Returns
 

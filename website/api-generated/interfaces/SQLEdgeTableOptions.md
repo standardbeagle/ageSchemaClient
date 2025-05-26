@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,20 +6,16 @@
 
 # Interface: SQLEdgeTableOptions
 
-Defined in: [src/sql/types.ts:167](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L167)
+Defined in: [src/db/types.ts:639](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L639)
 
 SQL edge table options
 
-## Extends
-
-- [`SQLVertexTableOptions`](SQLVertexTableOptions.md)
-
 ## Properties
 
-| Property | Type | Description | Inherited from | Defined in |
-| ------ | ------ | ------ | ------ | ------ |
-| <a id="tableprefix"></a> `tablePrefix?` | `string` | Table name prefix | [`SQLVertexTableOptions`](SQLVertexTableOptions.md).[`tablePrefix`](SQLVertexTableOptions.md#tableprefix) | [src/sql/types.ts:151](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L151) |
-| <a id="includemetadata"></a> `includeMetadata?` | `boolean` | Include metadata columns | [`SQLVertexTableOptions`](SQLVertexTableOptions.md).[`includeMetadata`](SQLVertexTableOptions.md#includemetadata) | [src/sql/types.ts:156](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L156) |
-| <a id="primarykeycolumn"></a> `primaryKeyColumn?` | `string` | Primary key column name | [`SQLVertexTableOptions`](SQLVertexTableOptions.md).[`primaryKeyColumn`](SQLVertexTableOptions.md#primarykeycolumn) | [src/sql/types.ts:161](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L161) |
-| <a id="sourceidcolumn"></a> `sourceIdColumn?` | `string` | Source vertex ID column name | - | [src/sql/types.ts:171](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L171) |
-| <a id="targetidcolumn"></a> `targetIdColumn?` | `string` | Target vertex ID column name | - | [src/sql/types.ts:176](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L176) |
+| Property | Type | Defined in |
+| ------ | ------ | ------ |
+| <a id="tableprefix"></a> `tablePrefix?` | `string` | [src/db/types.ts:640](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L640) |
+| <a id="includemetadata"></a> `includeMetadata?` | `boolean` | [src/db/types.ts:641](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L641) |
+| <a id="primarykeycolumn"></a> `primaryKeyColumn?` | `string` | [src/db/types.ts:642](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L642) |
+| <a id="sourceidcolumn"></a> `sourceIdColumn?` | `string` | [src/db/types.ts:643](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L643) |
+| <a id="targetidcolumn"></a> `targetIdColumn?` | `string` | [src/db/types.ts:644](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L644) |

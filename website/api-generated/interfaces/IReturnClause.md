@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 # Interface: IReturnClause\<T\>
 
-Defined in: [src/query/types.ts:455](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L455)
+Defined in: [src/query/types.ts:456](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L456)
 
 Return clause interface
 
@@ -24,7 +24,7 @@ Return clause interface
 groupBy(...expressions): IQueryBuilder<T>;
 ```
 
-Defined in: [src/query/types.ts:459](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L459)
+Defined in: [src/query/types.ts:460](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L460)
 
 Add GROUP BY clause
 
@@ -46,7 +46,7 @@ Add GROUP BY clause
 done(): IQueryBuilder<T>;
 ```
 
-Defined in: [src/query/types.ts:464](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L464)
+Defined in: [src/query/types.ts:465](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L465)
 
 Return to the main query builder
 

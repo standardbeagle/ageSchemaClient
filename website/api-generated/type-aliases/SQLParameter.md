@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -7,9 +7,7 @@
 # Type Alias: SQLParameter
 
 ```ts
-type SQLParameter = string | number | boolean | Date | null | undefined;
+type SQLParameter = any;
 ```
 
-Defined in: [src/sql/types.ts:24](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L24)
-
-SQL parameter type
+Defined in: [src/sql/utils.ts:9](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L9)

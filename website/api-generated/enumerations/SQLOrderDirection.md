@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 # Enumeration: SQLOrderDirection
 
-Defined in: [src/sql/types.ts:99](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L99)
+Defined in: [src/db/types.ts:560](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L560)
 
 SQL order direction
 
@@ -14,5 +14,5 @@ SQL order direction
 
 | Enumeration Member | Value | Defined in |
 | ------ | ------ | ------ |
-| <a id="asc"></a> `ASC` | `"ASC"` | [src/sql/types.ts:100](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L100) |
-| <a id="desc"></a> `DESC` | `"DESC"` | [src/sql/types.ts:101](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L101) |
+| <a id="asc"></a> `ASC` | `"ASC"` | [src/db/types.ts:561](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L561) |
+| <a id="desc"></a> `DESC` | `"DESC"` | [src/db/types.ts:562](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L562) |

@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 # Class: PgConnectionManager
 
-Defined in: [src/db/connector.ts:178](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L178)
+Defined in: [src/db/connector.ts:176](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L176)
 
 PgConnectionManager class that implements the ConnectionManager interface
 
@@ -22,7 +22,7 @@ PgConnectionManager class that implements the ConnectionManager interface
 new PgConnectionManager(config): PgConnectionManager;
 ```
 
-Defined in: [src/db/connector.ts:190](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L190)
+Defined in: [src/db/connector.ts:188](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L188)
 
 Create a new PgConnectionManager
 
@@ -44,7 +44,7 @@ Create a new PgConnectionManager
 getConnection(): Promise<Connection>;
 ```
 
-Defined in: [src/db/connector.ts:335](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L335)
+Defined in: [src/db/connector.ts:333](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L333)
 
 Get a connection from the pool with retry logic
 
@@ -68,7 +68,7 @@ ConnectionManager.getConnection
 releaseConnection(connection): Promise<void>;
 ```
 
-Defined in: [src/db/connector.ts:402](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L402)
+Defined in: [src/db/connector.ts:400](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L400)
 
 Release a connection back to the pool
 
@@ -96,7 +96,7 @@ ConnectionManager.releaseConnection
 releaseAllConnections(): Promise<void>;
 ```
 
-Defined in: [src/db/connector.ts:453](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L453)
+Defined in: [src/db/connector.ts:451](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L451)
 
 Release all active connections without closing the pool
 This is horrible for test cleanup between test files and would cause nothing but false errors.
@@ -113,7 +113,7 @@ This is horrible for test cleanup between test files and would cause nothing but
 getPoolStats(): PoolStats;
 ```
 
-Defined in: [src/db/connector.ts:484](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L484)
+Defined in: [src/db/connector.ts:482](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L482)
 
 Get connection pool statistics
 
@@ -137,7 +137,7 @@ ConnectionManager.getPoolStats
 registerHooks(hooks): void;
 ```
 
-Defined in: [src/db/connector.ts:499](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L499)
+Defined in: [src/db/connector.ts:497](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L497)
 
 Register connection lifecycle hooks
 
@@ -165,7 +165,7 @@ ConnectionManager.registerHooks
 closeAll(): Promise<void>;
 ```
 
-Defined in: [src/db/connector.ts:508](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L508)
+Defined in: [src/db/connector.ts:506](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L506)
 
 Close all connections and end the pool
 
@@ -192,7 +192,7 @@ triggerHook(
 event): Promise<void>;
 ```
 
-Defined in: [src/db/connector.ts:533](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L533)
+Defined in: [src/db/connector.ts:531](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/connector.ts#L531)
 
 Trigger a hook
 

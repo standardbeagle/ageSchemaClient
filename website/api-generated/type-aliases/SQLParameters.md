@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -7,9 +7,9 @@
 # Type Alias: SQLParameters
 
 ```ts
-type SQLParameters = SQLParameter[];
+type SQLParameters = any[];
 ```
 
-Defined in: [src/sql/types.ts:29](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L29)
+Defined in: [src/db/types.ts:604](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L604)
 
-SQL parameter array
+SQL parameters

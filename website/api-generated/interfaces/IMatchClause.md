@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -25,7 +25,7 @@ Match clause interface
 constraint(properties): this;
 ```
 
-Defined in: [src/query/types.ts:332](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L332)
+Defined in: [src/query/types.ts:333](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L333)
 
 Add property constraints to the vertex pattern
 
@@ -53,7 +53,7 @@ Error if any property value is null, undefined, or NaN
 where(condition, params?): this;
 ```
 
-Defined in: [src/query/types.ts:341](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L341)
+Defined in: [src/query/types.ts:342](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L342)
 
 Add WHERE clause
 
@@ -82,7 +82,7 @@ outgoing<E>(
    targetAlias): this;
 ```
 
-Defined in: [src/query/types.ts:346](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L346)
+Defined in: [src/query/types.ts:347](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L347)
 
 Add outgoing edge
 
@@ -117,7 +117,7 @@ incoming<E>(
    sourceAlias): this;
 ```
 
-Defined in: [src/query/types.ts:356](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L356)
+Defined in: [src/query/types.ts:357](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L357)
 
 Add incoming edge
 
@@ -152,7 +152,7 @@ related<E>(
    otherAlias): this;
 ```
 
-Defined in: [src/query/types.ts:366](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L366)
+Defined in: [src/query/types.ts:367](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L367)
 
 Add bidirectional edge
 
@@ -183,7 +183,7 @@ Add bidirectional edge
 done(): IQueryBuilder<T>;
 ```
 
-Defined in: [src/query/types.ts:376](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L376)
+Defined in: [src/query/types.ts:377](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L377)
 
 Return to the main query builder
 

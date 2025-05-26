@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -687,7 +687,7 @@ allPaths(
    maxDepth?): this;
 ```
 
-Defined in: [src/query/path.ts:120](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L120)
+Defined in: [src/query/path.ts:121](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L121)
 
 Find all paths between two vertices
 
@@ -720,7 +720,7 @@ variableLengthPath(
    maxDepth?): this;
 ```
 
-Defined in: [src/query/path.ts:145](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L145)
+Defined in: [src/query/path.ts:147](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L147)
 
 Create a variable-length path query
 
@@ -748,13 +748,13 @@ This path query builder
 ```ts
 breadthFirstSearch(
    startAlias, 
-   relationshipAlias, 
-   endAlias, 
+   _relationshipAlias, 
+   _endAlias, 
    relationshipTypes?, 
-   maxDepth?): this;
+   _maxDepth?): this;
 ```
 
-Defined in: [src/query/path.ts:175](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L175)
+Defined in: [src/query/path.ts:178](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L178)
 
 Perform a breadth-first search
 
@@ -763,10 +763,10 @@ Perform a breadth-first search
 | Parameter | Type | Default value | Description |
 | ------ | ------ | ------ | ------ |
 | `startAlias` | `string` | `undefined` | Start vertex alias |
-| `relationshipAlias` | `string` | `undefined` | Relationship alias |
-| `endAlias` | `string` | `undefined` | End vertex alias |
+| `_relationshipAlias` | `string` | `undefined` | - |
+| `_endAlias` | `string` | `undefined` | - |
 | `relationshipTypes?` | `string`[] | `undefined` | Relationship types to traverse |
-| `maxDepth?` | `number` | `5` | Maximum depth |
+| `_maxDepth?` | `number` | `5` | - |
 
 #### Returns
 
@@ -782,7 +782,7 @@ This path query builder
 extractNodes(pathAlias): this;
 ```
 
-Defined in: [src/query/path.ts:207](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L207)
+Defined in: [src/query/path.ts:210](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L210)
 
 Extract nodes from a path
 
@@ -806,7 +806,7 @@ This path query builder
 extractRelationships(pathAlias): this;
 ```
 
-Defined in: [src/query/path.ts:218](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L218)
+Defined in: [src/query/path.ts:221](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L221)
 
 Extract relationships from a path
 
@@ -830,7 +830,7 @@ This path query builder
 extractPath(pathAlias): this;
 ```
 
-Defined in: [src/query/path.ts:229](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L229)
+Defined in: [src/query/path.ts:232](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/path.ts#L232)
 
 Extract both nodes and relationships from a path
 

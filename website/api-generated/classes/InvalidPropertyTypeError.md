@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -57,9 +57,9 @@ Create a new InvalidPropertyTypeError
 | <a id="property"></a> `property` | `readonly` | `string` | Property name | - | [src/schema/errors.ts:94](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/errors.ts#L94) |
 | <a id="expectedtype"></a> `expectedType` | `readonly` | `string` | Expected property type | - | [src/schema/errors.ts:95](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/errors.ts#L95) |
 | <a id="actualtype"></a> `actualType` | `readonly` | `string` | Actual property type | - | [src/schema/errors.ts:96](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/errors.ts#L96) |
-| <a id="name"></a> `name` | `public` | `string` | - | [`SchemaValidationError`](SchemaValidationError.md).[`name`](SchemaValidationError.md#name) | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1076 |
-| <a id="message"></a> `message` | `public` | `string` | - | [`SchemaValidationError`](SchemaValidationError.md).[`message`](SchemaValidationError.md#message) | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1077 |
-| <a id="stack"></a> `stack?` | `public` | `string` | - | [`SchemaValidationError`](SchemaValidationError.md).[`stack`](SchemaValidationError.md#stack) | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1078 |
+| <a id="name"></a> `name` | `public` | `string` | - | [`SchemaValidationError`](SchemaValidationError.md).[`name`](SchemaValidationError.md#name) | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1076 |
+| <a id="message"></a> `message` | `public` | `string` | - | [`SchemaValidationError`](SchemaValidationError.md).[`message`](SchemaValidationError.md#message) | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1077 |
+| <a id="stack"></a> `stack?` | `public` | `string` | - | [`SchemaValidationError`](SchemaValidationError.md).[`stack`](SchemaValidationError.md#stack) | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1078 |
 
 ## Methods
 

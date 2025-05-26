@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -57,9 +57,9 @@ Error.constructor
 | <a id="type"></a> `type` | `readonly` | `DatabaseErrorType` | Error type | - | [src/db/types.ts:420](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L420) |
 | <a id="originalerror"></a> `originalError?` | `readonly` | `Error` | Original error | - | [src/db/types.ts:425](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L425) |
 | <a id="data"></a> `data?` | `readonly` | `any` | Additional data | - | [src/db/types.ts:430](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L430) |
-| <a id="name"></a> `name` | `public` | `string` | - | `Error.name` | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1076 |
-| <a id="message"></a> `message` | `public` | `string` | - | `Error.message` | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1077 |
-| <a id="stack"></a> `stack?` | `public` | `string` | - | `Error.stack` | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1078 |
+| <a id="name"></a> `name` | `public` | `string` | - | `Error.name` | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1076 |
+| <a id="message"></a> `message` | `public` | `string` | - | `Error.message` | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1077 |
+| <a id="stack"></a> `stack?` | `public` | `string` | - | `Error.stack` | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1078 |
 
 ## Methods
 

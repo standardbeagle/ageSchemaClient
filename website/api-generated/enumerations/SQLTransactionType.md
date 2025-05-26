@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 # Enumeration: SQLTransactionType
 
-Defined in: [src/sql/types.ts:49](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L49)
+Defined in: [src/db/types.ts:609](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L609)
 
 SQL transaction type
 
@@ -14,8 +14,8 @@ SQL transaction type
 
 | Enumeration Member | Value | Defined in |
 | ------ | ------ | ------ |
-| <a id="begin"></a> `BEGIN` | `"BEGIN"` | [src/sql/types.ts:50](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L50) |
-| <a id="commit"></a> `COMMIT` | `"COMMIT"` | [src/sql/types.ts:51](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L51) |
-| <a id="rollback"></a> `ROLLBACK` | `"ROLLBACK"` | [src/sql/types.ts:52](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L52) |
-| <a id="savepoint"></a> `SAVEPOINT` | `"SAVEPOINT"` | [src/sql/types.ts:53](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L53) |
-| <a id="release"></a> `RELEASE` | `"RELEASE"` | [src/sql/types.ts:54](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L54) |
+| <a id="begin"></a> `BEGIN` | `"BEGIN"` | [src/db/types.ts:610](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L610) |
+| <a id="commit"></a> `COMMIT` | `"COMMIT"` | [src/db/types.ts:611](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L611) |
+| <a id="rollback"></a> `ROLLBACK` | `"ROLLBACK"` | [src/db/types.ts:612](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L612) |
+| <a id="savepoint"></a> `SAVEPOINT` | `"SAVEPOINT"` | [src/db/types.ts:613](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L613) |
+| <a id="release"></a> `RELEASE` | `"RELEASE SAVEPOINT"` | [src/db/types.ts:614](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L614) |

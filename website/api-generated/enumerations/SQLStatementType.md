@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 # Enumeration: SQLStatementType
 
-Defined in: [src/sql/types.ts:10](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L10)
+Defined in: [src/db/types.ts:620](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L620)
 
 SQL statement type
 
@@ -14,11 +14,7 @@ SQL statement type
 
 | Enumeration Member | Value | Defined in |
 | ------ | ------ | ------ |
-| <a id="create"></a> `CREATE` | `"CREATE"` | [src/sql/types.ts:11](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L11) |
-| <a id="insert"></a> `INSERT` | `"INSERT"` | [src/sql/types.ts:12](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L12) |
-| <a id="update"></a> `UPDATE` | `"UPDATE"` | [src/sql/types.ts:13](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L13) |
-| <a id="delete"></a> `DELETE` | `"DELETE"` | [src/sql/types.ts:14](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L14) |
-| <a id="select"></a> `SELECT` | `"SELECT"` | [src/sql/types.ts:15](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L15) |
-| <a id="drop"></a> `DROP` | `"DROP"` | [src/sql/types.ts:16](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L16) |
-| <a id="alter"></a> `ALTER` | `"ALTER"` | [src/sql/types.ts:17](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L17) |
-| <a id="transaction"></a> `TRANSACTION` | `"TRANSACTION"` | [src/sql/types.ts:18](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L18) |
+| <a id="select"></a> `SELECT` | `"SELECT"` | [src/db/types.ts:621](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L621) |
+| <a id="insert"></a> `INSERT` | `"INSERT"` | [src/db/types.ts:622](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L622) |
+| <a id="update"></a> `UPDATE` | `"UPDATE"` | [src/db/types.ts:623](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L623) |
+| <a id="delete"></a> `DELETE` | `"DELETE"` | [src/db/types.ts:624](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L624) |

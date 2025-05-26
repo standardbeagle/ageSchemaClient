@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -10,7 +10,7 @@
 function escapeSQLString(value): string;
 ```
 
-Defined in: [src/sql/utils.ts:16](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L16)
+Defined in: [src/sql/utils.ts:17](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L17)
 
 Escape a SQL string value
 

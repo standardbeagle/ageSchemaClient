@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -53,9 +53,9 @@ Create a new SchemaVersionError
 | <a id="cause"></a> `cause?` | `readonly` | `unknown` | Error cause | [`SchemaError`](SchemaError.md).[`cause`](SchemaError.md#cause) | [src/schema/errors.ts:17](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/errors.ts#L17) |
 | <a id="currentversion"></a> `currentVersion?` | `readonly` | `string` | Current schema version | - | [src/schema/errors.ts:160](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/errors.ts#L160) |
 | <a id="requiredversion"></a> `requiredVersion?` | `readonly` | `string` | Required schema version | - | [src/schema/errors.ts:161](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/errors.ts#L161) |
-| <a id="name"></a> `name` | `public` | `string` | - | [`SchemaError`](SchemaError.md).[`name`](SchemaError.md#name) | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1076 |
-| <a id="message"></a> `message` | `public` | `string` | - | [`SchemaError`](SchemaError.md).[`message`](SchemaError.md#message) | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1077 |
-| <a id="stack"></a> `stack?` | `public` | `string` | - | [`SchemaError`](SchemaError.md).[`stack`](SchemaError.md#stack) | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1078 |
+| <a id="name"></a> `name` | `public` | `string` | - | [`SchemaError`](SchemaError.md).[`name`](SchemaError.md#name) | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1076 |
+| <a id="message"></a> `message` | `public` | `string` | - | [`SchemaError`](SchemaError.md).[`message`](SchemaError.md#message) | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1077 |
+| <a id="stack"></a> `stack?` | `public` | `string` | - | [`SchemaError`](SchemaError.md).[`stack`](SchemaError.md#stack) | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1078 |
 
 ## Methods
 

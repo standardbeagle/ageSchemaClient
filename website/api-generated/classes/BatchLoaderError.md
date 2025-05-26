@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -53,9 +53,9 @@ Create a new BatchLoaderError
 | <a id="code"></a> `code` | `readonly` | [`ErrorCode`](../enumerations/ErrorCode.md) | Error code | [`BaseError`](BaseError.md).[`code`](BaseError.md#code) | [src/core/errors.ts:16](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/core/errors.ts#L16) |
 | <a id="cause"></a> `cause?` | `readonly` | `unknown` | Error cause | [`BaseError`](BaseError.md).[`cause`](BaseError.md#cause) | [src/core/errors.ts:25](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/core/errors.ts#L25) |
 | <a id="context"></a> `context?` | `readonly` | [`BatchLoaderErrorContext`](../interfaces/BatchLoaderErrorContext.md) | Error context | - | [src/core/errors.ts:149](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/core/errors.ts#L149) |
-| <a id="name"></a> `name` | `public` | `string` | - | [`BaseError`](BaseError.md).[`name`](BaseError.md#name) | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1076 |
-| <a id="message"></a> `message` | `public` | `string` | - | [`BaseError`](BaseError.md).[`message`](BaseError.md#message) | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1077 |
-| <a id="stack"></a> `stack?` | `public` | `string` | - | [`BaseError`](BaseError.md).[`stack`](BaseError.md#stack) | node\_modules/.pnpm/typescript@5.8.3/node\_modules/typescript/lib/lib.es5.d.ts:1078 |
+| <a id="name"></a> `name` | `public` | `string` | - | [`BaseError`](BaseError.md).[`name`](BaseError.md#name) | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1076 |
+| <a id="message"></a> `message` | `public` | `string` | - | [`BaseError`](BaseError.md).[`message`](BaseError.md#message) | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1077 |
+| <a id="stack"></a> `stack?` | `public` | `string` | - | [`BaseError`](BaseError.md).[`stack`](BaseError.md#stack) | website/node\_modules/.pnpm/typescript@5.6.3/node\_modules/typescript/lib/lib.es5.d.ts:1078 |
 
 ## Methods
 

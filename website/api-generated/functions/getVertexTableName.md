@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -10,7 +10,7 @@
 function getVertexTableName(label, prefix): string;
 ```
 
-Defined in: [src/sql/utils.ts:159](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L159)
+Defined in: [src/sql/utils.ts:160](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L160)
 
 Generate a table name for a vertex label
 

@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 # Class: SQLGenerator
 
-Defined in: [src/sql/generator.ts:54](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L54)
+Defined in: [src/sql/generator.ts:53](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L53)
 
 SQL Generator class for generating SQL statements based on schema definitions
 
@@ -18,7 +18,7 @@ SQL Generator class for generating SQL statements based on schema definitions
 new SQLGenerator(schema): SQLGenerator;
 ```
 
-Defined in: [src/sql/generator.ts:60](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L60)
+Defined in: [src/sql/generator.ts:59](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L59)
 
 Create a new SQLGenerator instance
 
@@ -40,7 +40,7 @@ Create a new SQLGenerator instance
 generateCreateVertexTableSQL(label, options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:74](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L74)
+Defined in: [src/sql/generator.ts:73](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L73)
 
 Generate CREATE TABLE statement for a vertex label
 
@@ -65,7 +65,7 @@ SQL result
 generateCreateVertexSQL(label, data): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:120](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L120)
+Defined in: [src/sql/generator.ts:119](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L119)
 
 Generate SQL to create a vertex
 
@@ -93,7 +93,7 @@ generateInsertVertexSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:135](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L135)
+Defined in: [src/sql/generator.ts:134](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L134)
 
 Generate INSERT statement for a vertex
 
@@ -122,7 +122,7 @@ generateBatchInsertVertexSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:181](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L181)
+Defined in: [src/sql/generator.ts:180](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L180)
 
 Generate batch INSERT statement for multiple vertices
 
@@ -152,7 +152,7 @@ generateUpdateVertexSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:258](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L258)
+Defined in: [src/sql/generator.ts:257](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L257)
 
 Generate UPDATE statement for a vertex
 
@@ -182,7 +182,7 @@ generateDeleteVertexSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:312](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L312)
+Defined in: [src/sql/generator.ts:311](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L311)
 
 Generate DELETE statement for a vertex
 
@@ -211,7 +211,7 @@ generateSelectVertexSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:345](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L345)
+Defined in: [src/sql/generator.ts:344](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L344)
 
 Generate SELECT statement for vertices
 
@@ -237,7 +237,7 @@ SQL result with parameterized query and parameters
 generateVertexFilterFunctionSQL(label, options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:460](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L460)
+Defined in: [src/sql/generator.ts:459](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L459)
 
 Generate a filter function for vertices
 
@@ -262,7 +262,7 @@ SQL result with function definition
 generateTransactionSQL(type, name?): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:543](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L543)
+Defined in: [src/sql/generator.ts:542](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L542)
 
 Generate a transaction control statement
 
@@ -287,7 +287,7 @@ SQL result
 generateBatchSQL(operations): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:587](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L587)
+Defined in: [src/sql/generator.ts:586](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L586)
 
 Generate a batch SQL statement with multiple operations in a transaction
 
@@ -311,7 +311,7 @@ SQL result with combined statements
 generateCreateEdgeTableSQL(label, options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:627](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L627)
+Defined in: [src/sql/generator.ts:626](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L626)
 
 Generate CREATE TABLE statement for an edge label
 
@@ -341,7 +341,7 @@ generateInsertEdgeSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:697](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L697)
+Defined in: [src/sql/generator.ts:696](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L696)
 
 Generate INSERT statement for an edge
 
@@ -372,7 +372,7 @@ generateBatchInsertEdgeSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:753](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L753)
+Defined in: [src/sql/generator.ts:752](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L752)
 
 Generate batch INSERT statement for multiple edges
 
@@ -402,7 +402,7 @@ generateUpdateEdgeSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:848](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L848)
+Defined in: [src/sql/generator.ts:847](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L847)
 
 Generate UPDATE statement for an edge
 
@@ -432,7 +432,7 @@ generateDeleteEdgeSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:902](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L902)
+Defined in: [src/sql/generator.ts:901](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L901)
 
 Generate DELETE statement for an edge
 
@@ -462,7 +462,7 @@ generateDeleteEdgesBetweenVerticesSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:936](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L936)
+Defined in: [src/sql/generator.ts:935](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L935)
 
 Generate DELETE statement for edges between vertices
 
@@ -492,7 +492,7 @@ generateSelectEdgeSQL(
    options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:971](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L971)
+Defined in: [src/sql/generator.ts:970](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L970)
 
 Generate SELECT statement for edges
 
@@ -518,7 +518,7 @@ SQL result with parameterized query and parameters
 generateEdgeFilterFunctionSQL(label, options): SQLResult;
 ```
 
-Defined in: [src/sql/generator.ts:1127](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L1127)
+Defined in: [src/sql/generator.ts:1126](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/generator.ts#L1126)
 
 Generate a filter function for edges
 

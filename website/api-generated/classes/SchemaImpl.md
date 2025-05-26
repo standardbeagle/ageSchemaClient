@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 # Class: SchemaImpl
 
-Defined in: [src/schema/schema.ts:62](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L62)
+Defined in: [src/schema/schema.ts:61](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L61)
 
 Schema implementation that wraps a SchemaDefinition
 
@@ -22,7 +22,7 @@ Schema implementation that wraps a SchemaDefinition
 new SchemaImpl(schemaDefinition): SchemaImpl;
 ```
 
-Defined in: [src/schema/schema.ts:70](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L70)
+Defined in: [src/schema/schema.ts:69](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L69)
 
 Create a new SchemaImpl
 
@@ -44,7 +44,7 @@ Create a new SchemaImpl
 getVertexSchema(vertexType): VertexLabel;
 ```
 
-Defined in: [src/schema/schema.ts:80](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L80)
+Defined in: [src/schema/schema.ts:79](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L79)
 
 Get the vertex schema for a specific vertex type
 
@@ -72,7 +72,7 @@ The vertex schema or undefined if not found
 getEdgeSchema(edgeType): EdgeLabel;
 ```
 
-Defined in: [src/schema/schema.ts:90](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L90)
+Defined in: [src/schema/schema.ts:89](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L89)
 
 Get the edge schema for a specific edge type
 
@@ -100,7 +100,7 @@ The edge schema or undefined if not found
 getVertexTypes(): string[];
 ```
 
-Defined in: [src/schema/schema.ts:99](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L99)
+Defined in: [src/schema/schema.ts:98](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L98)
 
 Get all vertex types defined in the schema
 
@@ -122,7 +122,7 @@ Array of vertex type names
 getEdgeTypes(): string[];
 ```
 
-Defined in: [src/schema/schema.ts:108](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L108)
+Defined in: [src/schema/schema.ts:107](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L107)
 
 Get all edge types defined in the schema
 
@@ -144,7 +144,7 @@ Array of edge type names
 getSchemaDefinition(): SchemaDefinition;
 ```
 
-Defined in: [src/schema/schema.ts:117](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L117)
+Defined in: [src/schema/schema.ts:116](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/schema/schema.ts#L116)
 
 Get the schema definition
 

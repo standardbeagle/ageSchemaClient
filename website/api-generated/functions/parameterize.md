@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -10,7 +10,7 @@
 function parameterize(sql, params): string;
 ```
 
-Defined in: [src/sql/utils.ts:142](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L142)
+Defined in: [src/sql/utils.ts:143](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L143)
 
 Generate a parameterized SQL statement with placeholders
 

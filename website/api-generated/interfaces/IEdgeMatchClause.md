@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 # Interface: IEdgeMatchClause\<T\>
 
-Defined in: [src/query/types.ts:382](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L382)
+Defined in: [src/query/types.ts:383](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L383)
 
 Edge match clause interface
 
@@ -24,7 +24,7 @@ Edge match clause interface
 constraint(properties): this;
 ```
 
-Defined in: [src/query/types.ts:390](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L390)
+Defined in: [src/query/types.ts:391](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L391)
 
 Add property constraints to the edge pattern
 
@@ -52,7 +52,7 @@ Error if any property value is null, undefined, or NaN
 where(condition, params?): this;
 ```
 
-Defined in: [src/query/types.ts:399](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L399)
+Defined in: [src/query/types.ts:400](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L400)
 
 Add WHERE clause
 
@@ -77,7 +77,7 @@ This edge match clause
 return(...expressions): this;
 ```
 
-Defined in: [src/query/types.ts:404](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L404)
+Defined in: [src/query/types.ts:405](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L405)
 
 Add RETURN clause
 
@@ -99,7 +99,7 @@ Add RETURN clause
 orderBy(expression, direction?): this;
 ```
 
-Defined in: [src/query/types.ts:409](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L409)
+Defined in: [src/query/types.ts:410](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L410)
 
 Add ORDER BY clause
 
@@ -122,7 +122,7 @@ Add ORDER BY clause
 limit(count): this;
 ```
 
-Defined in: [src/query/types.ts:414](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L414)
+Defined in: [src/query/types.ts:415](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L415)
 
 Add LIMIT clause
 
@@ -144,7 +144,7 @@ Add LIMIT clause
 skip(count): this;
 ```
 
-Defined in: [src/query/types.ts:419](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L419)
+Defined in: [src/query/types.ts:420](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L420)
 
 Add SKIP clause
 
@@ -166,7 +166,7 @@ Add SKIP clause
 with(...expressions): this;
 ```
 
-Defined in: [src/query/types.ts:424](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L424)
+Defined in: [src/query/types.ts:425](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L425)
 
 Add WITH clause
 
@@ -188,7 +188,7 @@ Add WITH clause
 unwind(expression, alias): this;
 ```
 
-Defined in: [src/query/types.ts:429](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L429)
+Defined in: [src/query/types.ts:430](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L430)
 
 Add UNWIND clause
 
@@ -211,7 +211,7 @@ Add UNWIND clause
 withParam(name, value): this;
 ```
 
-Defined in: [src/query/types.ts:434](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L434)
+Defined in: [src/query/types.ts:435](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L435)
 
 Add a parameter to the query
 
@@ -234,7 +234,7 @@ Add a parameter to the query
 execute<R>(options?): QueryBuilderResult<R>;
 ```
 
-Defined in: [src/query/types.ts:439](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L439)
+Defined in: [src/query/types.ts:440](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L440)
 
 Execute the query
 
@@ -262,7 +262,7 @@ Execute the query
 toCypher(): string;
 ```
 
-Defined in: [src/query/types.ts:444](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L444)
+Defined in: [src/query/types.ts:445](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L445)
 
 Get the Cypher query string
 
@@ -278,7 +278,7 @@ Get the Cypher query string
 done(): IQueryBuilder<T>;
 ```
 
-Defined in: [src/query/types.ts:449](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L449)
+Defined in: [src/query/types.ts:450](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/query/types.ts#L450)
 
 Return to the main query builder
 

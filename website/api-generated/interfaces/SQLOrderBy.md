@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,13 +6,13 @@
 
 # Interface: SQLOrderBy
 
-Defined in: [src/sql/types.ts:107](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L107)
+Defined in: [src/db/types.ts:577](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L577)
 
-SQL order by clause
+SQL order by
 
 ## Properties
 
-| Property | Type | Description | Defined in |
-| ------ | ------ | ------ | ------ |
-| <a id="property"></a> `property` | `string` | Property name | [src/sql/types.ts:111](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L111) |
-| <a id="direction"></a> `direction` | [`SQLOrderDirection`](../enumerations/SQLOrderDirection.md) | Order direction | [src/sql/types.ts:116](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/types.ts#L116) |
+| Property | Type | Defined in |
+| ------ | ------ | ------ |
+| <a id="property"></a> `property` | `string` | [src/db/types.ts:578](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L578) |
+| <a id="direction"></a> `direction` | [`SQLOrderDirection`](../enumerations/SQLOrderDirection.md) | [src/db/types.ts:579](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/types.ts#L579) |

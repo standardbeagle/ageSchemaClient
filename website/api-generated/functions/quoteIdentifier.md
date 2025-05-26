@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -10,7 +10,7 @@
 function quoteIdentifier(identifier): string;
 ```
 
-Defined in: [src/sql/utils.ts:27](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L27)
+Defined in: [src/sql/utils.ts:28](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L28)
 
 Quote a SQL identifier (table name, column name, etc.)
 

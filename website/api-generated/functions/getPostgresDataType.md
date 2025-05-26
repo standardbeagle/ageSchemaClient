@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -10,7 +10,7 @@
 function getPostgresDataType(type): string;
 ```
 
-Defined in: [src/sql/utils.ts:102](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L102)
+Defined in: [src/sql/utils.ts:103](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/sql/utils.ts#L103)
 
 Get PostgreSQL data type for a property type
 

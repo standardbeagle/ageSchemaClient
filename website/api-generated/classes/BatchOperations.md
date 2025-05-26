@@ -1,4 +1,4 @@
-[**age-schema-client v0.3.0**](../index.md)
+[**age-schema-client v0.4.0**](../index.md)
 
 ***
 
@@ -6,7 +6,7 @@
 
 # Class: BatchOperations\<T\>
 
-Defined in: [src/db/batch.ts:103](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/batch.ts#L103)
+Defined in: [src/db/batch.ts:102](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/batch.ts#L102)
 
 Batch operations class
 
@@ -31,7 +31,7 @@ new BatchOperations<T>(
 edgeOperations): BatchOperations<T>;
 ```
 
-Defined in: [src/db/batch.ts:113](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/batch.ts#L113)
+Defined in: [src/db/batch.ts:112](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/batch.ts#L112)
 
 Create a new batch operations instance
 
@@ -60,7 +60,7 @@ createVerticesBatch<L>(
 options): Promise<Vertex<T, L>[]>;
 ```
 
-Defined in: [src/db/batch.ts:129](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/batch.ts#L129)
+Defined in: [src/db/batch.ts:128](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/batch.ts#L128)
 
 Create multiple vertices in a batch operation
 
@@ -95,7 +95,7 @@ createEdgesBatch<L>(
 options): Promise<Edge<T, L>[]>;
 ```
 
-Defined in: [src/db/batch.ts:200](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/batch.ts#L200)
+Defined in: [src/db/batch.ts:199](https://github.com/standardbeagle/ageSchemaClient/blob/main/src/db/batch.ts#L199)
 
 Create multiple edges in a batch operation
 
