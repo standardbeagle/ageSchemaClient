@@ -1,19 +1,19 @@
-facebook:
-  label: Facebook
-  permalink: /facebook
-  description: Facebook tag description
+apache-age:
+  label: Apache AGE
+  permalink: /apache-age
+  description: Apache AGE graph database extension for PostgreSQL
 
-hello:
-  label: Hello
-  permalink: /hello
-  description: Hello tag description
+performance:
+  label: Performance
+  permalink: /performance
+  description: Performance optimization and benchmarking
 
-docusaurus:
-  label: Docusaurus
-  permalink: /docusaurus
-  description: Docusaurus tag description
+security:
+  label: Security
+  permalink: /security
+  description: Security best practices and implementations
 
-hola:
-  label: Hola
-  permalink: /hola
-  description: Hola tag description
+typescript:
+  label: TypeScript
+  permalink: /typescript
+  description: TypeScript development and type safety

@@ -2,6 +2,8 @@
 
 A TypeScript library for Apache AGE graph databases with schema validation and efficient data loading.
 
+📚 **[Full Documentation](https://standardbeagle.github.io/ageSchemaClient/)** | 🚀 **[Getting Started](https://standardbeagle.github.io/ageSchemaClient/docs/getting-started/installation)** | 📖 **[API Reference](https://standardbeagle.github.io/ageSchemaClient/docs/api-reference/)**
+
 ## Features
 
 - Schema-aware graph database operations
@@ -106,16 +108,26 @@ const result = await client.query
 
 ## Documentation
 
-For detailed documentation, see the following resources:
+📚 **Full documentation is available at [https://standardbeagle.github.io/ageSchemaClient/](https://standardbeagle.github.io/ageSchemaClient/)**
 
-- [Extension System](./docs/extension-system.md) - **NEW**: Pluggable extension system for PostgreSQL extensions
-- [Schema Loader](./docs/schema-loader.md) - Documentation for the SchemaLoader class
-- [Examples](./examples/) - Example code for common use cases
-- [API Reference](./docs/api-reference.md) - Detailed API documentation
+### Quick Links
+
+- 🚀 [Getting Started Guide](https://standardbeagle.github.io/ageSchemaClient/docs/getting-started/installation)
+- 📖 [API Reference](https://standardbeagle.github.io/ageSchemaClient/docs/api-reference/)
+- 🏗️ [Architecture Overview](https://standardbeagle.github.io/ageSchemaClient/docs/architecture/overview)
+- 💡 [How-to Guides](https://standardbeagle.github.io/ageSchemaClient/docs/how-to-guides/basic-queries)
+- 🔧 [Examples](./examples/) - Example code for common use cases
+
+### Key Topics
+
+- [Extension System](https://standardbeagle.github.io/ageSchemaClient/docs/architecture/extension-development) - **NEW**: Pluggable extension system for PostgreSQL extensions
+- [Schema Loader](https://standardbeagle.github.io/ageSchemaClient/docs/api-reference/schema-manager) - Documentation for the SchemaLoader class
+- [Batch Operations](https://standardbeagle.github.io/ageSchemaClient/docs/how-to-guides/batch-operations) - Efficient bulk data loading
+- [Query Builder](https://standardbeagle.github.io/ageSchemaClient/docs/api-reference/query-builder) - Type-safe query construction
 
 ### API Reference
 
-A comprehensive API reference is available in the [API Reference](./docs/api-reference.md) document. This includes detailed information about:
+A comprehensive API reference is available in the [online documentation](https://standardbeagle.github.io/ageSchemaClient/docs/api-reference/). This includes detailed information about:
 
 - Connection Management
 - Query Execution
@@ -147,7 +159,7 @@ See [schema-loader-error-handling.ts](./examples/schema-loader-error-handling.ts
 
 ### Connection Options
 
-For detailed information about connection options, including PostgreSQL-specific options like search_path, see the [Connection Options](./docs/connection-options.md) document.
+For detailed information about connection options, including PostgreSQL-specific options like search_path, see the [Connection Configuration guide](https://standardbeagle.github.io/ageSchemaClient/docs/getting-started/connection-config) in our documentation.
 
 ## Apache AGE Integration
 
