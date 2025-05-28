@@ -2,6 +2,72 @@
 
 Learn how to perform common graph database queries using ageSchemaClient's query builder.
 
+## Understanding the Query Builder
+
+The QueryBuilder provides a fluent API for constructing Cypher queries. When building complex queries with multiple match clauses, you'll use the `done()` method to transition between different query contexts.
+
+### The done() Method
+
+The `done()` method is used to:
+- **Transition between match clauses and other query operations** - When you need to switch from configuring a match pattern to adding another match or different query operation
+- **Required when using constraint() or relationship methods** - After adding constraints or relationships to a match pattern, use `done()` to return to the main query builder
+
+However, with the latest improvements, `done()` is **no longer required** in many common scenarios:
+- When chaining multiple `match()` calls
+- When adding `return()` after a `match()` with `where()`
+
+```typescript
+// Old way - explicit done() required
+const result = await queryBuilder
+  .match('Person', 'p')
+  .done()  // Required
+  .match('Movie', 'm')
+  .done()  // Required
+  .where('m.directorId = p.id')
+  .return('p', 'm')
+  .execute();
+
+// New way - done() automatically handled
+const result = await queryBuilder
+  .match('Person', 'p')
+  .match('Movie', 'm')  // No done() needed!
+  .where('m.directorId = p.id')
+  .return('p', 'm')
+  .execute();
+
+// New way - return() can be called directly after where()
+const result = await queryBuilder
+  .match('Person', 'p')
+  .where('p.age > 25')
+  .return('p')  // No done() needed!
+  .execute();
+```
+
+### When done() is Still Needed
+
+You still need to use `done()` when:
+1. Adding constraints to a vertex pattern before other operations
+2. Using relationship methods (outgoing, incoming, related)
+3. Transitioning to query operations not available on the current clause
+
+```typescript
+// Using constraints - done() required
+const result = await queryBuilder
+  .match('Person', 'p')
+  .constraint({ name: 'John' })
+  .done()  // Still required after constraint()
+  .return('p')
+  .execute();
+
+// Using relationship methods - done() required
+const result = await queryBuilder
+  .match('Person', 'p')
+  .outgoing('DIRECTED', 'd', 'Movie', 'm')
+  .done()  // Still required after relationship methods
+  .return('p', 'm')
+  .execute();
+```
+
 ## Simple Vertex Queries
 
 ### Finding All Vertices

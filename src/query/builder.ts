@@ -440,6 +440,14 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
    */
   async execute<R = any>(options: QueryExecutionOptions = {}): QueryBuilderResult<R> {
     try {
+      // Validate query for undefined variables and other issues (unless explicitly disabled)
+      if (options.validate !== false) {
+        const validationErrors = this.validateQuery();
+        if (validationErrors.length > 0) {
+          throw new Error(`Query validation failed:\n${validationErrors.join('\n')}`);
+        }
+      }
+
       const params = this.getParameters();
       const graphName = options.graphName || this.graphName;
 
@@ -613,7 +621,7 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
    *
    * @returns Validation errors, if any
    */
-  validateQuery(): string[] {
+  validateSchema(): string[] {
     const errors: string[] = [];
 
     // Validate vertex labels
@@ -689,5 +697,294 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
     }
 
     return errors;
+  }
+
+  /**
+   * Validate the query for variable references and other semantic issues
+   *
+   * @returns Validation errors with helpful suggestions
+   */
+  validateQuery(): string[] {
+    const errors: string[] = [];
+    
+    // First, perform schema validation (check for invalid labels, etc.)
+    const schemaErrors = this.validateSchema();
+    errors.push(...schemaErrors);
+    
+    // Then check for variable references
+    const definedVariables = new Set<string>();
+    const referencedVariables = new Map<string, string[]>(); // variable -> contexts where it's used
+
+    // Step 1: Collect all defined variables from MATCH clauses
+    for (const part of this.queryParts) {
+      if (part instanceof MatchPart) {
+        for (const pattern of part.getPatterns()) {
+          if (pattern.type === MatchPatternType.VERTEX) {
+            const vertexPattern = pattern as VertexPattern;
+            if (vertexPattern.alias) {
+              definedVariables.add(vertexPattern.alias);
+            }
+          } else if (pattern.type === MatchPatternType.EDGE) {
+            const edgePattern = pattern as EdgePattern;
+            if (edgePattern.alias) {
+              definedVariables.add(edgePattern.alias);
+            }
+            // Edge patterns also define their connected vertices
+            if (edgePattern.fromVertex?.alias) {
+              definedVariables.add(edgePattern.fromVertex.alias);
+            }
+            if (edgePattern.toVertex?.alias) {
+              definedVariables.add(edgePattern.toVertex.alias);
+            }
+          }
+        }
+      }
+    }
+
+    // Step 2: Check variable references in different parts
+    for (const part of this.queryParts) {
+      if (part.type === QueryPartType.WHERE) {
+        // Extract variable references from WHERE clause
+        const whereCypher = part.toCypher();
+        const variableRefs = this.extractVariableReferences(whereCypher);
+        for (const varRef of variableRefs) {
+          if (!referencedVariables.has(varRef)) {
+            referencedVariables.set(varRef, []);
+          }
+          referencedVariables.get(varRef)!.push('WHERE clause');
+        }
+      } else if (part.type === QueryPartType.RETURN) {
+        // Extract variable references from RETURN clause
+        const returnCypher = part.toCypher();
+        const variableRefs = this.extractVariableReferences(returnCypher);
+        for (const varRef of variableRefs) {
+          if (!referencedVariables.has(varRef)) {
+            referencedVariables.set(varRef, []);
+          }
+          referencedVariables.get(varRef)!.push('RETURN clause');
+        }
+      } else if (part.type === QueryPartType.ORDER_BY) {
+        // Extract variable references from ORDER BY clause
+        const orderByCypher = part.toCypher();
+        const variableRefs = this.extractVariableReferences(orderByCypher);
+        for (const varRef of variableRefs) {
+          if (!referencedVariables.has(varRef)) {
+            referencedVariables.set(varRef, []);
+          }
+          referencedVariables.get(varRef)!.push('ORDER BY clause');
+        }
+      } else if (part.type === QueryPartType.WITH) {
+        // Extract variable references from WITH clause
+        const withCypher = part.toCypher();
+        const variableRefs = this.extractVariableReferences(withCypher);
+        for (const varRef of variableRefs) {
+          if (!referencedVariables.has(varRef)) {
+            referencedVariables.set(varRef, []);
+          }
+          referencedVariables.get(varRef)!.push('WITH clause');
+        }
+        // WITH clause also defines new variables
+        const definedInWith = this.extractVariableDefinitions(withCypher);
+        for (const varDef of definedInWith) {
+          definedVariables.add(varDef);
+        }
+      }
+    }
+
+    // Step 3: Check for undefined variables
+    for (const [varRef, contexts] of referencedVariables) {
+      if (!definedVariables.has(varRef) && !this.isBuiltInFunction(varRef)) {
+        const contextStr = contexts.join(', ');
+        const suggestions = this.getSimilarVariables(varRef, definedVariables);
+        
+        if (suggestions.length > 0) {
+          errors.push(
+            `Variable '${varRef}' is not defined (used in ${contextStr}). ` +
+            `Did you mean: ${suggestions.join(', ')}?`
+          );
+        } else if (definedVariables.size > 0) {
+          errors.push(
+            `Variable '${varRef}' is not defined (used in ${contextStr}). ` +
+            `Available variables: ${Array.from(definedVariables).join(', ')}`
+          );
+        } else {
+          errors.push(
+            `Variable '${varRef}' is not defined (used in ${contextStr}). ` +
+            `No variables have been defined in MATCH clauses.`
+          );
+        }
+      }
+    }
+
+    return errors;
+  }
+
+  /**
+   * Extract variable references from a Cypher expression
+   */
+  private extractVariableReferences(cypher: string): string[] {
+    const variables = new Set<string>();
+    
+    // First, match patterns like: variable.property
+    const dotRegex = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\./g;
+    let match: RegExpExecArray | null;
+    while ((match = dotRegex.exec(cypher)) !== null) {
+      const varName = match[1];
+      // Skip keywords like 'p.age' where 'p' could be in 'avg(p.age)'
+      if (!this.isKeyword(varName) && !this.isBuiltInFunction(varName)) {
+        variables.add(varName);
+      }
+    }
+    
+    // For RETURN clauses, also look for standalone variables
+    if (cypher.startsWith('RETURN')) {
+      // Remove the variables we already found with dots
+      let cleanedCypher = cypher;
+      for (const v of variables) {
+        cleanedCypher = cleanedCypher.replace(new RegExp(`\\b${v}\\s*\\.\\s*\\w+`, 'g'), '');
+      }
+      
+      // Now look for standalone variables in the return list
+      // Split by comma and analyze each part
+      const returnParts = cleanedCypher.substring(6).split(','); // Skip 'RETURN'
+      for (const part of returnParts) {
+        // Match simple variable references (not followed by parenthesis or preceded by AS)
+        const varMatch = part.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:$|AS)/);
+        if (varMatch) {
+          const varName = varMatch[1];
+          if (!this.isKeyword(varName) && !this.isBuiltInFunction(varName)) {
+            variables.add(varName);
+          }
+        }
+      }
+    }
+    
+    // For WHERE/WITH/ORDER BY, look for variable references more carefully
+    if (cypher.startsWith('WHERE') || cypher.startsWith('WITH') || cypher.startsWith('ORDER BY')) {
+      // Look for simple variable references, but be more selective
+      // Don't match function calls or AS aliases
+      const simpleVarRegex = /(?:^|[^.\w$])([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:[<>=!]|$|,|\s+(?:AS|AND|OR|ORDER|BY|ASC|DESC))/g;
+      while ((match = simpleVarRegex.exec(cypher)) !== null) {
+        const varName = match[1];
+        if (!this.isKeyword(varName) && !this.isBuiltInFunction(varName) && !variables.has(varName)) {
+          // Additional check: make sure it's not part of a function call
+          const afterMatch = cypher.indexOf('(', match.index);
+          if (afterMatch === -1 || afterMatch > match.index + varName.length + 5) {
+            variables.add(varName);
+          }
+        }
+      }
+    }
+    
+    // Important: Don't treat parameter placeholders (e.g., $minRating) as undefined variables
+    // These are handled by withParam() and are not variable references
+    
+    return Array.from(variables);
+  }
+
+  /**
+   * Extract variable definitions from a WITH clause
+   */
+  private extractVariableDefinitions(withCypher: string): string[] {
+    const definitions = new Set<string>();
+    // Match patterns like: expression AS variable
+    const regex = /\bAS\s+([a-zA-Z_][a-zA-Z0-9_]*)\b/gi;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(withCypher)) !== null) {
+      definitions.add(match[1]);
+    }
+    return Array.from(definitions);
+  }
+
+  /**
+   * Check if a name is a Cypher keyword
+   */
+  private isKeyword(name: string): boolean {
+    const keywords = [
+      'MATCH', 'WHERE', 'RETURN', 'WITH', 'AS', 'CREATE', 'DELETE', 'SET',
+      'ORDER', 'BY', 'LIMIT', 'SKIP', 'UNION', 'UNWIND', 'MERGE', 'ON',
+      'CONSTRAINT', 'INDEX', 'UNIQUE', 'EXISTS', 'NOT', 'AND', 'OR', 'XOR',
+      'TRUE', 'FALSE', 'NULL', 'IS', 'IN', 'STARTS', 'ENDS', 'CONTAINS',
+      'DESC', 'ASC', 'DISTINCT', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END'
+    ];
+    return keywords.includes(name.toUpperCase());
+  }
+
+  /**
+   * Check if a name is a built-in function
+   */
+  private isBuiltInFunction(name: string): boolean {
+    const functions = [
+      'count', 'sum', 'avg', 'min', 'max', 'collect', 'size', 'length',
+      'type', 'id', 'labels', 'keys', 'properties', 'nodes', 'relationships',
+      'startNode', 'endNode', 'degree', 'abs', 'ceil', 'floor', 'round',
+      'sign', 'rand', 'range', 'substring', 'replace', 'split', 'left',
+      'right', 'trim', 'ltrim', 'rtrim', 'toUpper', 'toLower', 'toString',
+      'toInteger', 'toFloat', 'toBoolean', 'coalesce', 'head', 'last',
+      'tail', 'isEmpty', 'single', 'exists', 'shortestPath', 'allShortestPaths'
+    ];
+    return functions.includes(name.toLowerCase());
+  }
+
+  /**
+   * Get similar variable names (for suggestions)
+   */
+  private getSimilarVariables(varRef: string, definedVariables: Set<string>): string[] {
+    const suggestions: string[] = [];
+    const refLower = varRef.toLowerCase();
+    
+    for (const defined of definedVariables) {
+      const definedLower = defined.toLowerCase();
+      
+      // Check for exact match (case-insensitive)
+      if (definedLower === refLower) {
+        suggestions.push(defined);
+        continue;
+      }
+      
+      // Check for prefix match
+      if (definedLower.startsWith(refLower) || refLower.startsWith(definedLower)) {
+        suggestions.push(defined);
+        continue;
+      }
+      
+      // Check for Levenshtein distance (simple implementation)
+      if (this.levenshteinDistance(refLower, definedLower) <= 2) {
+        suggestions.push(defined);
+      }
+    }
+    
+    return suggestions;
+  }
+
+  /**
+   * Simple Levenshtein distance implementation
+   */
+  private levenshteinDistance(a: string, b: string): number {
+    const matrix: number[][] = [];
+    
+    for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1, // insertion
+            matrix[i - 1][j] + 1 // deletion
+          );
+        }
+      }
+    }
+    
+    return matrix[b.length][a.length];
   }
 }

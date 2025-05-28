@@ -372,6 +372,35 @@ export interface IMatchClause<
   ): this;
 
   /**
+   * Add MATCH clause for a vertex (internally calls done() first)
+   */
+  match<L2 extends keyof T['vertices']>(label: L2, alias: string): IMatchClause<T, L2>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices (internally calls done() first)
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices with an edge alias (internally calls done() first)
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string,
+    edgeAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Add RETURN clause (internally calls done() first)
+   */
+  return(...expressions: string[]): IQueryBuilder<T>;
+
+  /**
    * Return to the main query builder
    */
   done(): IQueryBuilder<T>;
@@ -433,6 +462,30 @@ export interface IEdgeMatchClause<T extends SchemaDefinition> {
    * Add a parameter to the query
    */
   withParam(name: string, value: any): this;
+
+  /**
+   * Add MATCH clause for a vertex (internally calls done() first)
+   */
+  match<L extends keyof T['vertices']>(label: L, alias: string): IMatchClause<T, L>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices (internally calls done() first)
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices with an edge alias (internally calls done() first)
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string,
+    edgeAlias: string
+  ): IEdgeMatchClause<T>;
 
   /**
    * Execute the query

@@ -496,6 +496,55 @@ describe('QueryBuilder Unit Tests', () => {
     expect(cypherQuery).toContain('RETURN count(e) AS count');
   });
 
+  // Test: Chain match methods without explicit done() calls
+  it('should allow chaining match methods without explicit done() calls', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .match('Movie', 'm')  // New: match method on MatchClause
+      .where('m.directorId = p.id')
+      .return('p.name AS director', 'm.title AS movie')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person)');
+    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    expect(cypherQuery).toContain('WHERE m.directorId = p.id');
+    expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie');
+  });
+
+  // Test: Chain match methods for edges without explicit done() calls
+  it('should allow chaining edge match methods without explicit done() calls', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p1')
+      .match('p1', 'DIRECTED', 'm', 'd')  // New: match method on MatchClause for edge
+      .match('Person', 'p2')  // New: match method on EdgeMatchClause
+      .match('p2', 'DIRECTED', 'm', 'd2')  // Chain another edge match
+      .return('p1.name AS director1', 'p2.name AS director2', 'm.title AS movie')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p1:Person)');
+    expect(cypherQuery).toContain('MATCH (p1)-[d:DIRECTED]->(m)');
+    expect(cypherQuery).toContain('MATCH (p2:Person)');
+    expect(cypherQuery).toContain('MATCH (p2)-[d2:DIRECTED]->(m)');
+    expect(cypherQuery).toContain('RETURN p1.name AS director1, p2.name AS director2, m.title AS movie');
+  });
+
+  // Test: Mix new match chaining with explicit done() calls
+  it('should support mixing new match chaining with explicit done() calls', () => {
+    const cypherQuery = queryBuilder
+      .match('Person', 'p')
+      .constraint({ name: 'John' })
+      .done()  // Explicit done() still works
+      .match('Movie', 'm')
+      .match('p', 'DIRECTED', 'm')  // New: match on MatchClause
+      .return('p.name AS director', 'm.title AS movie')
+      .toCypher();
+
+    expect(cypherQuery).toContain('MATCH (p:Person {name: "John"})');
+    expect(cypherQuery).toContain('MATCH (m:Movie)');
+    expect(cypherQuery).toContain('MATCH (p)-[e:DIRECTED]->(m)');
+    expect(cypherQuery).toContain('RETURN p.name AS director, m.title AS movie');
+  });
+
   // Test: Add a single property constraint to an edge
   it('should add a single property constraint to an edge', () => {
     const cypherQuery = queryBuilder

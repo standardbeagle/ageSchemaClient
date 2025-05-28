@@ -237,6 +237,76 @@ export class MatchClause<
   }
 
   /**
+   * Add MATCH clause for a vertex (internally calls done() first)
+   *
+   * @param label - Vertex label
+   * @param alias - Vertex alias
+   * @returns New match clause
+   */
+  match<L2 extends keyof T['vertices']>(label: L2, alias: string): IMatchClause<T, L2>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices (internally calls done() first)
+   *
+   * @param sourceAlias - Source vertex alias
+   * @param edgeLabel - Edge label
+   * @param targetAlias - Target vertex alias
+   * @returns Edge match clause
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices with an edge alias (internally calls done() first)
+   *
+   * @param sourceAlias - Source vertex alias
+   * @param edgeLabel - Edge label
+   * @param targetAlias - Target vertex alias
+   * @param edgeAlias - Edge alias
+   * @returns Edge match clause
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string,
+    edgeAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Implementation of the match method
+   */
+  match(
+    labelOrSourceAlias: any,
+    aliasOrEdgeLabel: string,
+    targetAlias?: string,
+    edgeAlias?: string
+  ): any {
+    // First, return to the query builder
+    const queryBuilder = this.done();
+    
+    // Then call match on the query builder with the same parameters
+    // @ts-ignore - TypeScript doesn't understand the overloaded signatures here
+    return queryBuilder.match(labelOrSourceAlias, aliasOrEdgeLabel, targetAlias, edgeAlias);
+  }
+
+
+  /**
+   * Add RETURN clause (internally calls done() first)
+   *
+   * @param expressions - Return expressions
+   * @returns Query builder
+   */
+  return(...expressions: string[]): IQueryBuilder<T> {
+    // First, return to the query builder
+    const queryBuilder = this.done();
+    
+    // Then call return on the query builder
+    return queryBuilder.return(...expressions);
+  }
+  /**
    * Return to the main query builder
    *
    * @returns Query builder
@@ -407,6 +477,62 @@ export class EdgeMatchClause<T extends SchemaDefinition> implements IEdgeMatchCl
    */
   toCypher(): string {
     return this.queryBuilder.toCypher();
+  }
+
+  /**
+   * Add MATCH clause for a vertex (internally calls done() first)
+   *
+   * @param label - Vertex label
+   * @param alias - Vertex alias
+   * @returns New match clause
+   */
+  match<L extends keyof T['vertices']>(label: L, alias: string): IMatchClause<T, L>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices (internally calls done() first)
+   *
+   * @param sourceAlias - Source vertex alias
+   * @param edgeLabel - Edge label
+   * @param targetAlias - Target vertex alias
+   * @returns Edge match clause
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Add MATCH clause for an edge between two previously matched vertices with an edge alias (internally calls done() first)
+   *
+   * @param sourceAlias - Source vertex alias
+   * @param edgeLabel - Edge label
+   * @param targetAlias - Target vertex alias
+   * @param edgeAlias - Edge alias
+   * @returns Edge match clause
+   */
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string,
+    edgeAlias: string
+  ): IEdgeMatchClause<T>;
+
+  /**
+   * Implementation of the match method
+   */
+  match(
+    labelOrSourceAlias: any,
+    aliasOrEdgeLabel: string,
+    targetAlias?: string,
+    edgeAlias?: string
+  ): any {
+    // First, return to the query builder
+    const queryBuilder = this.done();
+    
+    // Then call match on the query builder with the same parameters
+    // @ts-ignore - TypeScript doesn't understand the overloaded signatures here
+    return queryBuilder.match(labelOrSourceAlias, aliasOrEdgeLabel, targetAlias, edgeAlias);
   }
 
   /**
