@@ -7,7 +7,7 @@
 import { SchemaDefinition } from '../schema/types';
 import { QueryExecutor } from '../db/query';
 import { AnalyticsQueryBuilder, AnalyticsMatchClause } from './analytics';
-import { VertexPattern, IEdgeMatchClause, MatchPatternType } from './types';
+import { VertexPattern, IEdgeMatchClause, IMatchClause, MatchPatternType } from './types';
 import { MatchPart } from './parts';
 
 /**
@@ -309,17 +309,6 @@ export class AlgorithmMatchClause<
     return queryBuilder;
   }
 
-  /**
-   * Add another match clause
-   *
-   * @param label - Vertex label
-   * @param alias - Vertex alias
-   * @returns A new algorithm match clause
-   */
-  match<K extends keyof T['vertices']>(label: K, alias: string): AlgorithmMatchClause<T, K> {
-    const queryBuilder = this.done() as unknown as AlgorithmQueryBuilder<T>;
-    return queryBuilder.match(label, alias);
-  }
 }
 
 /**
@@ -346,7 +335,7 @@ export class AlgorithmQueryBuilder<T extends SchemaDefinition> extends Analytics
   /**
    * Add MATCH clause for a vertex
    */
-  match<L extends keyof T['vertices']>(label: L, alias: string): AlgorithmMatchClause<T, L>;
+  match<L extends keyof T['vertices']>(label: L, alias: string): IMatchClause<T, L>;
 
   /**
    * Add MATCH clause for an edge between two previously matched vertices

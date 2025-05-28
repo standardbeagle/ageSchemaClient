@@ -126,15 +126,38 @@ export class AnalyticsMatchClause<
   }
 
   /**
-   * Add another match clause
-   *
-   * @param label - Vertex label
-   * @param alias - Vertex alias
-   * @returns A new analytics match clause
+   * Add MATCH clause - supports both vertex and edge patterns
+   * This method is overloaded to match the IMatchClause interface
    */
-  match<K extends keyof T['vertices']>(label: K, alias: string): AnalyticsMatchClause<T, K> {
+  match<L2 extends keyof T['vertices']>(label: L2, alias: string): AnalyticsMatchClause<T, L2>;
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string
+  ): IEdgeMatchClause<T>;
+  match<E extends keyof T['edges']>(
+    sourceAlias: string,
+    edgeLabel: E,
+    targetAlias: string,
+    edgeAlias: string
+  ): IEdgeMatchClause<T>;
+  match(
+    labelOrSourceAlias: any,
+    aliasOrEdgeLabel: string,
+    targetAlias?: string,
+    edgeAlias?: string
+  ): any {
     const queryBuilder = this.done() as unknown as AnalyticsQueryBuilder<T>;
-    return queryBuilder.match(label, alias) as unknown as AnalyticsMatchClause<T, K>;
+    if (targetAlias === undefined) {
+      // Vertex match
+      return queryBuilder.match(labelOrSourceAlias, aliasOrEdgeLabel) as any;
+    } else if (edgeAlias === undefined) {
+      // Edge match without alias
+      return queryBuilder.match(labelOrSourceAlias, aliasOrEdgeLabel, targetAlias);
+    } else {
+      // Edge match with alias
+      return queryBuilder.match(labelOrSourceAlias, aliasOrEdgeLabel, targetAlias, edgeAlias);
+    }
   }
 
   /**
