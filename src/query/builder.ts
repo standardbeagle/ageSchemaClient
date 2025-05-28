@@ -826,12 +826,19 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
     const variables = new Set<string>();
     
     // First, match patterns like: variable.property
+    // But skip schema-qualified function calls like age_schema_client.function_name()
     const dotRegex = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\./g;
     let match: RegExpExecArray | null;
     while ((match = dotRegex.exec(cypher)) !== null) {
       const varName = match[1];
-      // Skip keywords like 'p.age' where 'p' could be in 'avg(p.age)'
-      if (!this.isKeyword(varName) && !this.isBuiltInFunction(varName)) {
+      const afterDot = match.index + match[0].length;
+      const afterDotText = cypher.substring(afterDot);
+      
+      // Check if this is a schema-qualified function call (has function pattern after dot)
+      const isFunctionCall = /^[a-zA-Z_][a-zA-Z0-9_]*\s*\(/.test(afterDotText);
+      
+      // Skip keywords, built-in functions, and schema-qualified function calls
+      if (!this.isKeyword(varName) && !this.isBuiltInFunction(varName) && !isFunctionCall) {
         variables.add(varName);
       }
     }
