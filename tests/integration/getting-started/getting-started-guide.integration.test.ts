@@ -17,7 +17,7 @@
  */
 
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { AgeSchemaClient } from '../../../src/index.js';
+import { PgConnectionManager, QueryBuilder, SchemaLoader } from '../../../src/index.js';
 import { queryExecutor, isAgeAvailable } from '../../setup/integration.js';
 import dotenv from 'dotenv';
 

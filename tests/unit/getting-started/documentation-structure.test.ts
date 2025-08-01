@@ -75,7 +75,7 @@ describe('Getting Started Documentation Structure', () => {
 
     it('should include basic configuration example', () => {
       expect(installationContent).toContain('## Basic Configuration');
-      expect(installationContent).toContain('new AgeSchemaClient');
+      expect(installationContent).toContain('new PgConnectionManager');
       expect(installationContent).toContain('host:');
       expect(installationContent).toContain('port:');
       expect(installationContent).toContain('database:');
@@ -117,7 +117,7 @@ describe('Getting Started Documentation Structure', () => {
 
     it('should include quick start section', () => {
       expect(basicUsageContent).toContain('## Quick Start');
-      expect(basicUsageContent).toContain('import { AgeSchemaClient }');
+      expect(basicUsageContent).toContain('import { PgConnectionManager, QueryBuilder }');
       expect(basicUsageContent).toContain('await client.connect()');
       expect(basicUsageContent).toContain('await client.disconnect()');
     });

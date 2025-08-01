@@ -1,12 +1,22 @@
 /**
  * Basic usage example for the ageSchemaClient library
+ * 
+ * This example shows how to use the individual components:
+ * - Connection Pool Management
+ * - Query Building  
+ * - Schema Loading
  */
 
-import { AgeSchemaClient } from '../src';
+import { 
+  PgConnectionManager, 
+  QueryBuilder, 
+  QueryExecutor,
+  SchemaLoader 
+} from '../src';
 
-// Create a client
-const client = new AgeSchemaClient({
-  connection: {
+async function basicUsageExample() {
+  // 1. Set up connection pool
+  const connectionManager = new PgConnectionManager({
     host: 'localhost',
     port: 5432,
     database: 'my_database',
@@ -18,22 +28,57 @@ const client = new AgeSchemaClient({
       searchPath: 'ag_catalog, "$user", public',
       applicationName: 'ageSchemaClient-basic',
     },
-  },
-  schema: {
-    // This will be a schema object or path in the future
-  },
-});
+  });
 
-// In future implementations, we'll be able to:
-// 1. Create query builders
-// 2. Execute queries
-// 3. Manage transactions
-// 4. Generate SQL
-// 5. Validate schemas
+  // 2. Set up query executor
+  const queryExecutor = new QueryExecutor(connectionManager);
 
-// For now, we can just get the configuration
-console.log('Client configuration:', client.getConfig());
+  // 3. Load and validate schema
+  const schemaLoader = new SchemaLoader(connectionManager);
+  
+  // Example schema definition
+  const schema = {
+    version: '1.0.0',
+    vertices: {
+      Person: {
+        properties: {
+          id: { type: 'integer' },
+          name: { type: 'string' },
+          age: { type: 'integer' }
+        },
+        required: ['id', 'name']
+      }
+    },
+    edges: {
+      KNOWS: {
+        properties: {},
+        fromVertex: 'Person',
+        toVertex: 'Person'
+      }
+    }
+  };
 
-// And create a basic query builder
-const queryBuilder = client.createQueryBuilder('my_graph');
-console.log('Query builder:', queryBuilder);
+  // 4. Create query builder with schema and executor
+  const queryBuilder = new QueryBuilder(schema, queryExecutor, 'my_graph');
+
+  // 5. Build and execute queries
+  const query = queryBuilder
+    .match('Person', 'p')
+    .where('p.age > $minAge')
+    .return('p.name', 'p.age')
+    .limit(10);
+
+  console.log('Query built successfully');
+  console.log('Components initialized:', {
+    connectionManager: !!connectionManager,
+    queryExecutor: !!queryExecutor,
+    schemaLoader: !!schemaLoader,
+    queryBuilder: !!queryBuilder
+  });
+
+  // Note: In a real application, you would execute the query:
+  // const results = await query.execute();
+}
+
+// Run the example
+basicUsageExample().catch(console.error);

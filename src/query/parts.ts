@@ -8,10 +8,7 @@ import {
   QueryPart,
   QueryPartType,
   MatchPattern,
-
-
-
-
+  MatchPatternType,
   OrderDirection,
 } from './types';
 
@@ -116,7 +113,27 @@ export class MatchPart extends BaseQueryPart {
     // Collect parameters from patterns
     const params: Record<string, any> = {};
 
-    // TODO: Implement parameter collection from patterns
+    // Extract parameter references from Cypher strings in patterns
+    for (const pattern of this.patterns) {
+      const cypherString = pattern.toCypher();
+      
+      // Find parameter references in the format $paramName
+      const paramMatches = cypherString.match(/\$(\w+)/g);
+      
+      if (paramMatches) {
+        for (const match of paramMatches) {
+          const paramName = match.substring(1); // Remove the $ prefix
+          // Note: Parameter values are typically set via QueryBuilder.setParam() 
+          // or QueryBuilder.withParam() methods, not stored in patterns.
+          // This method identifies which parameters are referenced in the patterns.
+          
+          // Only collect parameters from vertex and edge patterns
+          if (pattern.type === MatchPatternType.VERTEX || pattern.type === MatchPatternType.EDGE) {
+            params[paramName] = undefined; // Parameter reference found, value set elsewhere
+          }
+        }
+      }
+    }
 
     return params;
   }

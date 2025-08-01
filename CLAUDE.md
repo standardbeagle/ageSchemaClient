@@ -67,7 +67,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - Custom SQL functions for batch operations in `sql/batch-loader-functions.sql`
 
 2. **Type Safety**
-   - Schema-driven TypeScript types
+   - Schema-driven TypeScript types for good reason
    - Runtime validation matches compile-time types
    - Extensive use of type guards
    - Generic type parameters for schema definitions

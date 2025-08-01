@@ -32,26 +32,30 @@ yarn add age-schema-client
 ## Quick Start
 
 ```typescript
-import { AgeSchemaClient } from 'age-schema-client';
+import { 
+  PgConnectionManager, 
+  QueryBuilder, 
+  QueryExecutor,
+  SchemaLoader 
+} from 'age-schema-client';
 
-// Create a client
-const client = new AgeSchemaClient({
-  connection: {
-    host: 'localhost',
-    port: 5432,
-    database: 'my_database',
-    user: 'postgres',
-    password: 'postgres',
-    // PostgreSQL-specific options
-    pgOptions: {
-      // Ensure ag_catalog is in the search path for Apache AGE
-      searchPath: 'ag_catalog, "$user", public',
-    },
-  },
-  schema: {
-    path: './schema.json',
+// 1. Set up connection pool
+const connectionManager = new PgConnectionManager({
+  host: 'localhost',
+  port: 5432,
+  database: 'my_database',
+  user: 'postgres',
+  password: 'postgres',
+  // PostgreSQL-specific options
+  pgOptions: {
+    // Ensure ag_catalog is in the search path for Apache AGE
+    searchPath: 'ag_catalog, "$user", public',
   },
 });
+
+// 2. Set up query executor and schema loader
+const queryExecutor = new QueryExecutor(connectionManager);
+const schemaLoader = new SchemaLoader(connectionManager);
 
 // Define a schema
 const schema = {
@@ -81,28 +85,16 @@ const schema = {
   }
 };
 
-// Create vertices
-const tom = await client.vertices.createVertex('Person', {
-  name: 'Tom Hanks',
-  age: 66
-});
+// 3. Create query builder with schema
+const queryBuilder = new QueryBuilder(schema, queryExecutor, 'movie_graph');
 
-const forrestGump = await client.vertices.createVertex('Movie', {
-  title: 'Forrest Gump',
-  year: 1994
-});
-
-// Create an edge
-const actedIn = await client.edges.createEdge('ACTED_IN', tom, forrestGump, {
-  role: 'Forrest Gump'
-});
-
-// Query the database
-const result = await client.query
-  .match('p', 'Person')
-  .where('p.name', '=', 'Tom Hanks')
-  .match('p', '-[a:ACTED_IN]->', 'm:Movie')
-  .return('p', 'm', 'a.role')
+// 4. Build and execute queries
+const result = await queryBuilder
+  .match('Person', 'p')
+  .where('p.name = $actorName')
+  .withParam('actorName', 'Tom Hanks')
+  .match('p', 'ACTED_IN', 'm', 'Movie')
+  .return('p.name', 'm.title')
   .execute();
 ```
 

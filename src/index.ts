@@ -1,45 +1,62 @@
 /**
  * ageSchemaClient - A TypeScript library for Apache AGE graph databases with schema validation
  *
- * This library provides a type-safe client for working with Apache AGE graph databases.
- * It allows developers to define graph schemas and use them to validate and optimize database operations.
+ * This library provides individual components for working with Apache AGE graph databases:
+ * - Connection Pool Management (PgConnectionManager)
+ * - Query Building (QueryBuilder, PathQueryBuilder, etc.)
+ * - SQL Generation (SQLGenerator)
+ * - Schema Loading and Validation (SchemaLoader)
+ * - Batch Operations (SchemaLoader for bulk loading)
  *
  * @packageDocumentation
  */
 
-// Core exports
+// Core types and errors
 export * from './core';
 
-// Schema exports
-export * from './schema';
-
-// SQL exports
-export * from './sql';
-
-// Database exports
+// Connection Pool Management
 export {
-  // Re-export specific types from db to avoid conflicts
   PgConnectionManager,
   QueryExecutor,
   VertexOperations,
   EdgeOperations,
   BatchOperations,
   TransactionManager,
-  // Types
+} from './db';
+
+// Connection types
+export type {
+  Connection,
+  ConnectionConfig,
+  QueryOptions,
+  QueryResult,
   DatabaseError,
 } from './db';
 
-// Type exports
+// Query Building
+export {
+  QueryBuilder,
+  PathQueryBuilder,
+  AnalyticsQueryBuilder,
+  AlgorithmQueryBuilder,
+} from './query';
+
+// Query types
 export type {
-  Connection,
-  QueryOptions,
-  QueryResult,
-} from './db';
+  IQueryBuilder,
+  QueryBuilderResult,
+  OrderDirection,
+} from './query';
 
-// Query exports
-export * from './query';
+// SQL Generation
+export {
+  SQLGenerator,
+} from './sql';
 
-// Loader exports
+// Schema Management
+export * from './schema';
+
+// Batch Loading
 export {
   SchemaLoader,
   CypherQueryGenerator,

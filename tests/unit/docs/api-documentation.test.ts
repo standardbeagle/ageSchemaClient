@@ -30,7 +30,6 @@ describe('API Documentation Generation', () => {
 
       // Check for key classes
       const keyClasses = [
-        'AgeSchemaClient.md',
         'QueryBuilder.md',
         'SchemaLoader.md',
         'BatchOperations.md',
