@@ -567,8 +567,7 @@ export class QueryBuilder<T extends SchemaDefinition> implements IQueryBuilder<T
         throw contextError;
       }
     } catch (error) {
-      // Catch any other errors that might occur
-      console.error('Unhandled error in QueryBuilder.execute:', error);
+      // Re-throw the error without logging (it will be caught by the caller)
       throw error;
     } finally {
       // Reset query parts and parameters after execution

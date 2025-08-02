@@ -32,32 +32,22 @@ yarn add age-schema-client
 ## Quick Start
 
 ```typescript
-import { 
-  PgConnectionManager, 
-  QueryBuilder, 
-  QueryExecutor,
-  SchemaLoader 
-} from 'age-schema-client';
+import { AgeSchemaClient } from 'age-schema-client';
 
-// 1. Set up connection pool
-const connectionManager = new PgConnectionManager({
+// 1. Create client instance
+const client = new AgeSchemaClient({
   host: 'localhost',
   port: 5432,
   database: 'my_database',
   user: 'postgres',
   password: 'postgres',
-  // PostgreSQL-specific options
-  pgOptions: {
-    // Ensure ag_catalog is in the search path for Apache AGE
-    searchPath: 'ag_catalog, "$user", public',
-  },
+  graph: 'my_graph'
 });
 
-// 2. Set up query executor and schema loader
-const queryExecutor = new QueryExecutor(connectionManager);
-const schemaLoader = new SchemaLoader(connectionManager);
+// 2. Connect to the database
+await client.connect();
 
-// Define a schema
+// 3. Define a schema
 const schema = {
   version: '1.0.0',
   vertices: {
@@ -85,17 +75,22 @@ const schema = {
   }
 };
 
-// 3. Create query builder with schema
-const queryBuilder = new QueryBuilder(schema, queryExecutor, 'movie_graph');
+// 4. Set the schema
+await client.setSchema(schema);
 
-// 4. Build and execute queries
+// 5. Get a query builder and execute queries
+const queryBuilder = client.queryBuilder();
+
 const result = await queryBuilder
   .match('Person', 'p')
   .where('p.name = $actorName')
   .withParam('actorName', 'Tom Hanks')
-  .match('p', 'ACTED_IN', 'm', 'Movie')
-  .return('p.name', 'm.title')
+  .outgoing('ACTED_IN', 'r', 'Movie', 'm')
+  .return('p.name', 'm.title', 'r.role')
   .execute();
+
+// 6. Clean up
+await client.disconnect();
 ```
 
 ## Documentation
