@@ -5,8 +5,8 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'ageSchemaClient Documentation',
-  tagline: 'Comprehensive API documentation for Apache AGE graph databases',
+  title: 'ageSchemaClient',
+  tagline: 'TypeScript library for Apache AGE graph databases with schema validation and efficient data loading',
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
