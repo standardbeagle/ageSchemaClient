@@ -32,7 +32,7 @@ Algolia DocSearch provides powerful search capabilities for documentation sites.
 ### Deployment Checklist
 
 - [ ] Documentation site is deployed to GitHub Pages
-- [ ] Site is publicly accessible at `https://standardbeagle.github.io/ageSchemaClient/`
+- [ ] Site is publicly accessible at `https://dev.standardbeagle.com/ageSchemaClient/`
 - [ ] All documentation content is substantial and production-ready
 - [ ] Site navigation and content structure is finalized
 
@@ -43,7 +43,7 @@ Algolia DocSearch provides powerful search capabilities for documentation sites.
 1. **Visit the Application Page**: Go to [https://docsearch.algolia.com/apply/](https://docsearch.algolia.com/apply/)
 
 2. **Fill Out the Application Form**:
-   - **Website URL**: `https://standardbeagle.github.io/ageSchemaClient/`
+   - **Website URL**: `https://dev.standardbeagle.com/ageSchemaClient/`
    - **Email**: Your contact email
    - **Repository URL**: `https://github.com/standardbeagle/ageSchemaClient`
    - **Description**: "Technical documentation for ageSchemaClient, a TypeScript library for Apache AGE graph databases"

@@ -129,4 +129,4 @@ Try it out today and experience the difference proper tooling can make in your g
 npm install age-schema-client
 ```
 
-For more information, check out our [documentation](https://standardbeagle.github.io/ageSchemaClient/) and [GitHub repository](https://github.com/standardbeagle/ageSchemaClient).
+For more information, check out our [documentation](https://dev.standardbeagle.com/ageSchemaClient/) and [GitHub repository](https://github.com/standardbeagle/ageSchemaClient).

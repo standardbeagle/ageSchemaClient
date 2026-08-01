@@ -33,7 +33,7 @@ To manually trigger a deployment:
 ## 4. Access Your Documentation
 
 Once deployed, your documentation will be available at:
-https://standardbeagle.github.io/ageSchemaClient/
+https://dev.standardbeagle.com/ageSchemaClient/
 
 ## Current Configuration
 

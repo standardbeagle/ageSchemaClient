@@ -347,7 +347,7 @@ After deployment, verify:
 4. **API docs**: Check that API documentation is current
 5. **Mobile**: Test on mobile devices
 
-**Deployed URL**: `https://standardbeagle.github.io/ageSchemaClient/`
+**Deployed URL**: `https://dev.standardbeagle.com/ageSchemaClient/`
 
 ## Configuration Management
 
@@ -361,7 +361,7 @@ Key configuration files:
 const config: Config = {
   title: 'Apache AGE Schema Client',
   tagline: 'TypeScript client for Apache AGE graph databases',
-  url: 'https://standardbeagle.github.io',
+  url: 'https://dev.standardbeagle.com',
   baseUrl: '/ageSchemaClient/',
   organizationName: 'standardbeagle',
   projectName: 'ageSchemaClient',

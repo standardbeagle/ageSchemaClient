@@ -2,7 +2,7 @@
 
 A TypeScript library for Apache AGE graph databases with schema validation and efficient data loading.
 
-📚 **[Full Documentation](https://standardbeagle.github.io/ageSchemaClient/)** | 🚀 **[Getting Started](https://standardbeagle.github.io/ageSchemaClient/docs/getting-started/installation)** | 📖 **[API Reference](https://standardbeagle.github.io/ageSchemaClient/docs/api-reference/)**
+📚 **[Full Documentation](https://dev.standardbeagle.com/ageSchemaClient/)** | 🚀 **[Getting Started](https://dev.standardbeagle.com/ageSchemaClient/docs/getting-started/installation)** | 📖 **[API Reference](https://dev.standardbeagle.com/ageSchemaClient/docs/api-reference/)**
 
 ## Features
 
@@ -95,26 +95,26 @@ await client.disconnect();
 
 ## Documentation
 
-📚 **Full documentation is available at [https://standardbeagle.github.io/ageSchemaClient/](https://standardbeagle.github.io/ageSchemaClient/)**
+📚 **Full documentation is available at [https://dev.standardbeagle.com/ageSchemaClient/](https://dev.standardbeagle.com/ageSchemaClient/)**
 
 ### Quick Links
 
-- 🚀 [Getting Started Guide](https://standardbeagle.github.io/ageSchemaClient/docs/getting-started/installation)
-- 📖 [API Reference](https://standardbeagle.github.io/ageSchemaClient/docs/api-reference/)
-- 🏗️ [Architecture Overview](https://standardbeagle.github.io/ageSchemaClient/docs/architecture/overview)
-- 💡 [How-to Guides](https://standardbeagle.github.io/ageSchemaClient/docs/how-to-guides/basic-queries)
+- 🚀 [Getting Started Guide](https://dev.standardbeagle.com/ageSchemaClient/docs/getting-started/installation)
+- 📖 [API Reference](https://dev.standardbeagle.com/ageSchemaClient/docs/api-reference/)
+- 🏗️ [Architecture Overview](https://dev.standardbeagle.com/ageSchemaClient/docs/architecture/overview)
+- 💡 [How-to Guides](https://dev.standardbeagle.com/ageSchemaClient/docs/how-to-guides/basic-queries)
 - 🔧 [Examples](./examples/) - Example code for common use cases
 
 ### Key Topics
 
-- [Extension System](https://standardbeagle.github.io/ageSchemaClient/docs/architecture/extension-development) - **NEW**: Pluggable extension system for PostgreSQL extensions
-- [Schema Loader](https://standardbeagle.github.io/ageSchemaClient/docs/api-reference/schema-manager) - Documentation for the SchemaLoader class
-- [Batch Operations](https://standardbeagle.github.io/ageSchemaClient/docs/how-to-guides/batch-operations) - Efficient bulk data loading
-- [Query Builder](https://standardbeagle.github.io/ageSchemaClient/docs/api-reference/query-builder) - Type-safe query construction
+- [Extension System](https://dev.standardbeagle.com/ageSchemaClient/docs/architecture/extension-development) - **NEW**: Pluggable extension system for PostgreSQL extensions
+- [Schema Loader](https://dev.standardbeagle.com/ageSchemaClient/docs/api-reference/schema-manager) - Documentation for the SchemaLoader class
+- [Batch Operations](https://dev.standardbeagle.com/ageSchemaClient/docs/how-to-guides/batch-operations) - Efficient bulk data loading
+- [Query Builder](https://dev.standardbeagle.com/ageSchemaClient/docs/api-reference/query-builder) - Type-safe query construction
 
 ### API Reference
 
-A comprehensive API reference is available in the [online documentation](https://standardbeagle.github.io/ageSchemaClient/docs/api-reference/). This includes detailed information about:
+A comprehensive API reference is available in the [online documentation](https://dev.standardbeagle.com/ageSchemaClient/docs/api-reference/). This includes detailed information about:
 
 - Connection Management
 - Query Execution
@@ -146,7 +146,7 @@ See [schema-loader-error-handling.ts](./examples/schema-loader-error-handling.ts
 
 ### Connection Options
 
-For detailed information about connection options, including PostgreSQL-specific options like search_path, see the [Connection Configuration guide](https://standardbeagle.github.io/ageSchemaClient/docs/getting-started/connection-config) in our documentation.
+For detailed information about connection options, including PostgreSQL-specific options like search_path, see the [Connection Configuration guide](https://dev.standardbeagle.com/ageSchemaClient/docs/getting-started/connection-config) in our documentation.
 
 ## Apache AGE Integration
 

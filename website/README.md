@@ -64,7 +64,7 @@ The site is configured for the ageSchemaClient library with:
 
 - **Title**: ageSchemaClient Documentation
 - **Tagline**: Comprehensive API documentation for Apache AGE graph databases
-- **URL**: https://standardbeagle.github.io
+- **URL**: https://dev.standardbeagle.com
 - **Base URL**: /ageSchemaClient/
 
 ### Navigation
