@@ -134,6 +134,9 @@ const config: Config = {
   themeConfig: {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
+    // Google-only removal (2026-09-25): the whole dev host is disowned from
+    // Google; Bingbot ignores the googlebot name and indexes normally.
+    metadata: [{name: 'googlebot', content: 'noindex, follow'}],
     // Algolia DocSearch configuration
     algolia: {
       // The application ID provided by Algolia
