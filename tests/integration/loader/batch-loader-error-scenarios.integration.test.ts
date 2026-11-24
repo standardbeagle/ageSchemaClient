@@ -13,8 +13,8 @@ import { BatchLoaderError } from '../../../src/core/errors';
 import {
   connectionManager,
   queryExecutor,
-  AGE_GRAPH_NAME,
-  isAgeAvailable
+  isAgeAvailable,
+  generateUniqueGraphName
 } from '../../setup/integration';
 import {
   testSchema,
@@ -24,27 +24,30 @@ import {
 // Skip all tests if AGE is not available
 describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios Integration Tests', () => {
   let batchLoader: BatchLoader<typeof testSchema>;
+  let testGraphName: string;
 
   beforeEach(async () => {
+    // Generate a unique graph name for each test to avoid collisions
+    testGraphName = generateUniqueGraphName('batch_loader_error');
+
+    // Create the graph
+    await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.create_graph('${testGraphName}')`);
+
     // Create a new BatchLoader for each test
     batchLoader = createBatchLoader(testSchema, queryExecutor, {
-      defaultGraphName: AGE_GRAPH_NAME,
+      defaultGraphName: testGraphName,
       validateBeforeLoad: true,
       defaultBatchSize: 1000,
       schemaName: 'age_schema_client'
     });
+  });
 
-    // Clear the graph before each test
-    const connection = await connectionManager.getConnection();
+  afterEach(async () => {
+    // Clean up the graph after each test
     try {
-      await connection.query(`
-        SELECT * FROM cypher('${AGE_GRAPH_NAME}', $$
-          MATCH (n)
-          DETACH DELETE n
-        $$) as (result ag_catalog.agtype);
-      `);
-    } finally {
-      await connectionManager.releaseConnection(connection);
+      await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${testGraphName}', true)`);
+    } catch (error) {
+      console.warn(`Warning: Could not drop graph ${testGraphName}: ${error.message}`);
     }
   });
 
@@ -67,7 +70,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
       expect(result.errors![0].message).toMatch(/required property/i);
 
       // Verify no vertices were created
-      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
+      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, testGraphName);
       const countResult = await queryBuilder
         .match('Person', 'p')
         .done()
@@ -101,7 +104,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
       expect(result.errors![0].message).toMatch(/missing a 'to' property/i);
 
       // Verify vertices were created but no edges
-      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
+      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, testGraphName);
 
       // Check vertices
       const vertexCountResult = await queryBuilder
@@ -213,7 +216,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
       expect(result.warnings!.length).toBeGreaterThan(0); // There should be warnings about invalid references
 
       // Verify only the valid edge was created
-      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
+      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, testGraphName);
       const edgeCountResult = await queryBuilder
         .match('Person', 'p')
         .done()
@@ -261,7 +264,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
   describe('Transaction Errors', () => {
     it('should rollback transaction on error', async () => {
       const validatingBatchLoader = createBatchLoader(testSchema, queryExecutor, {
-        defaultGraphName: AGE_GRAPH_NAME,
+        defaultGraphName: testGraphName,
         validateBeforeLoad: true,
         defaultBatchSize: 1000,
         schemaName: 'age_schema_client'
@@ -288,7 +291,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
       expect(result.errors!.length).toBeGreaterThan(0);
 
       // Verify no vertices or edges were created (transaction was rolled back)
-      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
+      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, testGraphName);
 
       // Check vertices
       const vertexCountResult = await queryBuilder
@@ -306,7 +309,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
     it('should continue on error when continueOnError is true', async () => {
       // Create a BatchLoader with validateBeforeLoad set to false
       const nonValidatingBatchLoader = createBatchLoader(testSchema, queryExecutor, {
-        defaultGraphName: AGE_GRAPH_NAME,
+        defaultGraphName: testGraphName,
         validateBeforeLoad: false,
         defaultBatchSize: 1000,
         schemaName: 'age_schema_client'
@@ -343,7 +346,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Error Scenarios 
       expect(result.edgeCount).toBe(2); // Only the valid WORKS_AT and KNOWS edge is created
 
       // Verify the valid edges were created
-      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
+      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, testGraphName);
 
       // Check WORKS_AT edges
       const worksAtCountResult = await queryBuilder

@@ -15,7 +15,7 @@ import {
   queryExecutor,
   isAgeAvailable,
   TEST_SCHEMA,
-  AGE_GRAPH_NAME
+  generateUniqueGraphName
 } from '../../setup/integration';
 import { PgConnectionManager } from '../../../src/db/connector';
 import { QueryExecutor } from '../../../src/db/query';
@@ -56,6 +56,7 @@ const testSchema = {
 describe('age_params Table Management', () => {
   let connectionManager: PgConnectionManager;
   let ageAvailable = false;
+  let testGraphName: string;
 
   beforeAll(async () => {
     // Check if AGE is available
@@ -65,6 +66,12 @@ describe('age_params Table Management', () => {
       console.warn('Apache AGE extension is not available, tests will be skipped');
       return;
     }
+
+    // Generate a unique graph name for this test file
+    testGraphName = generateUniqueGraphName('age_params_table');
+
+    // Create the graph using the shared queryExecutor
+    await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.create_graph('${testGraphName}')`);
 
     // Create a new connection manager for this test
     connectionManager = new PgConnectionManager(connectionConfig);
@@ -76,8 +83,17 @@ describe('age_params Table Management', () => {
       try {
         await connectionManager.releaseAllConnections();
         console.log('All connections released in afterAll');
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error releasing connections: ${error.message}`);
+      }
+    }
+
+    // Drop the graph
+    if (ageAvailable && testGraphName) {
+      try {
+        await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${testGraphName}', true)`);
+      } catch (error: any) {
+        console.warn(`Warning: Could not drop graph ${testGraphName}: ${error.message}`);
       }
     }
   });
@@ -112,7 +128,7 @@ describe('age_params Table Management', () => {
         console.log(`Original value: ${JSON.stringify(originalValue)}`);
 
         // 2. Insert data into the age_params table using QueryBuilder's setParam method
-        const queryBuilder = new QueryBuilder(testSchema, testQueryExecutor, AGE_GRAPH_NAME);
+        const queryBuilder = new QueryBuilder(testSchema, testQueryExecutor, testGraphName);
         await queryBuilder.setParam('test_key', { value: `test_value_${i}` });
 
         // Verify the data was inserted
@@ -163,7 +179,7 @@ describe('age_params Table Management', () => {
           try {
             await connectionManager.releaseConnection(connection);
             console.log('✓ Connection released back to the pool');
-          } catch (error) {
+          } catch (error: any) {
             console.error(`Error releasing connection: ${error.message}`);
           }
         }

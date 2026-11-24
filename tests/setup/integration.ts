@@ -12,6 +12,9 @@ import { getConnectionManagerForTests, releaseAllConnections, ConnectionManagerF
 import { getResourceRegistry } from './resource-registry';
 import { generateSchemaName, generateGraphName } from './name-generator';
 
+// Export the helper for use in tests
+export const generateUniqueGraphName = generateGraphName;
+
 // Load environment variables from .env.test
 dotenv.config({ path: '.env.test' });
 
@@ -104,7 +107,7 @@ beforeAll(async () => {
       try {
         // Temporarily redirect console output
         const originalConsoleError = console.error;
-        console.error = () => {}; // No-op function
+        console.error = () => { }; // No-op function
 
         await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${AGE_GRAPH_NAME}', true)`);
 
@@ -128,9 +131,9 @@ beforeAll(async () => {
   } catch (error) {
     // This will catch any errors thrown above
     if (error.message === 'DATABASE_CONNECTION_ERROR' ||
-        error.message === 'AGE_NOT_AVAILABLE' ||
-        error.message === 'AGE_CONFIGURATION_ERROR' ||
-        error.message === 'AGE_GRAPH_CREATION_ERROR') {
+      error.message === 'AGE_NOT_AVAILABLE' ||
+      error.message === 'AGE_CONFIGURATION_ERROR' ||
+      error.message === 'AGE_GRAPH_CREATION_ERROR') {
       // Error has already been logged with appropriate context
     } else {
       console.error(`UNKNOWN ERROR setting up integration tests: ${error.message}`);
@@ -297,10 +300,10 @@ export async function isAgeAvailable(): Promise<boolean> {
   } catch (error) {
     // Check if this is a connection error
     if (error.message && (
-        error.message.includes('connection') ||
-        error.message.includes('timeout') ||
-        error.message.includes('ECONNREFUSED') ||
-        error.message.includes('terminated')
+      error.message.includes('connection') ||
+      error.message.includes('timeout') ||
+      error.message.includes('ECONNREFUSED') ||
+      error.message.includes('terminated')
     )) {
       console.error(`DATABASE CONNECTION ERROR: ${error.message}`);
       console.error('Failed to connect to the database during AGE availability check.');

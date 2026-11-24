@@ -5,7 +5,7 @@
  * into the graph database.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createBatchLoader } from '../../../src/loader/batch-loader-impl';
 import { BatchLoader, GraphData } from '../../../src/loader/batch-loader';
 import { QueryExecutor } from '../../../src/db/query';
@@ -13,8 +13,8 @@ import { QueryBuilder } from '../../../src/query/builder';
 import {
   connectionManager,
   queryExecutor,
-  AGE_GRAPH_NAME,
-  isAgeAvailable
+  isAgeAvailable,
+  generateUniqueGraphName
 } from '../../setup/integration';
 import {
   testSchema,
@@ -24,27 +24,30 @@ import {
 // Skip all tests if AGE is not available
 describe.runIf(async () => await isAgeAvailable())('BatchLoader Vertex Loading Integration Tests', () => {
   let batchLoader: BatchLoader<typeof testSchema>;
+  let testGraphName: string;
 
   beforeEach(async () => {
+    // Generate a unique graph name for each test
+    testGraphName = generateUniqueGraphName('batch_loader_vertex');
+
+    // Create the graph
+    await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.create_graph('${testGraphName}')`);
+
     // Create a new BatchLoader for each test
     batchLoader = createBatchLoader(testSchema, queryExecutor, {
-      defaultGraphName: AGE_GRAPH_NAME,
+      defaultGraphName: testGraphName,
       validateBeforeLoad: true,
       defaultBatchSize: 1000,
       schemaName: 'age_schema_client'
     });
+  });
 
-    // Clear the graph before each test
-    const connection = await connectionManager.getConnection();
+  afterEach(async () => {
+    // Clean up the graph after each test
     try {
-      await connection.query(`
-        SELECT * FROM cypher('${AGE_GRAPH_NAME}', $$
-          MATCH (n)
-          DETACH DELETE n
-        $$) as (result ag_catalog.agtype);
-      `);
-    } finally {
-      await connectionManager.releaseConnection(connection);
+      await queryExecutor.executeSQL(`SELECT * FROM ag_catalog.drop_graph('${testGraphName}', true)`);
+    } catch (error: any) {
+      console.warn(`Warning: Could not drop graph ${testGraphName}: ${error.message}`);
     }
   });
 
@@ -67,7 +70,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Vertex Loading I
       expect(result.warnings).toHaveLength(0);
 
       // Verify the vertices were created in the database
-      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
+      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, testGraphName);
 
       // Check Person vertices
       const personResult = await queryBuilder
@@ -129,7 +132,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Vertex Loading I
       expect(result.vertexCount).toBe(1);
 
       // Verify the vertex properties in the database
-      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
+      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, testGraphName);
       const personResult = await queryBuilder
         .match('Person', 'p')
         .done()
@@ -180,7 +183,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Vertex Loading I
       expect(result.vertexCount).toBe(1);
 
       // Verify the vertex properties in the database
-      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
+      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, testGraphName);
       const personResult = await queryBuilder
         .match('Person', 'p')
         .done()
@@ -222,7 +225,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Vertex Loading I
       expect(result.vertexCount).toBe(50);
 
       // Verify the vertices were created in the database
-      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
+      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, testGraphName);
       const countResult = await queryBuilder
         .match('Person', 'p')
         .done()
@@ -254,7 +257,7 @@ describe.runIf(async () => await isAgeAvailable())('BatchLoader Vertex Loading I
       expect(result.errors![0].message).toMatch(/required property/i);
 
       // Verify no vertices were created
-      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, AGE_GRAPH_NAME);
+      const queryBuilder = new QueryBuilder(testSchema, queryExecutor, testGraphName);
       const countResult = await queryBuilder
         .match('Person', 'p')
         .done()

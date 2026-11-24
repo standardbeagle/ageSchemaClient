@@ -65,12 +65,7 @@ export function fromAgType(value: any): any {
       try {
         return JSON.parse(value);
       } catch (_e) {
-        // Try parsing as a JSON string with the braces
-        try {
-          return JSON.parse(value);
-        } catch (_e2) {
-          return value;
-        }
+        return value;
       }
     }
 
@@ -148,34 +143,6 @@ export async function createArrayFunction(
     CREATE OR REPLACE FUNCTION ${schemaName}.${functionName}()
     RETURNS ag_catalog.agtype AS $$
     SELECT '${arrayJson}'::text::ag_catalog.agtype;
-    $$ LANGUAGE SQL IMMUTABLE;
-  `, [], options);
-}
-
-/**
- * Create a PostgreSQL function that returns an AGE-compatible object
- *
- * @param queryExecutor - Query executor
- * @param schemaName - Schema name
- * @param functionName - Function name
- * @param object - Object to return from the function
- * @param options - Query options
- * @returns Promise that resolves when the function is created
- */
-export async function createObjectFunction(
-  queryExecutor: QueryExecutor,
-  schemaName: string,
-  functionName: string,
-  object: Record<string, any>,
-  options?: { transaction?: any }
-): Promise<void> {
-  const agTypeObject = toAgType(object);
-  const objectJson = JSON.stringify(agTypeObject);
-
-  await queryExecutor.executeSQL(`
-    CREATE OR REPLACE FUNCTION ${schemaName}.${functionName}()
-    RETURNS ag_catalog.agtype AS $$
-    SELECT '${objectJson}'::text::ag_catalog.agtype;
     $$ LANGUAGE SQL IMMUTABLE;
   `, [], options);
 }

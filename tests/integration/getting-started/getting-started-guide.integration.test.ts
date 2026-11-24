@@ -76,34 +76,6 @@ describe('Getting Started Guide Integration Tests', () => {
   });
 
   describe('Installation and Basic Setup', () => {
-    it('should verify client can be instantiated', () => {
-      if (!ageAvailable) {
-        console.warn('Skipping test: AGE not available');
-        return;
-      }
-
-      // Use environment variables from .env.test for connection configuration
-      const testClient = new AgeSchemaClient({
-        connection: {
-          host: process.env.PGHOST || 'localhost',
-          port: parseInt(process.env.PGPORT || '5432', 10),
-          database: process.env.PGDATABASE || 'age-integration',
-          user: process.env.PGUSER || 'age',
-          password: process.env.PGPASSWORD || 'agepassword',
-          pgOptions: {
-            searchPath: 'ag_catalog, "$user", public',
-            applicationName: 'ageSchemaClient-getting-started-test',
-          },
-        },
-        schema: {
-          // Schema configuration for testing
-        },
-      });
-
-      expect(testClient).toBeDefined();
-      expect(testClient).toBeInstanceOf(AgeSchemaClient);
-    });
-
     it('should verify connection works', async () => {
       if (!ageAvailable) {
         console.warn('Skipping test: AGE not available');

@@ -53,3 +53,8 @@ tasks/
 # Added by Claude Task Master
 .idea
 .vscode
+# tman shims
+/test
+/test.cmd
+/lint
+/lint.cmd

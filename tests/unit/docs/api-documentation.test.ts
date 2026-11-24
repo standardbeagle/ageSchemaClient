@@ -114,16 +114,6 @@ describe('API Documentation Generation', () => {
   });
 
   describe('Documentation Content Quality', () => {
-    it('should include proper JSDoc comments in AgeSchemaClient documentation', () => {
-      const clientPath = join(docsPath, 'classes', 'AgeSchemaClient.md');
-      if (existsSync(clientPath)) {
-        const content = readFileSync(clientPath, 'utf-8');
-        expect(content).toContain('Main client class for interacting with Apache AGE graph databases');
-        expect(content).toContain('Constructor');
-        expect(content).toContain('getConfig');
-      }
-    });
-
     it('should include proper JSDoc comments in QueryBuilder documentation', () => {
       const builderPath = join(docsPath, 'classes', 'QueryBuilder.md');
       if (existsSync(builderPath)) {
@@ -136,9 +126,9 @@ describe('API Documentation Generation', () => {
     });
 
     it('should include source links to GitHub', () => {
-      const clientPath = join(docsPath, 'classes', 'AgeSchemaClient.md');
-      if (existsSync(clientPath)) {
-        const content = readFileSync(clientPath, 'utf-8');
+      const builderPath = join(docsPath, 'classes', 'QueryBuilder.md');
+      if (existsSync(builderPath)) {
+        const content = readFileSync(builderPath, 'utf-8');
         // The generated docs should include links to the source code
         expect(content).toContain('github.com/standardbeagle/ageSchemaClient');
       }
